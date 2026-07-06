@@ -52,7 +52,8 @@ export async function api<T = any>(
 
   const json = await res.json();
   if (!res.ok) throw new Error(json.error?.message || 'Request gagal');
-  return json.data ?? json;
+  if (json.meta) return json as T; // list response: { data: [...], meta: {...} }
+  return (json.data ?? json) as T;
 }
 
 export async function login(phone: string, password: string) {
