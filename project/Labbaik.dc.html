@@ -1,0 +1,745 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600;9..144,700&family=JetBrains+Mono:wght@400;500;600&family=Amiri:wght@400;700&display=swap" rel="stylesheet">
+<style>
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
+  body{margin:0;background:#E4DAC7;font-family:'Plus Jakarta Sans',sans-serif;}
+  .scr::-webkit-scrollbar{width:0;height:0;}
+  .scr{scrollbar-width:none;}
+  @keyframes sospulse{0%{box-shadow:0 0 0 0 rgba(196,69,54,.45)}70%{box-shadow:0 0 0 18px rgba(196,69,54,0)}100%{box-shadow:0 0 0 0 rgba(196,69,54,0)}}
+  @keyframes softin{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
+  @keyframes ring{0%{transform:scale(.6);opacity:.7}100%{transform:scale(1.9);opacity:0}}
+</style>
+</helmet>
+<div style="min-height:100vh;display:flex;align-items:center;justify-content:center;padding:28px;background:radial-gradient(120% 90% at 50% 0%,#EFE7D6 0%,#E1D6C0 60%,#D8CBB2 100%);font-family:'Plus Jakarta Sans',sans-serif;">
+<div style="width:392px;height:844px;background:#1F1B16;border-radius:52px;padding:11px;box-shadow:0 40px 80px rgba(92,58,30,.32),0 8px 24px rgba(31,27,22,.28);flex-shrink:0;">
+<div style="position:relative;width:100%;height:100%;background:#F5F1E8;border-radius:42px;overflow:hidden;display:flex;flex-direction:column;">
+
+<!-- notch -->
+<div style="position:absolute;top:0;left:50%;transform:translateX(-50%);width:130px;height:30px;background:#1F1B16;border-bottom-left-radius:18px;border-bottom-right-radius:18px;z-index:40;"></div>
+
+<!-- status bar -->
+<div style="height:46px;flex-shrink:0;display:flex;align-items:flex-end;justify-content:space-between;padding:0 26px 6px;color:#3A2A1E;font-size:13px;font-weight:700;letter-spacing:.02em;z-index:30;">
+  <span>09:41</span>
+  <span style="display:flex;gap:6px;align-items:center;">
+    <svg width="17" height="12" viewBox="0 0 17 12" fill="currentColor"><rect x="0" y="7" width="3" height="5" rx="1"/><rect x="4.5" y="4.5" width="3" height="7.5" rx="1"/><rect x="9" y="2" width="3" height="10" rx="1"/><rect x="13.5" y="0" width="3" height="12" rx="1"/></svg>
+    <svg width="16" height="12" viewBox="0 0 16 12" fill="none" stroke="currentColor" stroke-width="1.4"><path d="M1 4.5C3.5 2 6 1 8 1s4.5 1 7 3.5M3.5 7C5 5.6 6.5 5 8 5s3 .6 4.5 2M6 9.5c.8-.7 1.4-1 2-1s1.2.3 2 1"/></svg>
+    <svg width="24" height="12" viewBox="0 0 24 12" fill="none"><rect x="1" y="1" width="19" height="10" rx="2.5" stroke="currentColor" stroke-width="1.2" opacity=".5"/><rect x="2.6" y="2.6" width="14" height="6.8" rx="1.4" fill="currentColor"/><rect x="21" y="4" width="1.6" height="4" rx=".8" fill="currentColor" opacity=".5"/></svg>
+  </span>
+</div>
+
+<!-- top bar -->
+<div style="height:52px;flex-shrink:0;display:flex;align-items:center;justify-content:space-between;padding:0 16px;background:rgba(245,241,232,.86);backdrop-filter:blur(10px);border-bottom:1px solid #ECE5D8;z-index:20;">
+  <div style="display:flex;align-items:center;gap:9px;">
+    <div style="width:30px;height:30px;border-radius:9px;background:#8B2E2E;display:flex;align-items:center;justify-content:center;box-shadow:0 2px 6px rgba(139,46,46,.3);">
+      <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#F5D98A" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3 4 6.5v11L12 21l8-3.5v-11L12 3Z"/><path d="M4 6.5 12 10l8-3.5M12 10v11"/></svg>
+    </div>
+    <div style="font:800 16px 'Plus Jakarta Sans';color:#5C3A1E;letter-spacing:-.01em;">Labbaik</div>
+  </div>
+  <div style="display:flex;background:#EFE7D9;border:1px solid #E5DDD0;border-radius:999px;padding:3px;gap:2px;">
+    <button onClick="{{ onJamaah }}" style="{{ modeStJamaah }}">Jamaah</button>
+    <button onClick="{{ onMuth }}" style="{{ modeStMuth }}">Muthawwif</button>
+  </div>
+</div>
+
+<!-- ===================== SCROLL CONTENT ===================== -->
+<div class="scr" style="flex:1;overflow-y:auto;position:relative;">
+
+<!-- ============ BERANDA (JAMAAH) ============ -->
+<sc-if value="{{ homeJamaah }}" hint-placeholder-val="{{ true }}">
+<div style="padding:16px 16px 108px;animation:softin .4s cubic-bezier(.32,.72,0,1);">
+
+  <div style="font:500 13px 'Plus Jakarta Sans';color:#8C6B4A;">Assalamu'alaikum,</div>
+  <div style="font:600 24px 'Fraunces';font-variation-settings:'opsz' 48,'SOFT' 30;color:#1F1B16;letter-spacing:-.01em;margin-top:1px;">Hai, Pak Hidayat</div>
+
+  <!-- ihram / location hero -->
+  <div style="margin-top:14px;border-radius:18px;overflow:hidden;background:linear-gradient(150deg,#8B2E2E 0%,#6E2424 100%);box-shadow:0 10px 26px rgba(110,36,36,.28);position:relative;">
+    <div style="position:absolute;inset:0;background-image:url('assets/patterns/kawung.svg');background-size:74px;opacity:.09;"></div>
+    <div style="position:relative;padding:18px 18px 16px;color:#F5F1E8;">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;">
+        <div>
+          <div style="font:700 10px 'Plus Jakarta Sans';letter-spacing:.14em;text-transform:uppercase;color:rgba(245,241,232,.72);">Status ihram</div>
+          <div style="font:600 22px 'Fraunces';margin-top:6px;">{{ ihramTitle }}</div>
+        </div>
+        <span style="{{ ihramBadge }}">{{ ihramBadgeText }}</span>
+      </div>
+      <div style="height:1px;background:rgba(245,241,232,.16);margin:15px 0 13px;"></div>
+      <div style="display:flex;gap:16px;">
+        <div style="flex:1;">
+          <div style="font:500 10px 'Plus Jakarta Sans';letter-spacing:.1em;text-transform:uppercase;color:rgba(245,241,232,.6);">Miqat terdekat</div>
+          <div style="font:700 14px 'Plus Jakarta Sans';margin-top:3px;">Qarnul Manazil</div>
+        </div>
+        <div style="width:1px;background:rgba(245,241,232,.16);"></div>
+        <div style="flex:1;">
+          <div style="font:500 10px 'Plus Jakarta Sans';letter-spacing:.1em;text-transform:uppercase;color:rgba(245,241,232,.6);">Jarak ke batas</div>
+          <div style="font:700 14px 'JetBrains Mono';margin-top:3px;color:#F5D98A;">{{ distText }}</div>
+        </div>
+      </div>
+      <button onClick="{{ onMiqat }}" style="margin-top:16px;width:100%;border:none;background:rgba(245,241,232,.14);color:#F5F1E8;border-radius:11px;padding:11px;font:700 13px 'Plus Jakarta Sans';cursor:pointer;display:flex;align-items:center;justify-content:center;gap:7px;">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 21s-7-6.2-7-11a7 7 0 0 1 14 0c0 4.8-7 11-7 11Z"/><circle cx="12" cy="10" r="2.6"/></svg>
+        Buka peta batas miqat
+      </button>
+    </div>
+  </div>
+
+  <!-- alert strip when must wear ihram -->
+  <sc-if value="{{ warn }}" hint-placeholder-val="{{ false }}">
+    <div style="margin-top:12px;display:flex;gap:11px;align-items:center;padding:13px 14px;background:#F7E4D9;border:1px solid #E7B49E;border-radius:13px;">
+      <div style="width:34px;height:34px;border-radius:9px;background:#C44536;color:#fff;display:flex;align-items:center;justify-content:center;flex-shrink:0;animation:sospulse 2s infinite;">
+        <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m10.3 3.4-8 14A2 2 0 0 0 4 20.4h16a2 2 0 0 0 1.7-3l-8-14a2 2 0 0 0-3.4 0Z"/><path d="M12 9v4M12 17h.01"/></svg>
+      </div>
+      <div style="flex:1;">
+        <div style="font:700 13px 'Plus Jakarta Sans';color:#8B2E2E;">Segera kenakan kain ihram</div>
+        <div style="font:500 12px 'Plus Jakarta Sans';color:#A5654E;margin-top:1px;line-height:1.4;">Kamu mendekati batas miqat. Berihram &amp; niat sebelum garis.</div>
+      </div>
+    </div>
+  </sc-if>
+
+  <!-- quick actions -->
+  <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-top:18px;">
+    <button onClick="{{ onIbadah }}" style="display:flex;flex-direction:column;align-items:center;gap:7px;border:none;background:transparent;cursor:pointer;">
+      <div style="width:52px;height:52px;border-radius:16px;background:#fff;border:1px solid #ECE5D8;box-shadow:0 1px 2px rgba(92,58,30,.06);display:flex;align-items:center;justify-content:center;color:#8B2E2E;"><svg width="23" height="23" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M2 4h6a3 3 0 0 1 3 3v13a2.5 2.5 0 0 0-2.5-2.5H2ZM22 4h-6a3 3 0 0 0-3 3v13a2.5 2.5 0 0 1 2.5-2.5H22Z"/></svg></div>
+      <span style="font:600 11px 'Plus Jakarta Sans';color:#5C3A1E;">Tuntunan</span>
+    </button>
+    <button onClick="{{ onDoa }}" style="display:flex;flex-direction:column;align-items:center;gap:7px;border:none;background:transparent;cursor:pointer;">
+      <div style="width:52px;height:52px;border-radius:16px;background:#fff;border:1px solid #ECE5D8;box-shadow:0 1px 2px rgba(92,58,30,.06);display:flex;align-items:center;justify-content:center;color:#4A7C3A;"><svg width="23" height="23" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M11 5.5C9.5 4 7.5 3.5 5 3.5c-1 0-1.5.5-1.5 1.5v12c0 1 .5 1.4 1.5 1.4 2.3 0 4.2.5 6 2 1.8-1.5 3.7-2 6-2 1 0 1.5-.4 1.5-1.4v-12c0-1-.5-1.5-1.5-1.5-2.5 0-4.5.5-6 2M12 6.5v13.5"/></svg></div>
+      <span style="font:600 11px 'Plus Jakarta Sans';color:#5C3A1E;">Doa</span>
+    </button>
+    <button onClick="{{ onJadwal }}" style="display:flex;flex-direction:column;align-items:center;gap:7px;border:none;background:transparent;cursor:pointer;">
+      <div style="width:52px;height:52px;border-radius:16px;background:#fff;border:1px solid #ECE5D8;box-shadow:0 1px 2px rgba(92,58,30,.06);display:flex;align-items:center;justify-content:center;color:#D4A437;"><svg width="23" height="23" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4.5" width="18" height="16" rx="2.5"/><path d="M3 9h18M8 2.5v4M16 2.5v4"/></svg></div>
+      <span style="font:600 11px 'Plus Jakarta Sans';color:#5C3A1E;">Jadwal</span>
+    </button>
+    <button onClick="{{ onMiqat }}" style="display:flex;flex-direction:column;align-items:center;gap:7px;border:none;background:transparent;cursor:pointer;">
+      <div style="width:52px;height:52px;border-radius:16px;background:#fff;border:1px solid #ECE5D8;box-shadow:0 1px 2px rgba(92,58,30,.06);display:flex;align-items:center;justify-content:center;color:#8B2E2E;"><svg width="23" height="23" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="m3 6 6-3 6 3 6-3v15l-6 3-6-3-6 3Z"/><path d="M9 3v15M15 6v15"/></svg></div>
+      <span style="font:600 11px 'Plus Jakarta Sans';color:#5C3A1E;">Peta</span>
+    </button>
+  </div>
+
+  <!-- next agenda -->
+  <div style="display:flex;align-items:center;justify-content:space-between;margin:22px 2px 10px;">
+    <div style="font:700 16px 'Plus Jakarta Sans';color:#1F1B16;">Agenda berikutnya</div>
+    <button onClick="{{ onJadwal }}" style="border:none;background:transparent;color:#8B2E2E;font:600 13px 'Plus Jakarta Sans';cursor:pointer;">Lihat semua ›</button>
+  </div>
+  <div style="background:#fff;border:1px solid #ECE5D8;border-radius:14px;padding:16px;box-shadow:0 2px 6px rgba(92,58,30,.08);display:flex;gap:13px;align-items:center;">
+    <div style="text-align:center;background:#FBF2EE;border:1px solid #EBD4CB;border-radius:11px;padding:8px 12px;flex-shrink:0;">
+      <div style="font:800 18px 'Plus Jakarta Sans';color:#8B2E2E;line-height:1;">14</div>
+      <div style="font:600 10px 'Plus Jakarta Sans';color:#A5654E;margin-top:2px;">JUL</div>
+    </div>
+    <div style="flex:1;">
+      <div style="font:700 14px 'Plus Jakarta Sans';color:#5C3A1E;">Umrah wajib — berangkat ke miqat</div>
+      <div style="font:500 12px 'Plus Jakarta Sans';color:#8C6B4A;margin-top:2px;">08:30 · Bir Ali → Masjidil Haram</div>
+    </div>
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#B89A7A" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m9 6 6 6-6 6"/></svg>
+  </div>
+
+  <!-- rombongan mini -->
+  <div style="display:flex;align-items:center;justify-content:space-between;margin:22px 2px 10px;">
+    <div style="font:700 16px 'Plus Jakarta Sans';color:#1F1B16;">Rombongan kamu</div>
+    <span style="font:600 12px 'Plus Jakarta Sans';color:#4A7C3A;background:#E4F0DE;padding:3px 10px;border-radius:999px;">40 aman</span>
+  </div>
+  <div style="background:#fff;border:1px solid #ECE5D8;border-radius:14px;padding:15px 16px;box-shadow:0 2px 6px rgba(92,58,30,.08);">
+    <div style="display:flex;align-items:center;gap:11px;">
+      <div style="display:flex;">
+        <div style="width:32px;height:32px;border-radius:999px;background:#8B2E2E;color:#F5F1E8;display:flex;align-items:center;justify-content:center;font:700 12px 'Plus Jakarta Sans';border:2px solid #fff;">AH</div>
+        <div style="width:32px;height:32px;border-radius:999px;background:#4A7C3A;color:#F5F1E8;display:flex;align-items:center;justify-content:center;font:700 12px 'Plus Jakarta Sans';border:2px solid #fff;margin-left:-9px;">SR</div>
+        <div style="width:32px;height:32px;border-radius:999px;background:#D4A437;color:#3A2A1E;display:flex;align-items:center;justify-content:center;font:700 12px 'Plus Jakarta Sans';border:2px solid #fff;margin-left:-9px;">MZ</div>
+        <div style="width:32px;height:32px;border-radius:999px;background:#EFE7D9;color:#8C6B4A;display:flex;align-items:center;justify-content:center;font:700 11px 'Plus Jakarta Sans';border:2px solid #fff;margin-left:-9px;">+39</div>
+      </div>
+      <div style="flex:1;">
+        <div style="font:700 13px 'Plus Jakarta Sans';color:#5C3A1E;">KBIH Barokah · Kloter SOC-14</div>
+        <div style="font:500 12px 'Plus Jakarta Sans';color:#8C6B4A;margin-top:1px;">Muthawwif: Ustadz Fauzan</div>
+      </div>
+    </div>
+  </div>
+
+</div>
+</sc-if>
+
+<!-- ============ BERANDA (MUTHAWWIF) ============ -->
+<sc-if value="{{ homeMuth }}" hint-placeholder-val="{{ false }}">
+<div style="padding:16px 16px 108px;animation:softin .4s cubic-bezier(.32,.72,0,1);">
+  <div style="font:500 13px 'Plus Jakarta Sans';color:#8C6B4A;">Mode Muthawwif</div>
+  <div style="font:600 24px 'Fraunces';color:#1F1B16;letter-spacing:-.01em;margin-top:1px;">Ustadz Fauzan</div>
+
+  <!-- SOS incoming alert -->
+  <div style="margin-top:14px;border-radius:16px;background:linear-gradient(150deg,#C44536,#9E2E22);box-shadow:0 10px 24px rgba(158,46,34,.3);padding:16px;color:#fff;position:relative;overflow:hidden;">
+    <div style="display:flex;align-items:center;gap:11px;">
+      <div style="width:40px;height:40px;border-radius:11px;background:rgba(255,255,255,.16);display:flex;align-items:center;justify-content:center;animation:sospulse 1.6s infinite;">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m10.3 3.4-8 14A2 2 0 0 0 4 20.4h16a2 2 0 0 0 1.7-3l-8-14a2 2 0 0 0-3.4 0Z"/><path d="M12 9v4M12 17h.01"/></svg>
+      </div>
+      <div style="flex:1;">
+        <div style="font:700 10px 'Plus Jakarta Sans';letter-spacing:.12em;text-transform:uppercase;opacity:.85;">SOS aktif · Medis</div>
+        <div style="font:700 16px 'Plus Jakarta Sans';margin-top:2px;">Ibu Rohmah butuh bantuan</div>
+      </div>
+    </div>
+    <div style="margin-top:12px;display:flex;gap:8px;">
+      <button onClick="{{ onSosScreen }}" style="flex:1;border:none;background:#fff;color:#9E2E22;border-radius:10px;padding:10px;font:700 13px 'Plus Jakarta Sans';cursor:pointer;">Lihat lokasi</button>
+      <button style="flex:1;border:1px solid rgba(255,255,255,.5);background:transparent;color:#fff;border-radius:10px;padding:10px;font:700 13px 'Plus Jakarta Sans';cursor:pointer;">Hubungi</button>
+    </div>
+  </div>
+
+  <!-- stats -->
+  <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-top:14px;">
+    <div style="background:#fff;border:1px solid #ECE5D8;border-radius:13px;padding:14px 12px;box-shadow:0 2px 6px rgba(92,58,30,.08);">
+      <div style="font:700 26px 'Fraunces';color:#1F1B16;line-height:1;">42</div>
+      <div style="font:600 11px 'Plus Jakarta Sans';color:#8C6B4A;margin-top:5px;">Total jamaah</div>
+    </div>
+    <div style="background:#fff;border:1px solid #ECE5D8;border-radius:13px;padding:14px 12px;box-shadow:0 2px 6px rgba(92,58,30,.08);">
+      <div style="font:700 26px 'Fraunces';color:#4A7C3A;line-height:1;">40</div>
+      <div style="font:600 11px 'Plus Jakarta Sans';color:#8C6B4A;margin-top:5px;">Aman</div>
+    </div>
+    <div style="background:#fff;border:1px solid #ECE5D8;border-radius:13px;padding:14px 12px;box-shadow:0 2px 6px rgba(92,58,30,.08);">
+      <div style="font:700 26px 'Fraunces';color:#C44536;line-height:1;">2</div>
+      <div style="font:600 11px 'Plus Jakarta Sans';color:#8C6B4A;margin-top:5px;">Perlu perhatian</div>
+    </div>
+  </div>
+
+  <div style="font:700 16px 'Plus Jakarta Sans';color:#1F1B16;margin:22px 2px 10px;">Status rombongan</div>
+  <div style="background:#fff;border:1px solid #ECE5D8;border-radius:14px;box-shadow:0 2px 6px rgba(92,58,30,.08);overflow:hidden;">
+    <sc-for list="{{ rombongan }}" as="p" hint-placeholder-count="4">
+      <div style="display:flex;align-items:center;gap:12px;padding:13px 15px;border-top:1px solid #F0E9DC;">
+        <div style="{{ p.avStyle }}">{{ p.init }}</div>
+        <div style="flex:1;">
+          <div style="font:700 13px 'Plus Jakarta Sans';color:#5C3A1E;">{{ p.name }}</div>
+          <div style="font:500 12px 'Plus Jakarta Sans';color:#8C6B4A;margin-top:1px;">{{ p.place }}</div>
+        </div>
+        <span style="{{ p.chip }}">{{ p.status }}</span>
+      </div>
+    </sc-for>
+  </div>
+</div>
+</sc-if>
+
+<!-- ============ PETA MIQAT / GEOFENCE ============ -->
+<sc-if value="{{ isMiqat }}" hint-placeholder-val="{{ false }}">
+<div style="animation:softin .4s cubic-bezier(.32,.72,0,1);">
+  <!-- map canvas -->
+  <div style="position:relative;height:326px;background:radial-gradient(120% 120% at 50% 42%,#EBE0C9 0%,#DCCEAE 55%,#CDBB95 100%);overflow:hidden;">
+    <div style="position:absolute;inset:0;background-image:url('assets/patterns/parang.svg');background-size:150px;opacity:.05;"></div>
+    <!-- haram ring -->
+    <div style="position:absolute;left:50%;top:42%;width:150px;height:150px;transform:translate(-50%,-50%);border-radius:999px;border:2px dashed rgba(74,124,58,.55);background:rgba(74,124,58,.09);"></div>
+    <!-- miqat ring -->
+    <div style="position:absolute;left:50%;top:42%;width:270px;height:270px;transform:translate(-50%,-50%);border-radius:999px;border:2.5px solid rgba(139,46,46,.7);background:rgba(139,46,46,.05);"></div>
+    <div style="position:absolute;left:50%;top:calc(42% - 135px);transform:translate(-50%,-120%);font:700 10px 'Plus Jakarta Sans';letter-spacing:.1em;text-transform:uppercase;color:#8B2E2E;background:rgba(245,241,232,.85);padding:3px 8px;border-radius:6px;">Batas miqat</div>
+    <!-- kaaba center -->
+    <div style="position:absolute;left:50%;top:42%;transform:translate(-50%,-50%);text-align:center;">
+      <div style="width:26px;height:26px;background:#1F1B16;border-radius:5px;display:flex;align-items:center;justify-content:center;box-shadow:0 3px 8px rgba(31,27,22,.4);margin:0 auto;"><div style="width:14px;height:3px;background:#D4A437;border-radius:1px;"></div></div>
+      <div style="font:700 10px 'Plus Jakarta Sans';color:#5C3A1E;margin-top:4px;">Ka'bah</div>
+    </div>
+    <!-- jamaah marker -->
+    <div style="{{ markerStyle }}">
+      <div style="position:absolute;inset:0;border-radius:999px;background:rgba(139,46,46,.4);animation:ring 1.8s infinite;"></div>
+      <div style="position:relative;width:20px;height:20px;border-radius:999px;background:#8B2E2E;border:3px solid #fff;box-shadow:0 2px 6px rgba(92,58,30,.4);"></div>
+    </div>
+    <!-- legend -->
+    <div style="position:absolute;left:12px;bottom:12px;background:rgba(245,241,232,.9);backdrop-filter:blur(6px);border:1px solid #E5DDD0;border-radius:10px;padding:9px 11px;font:600 11px 'Plus Jakarta Sans';color:#5C3A1E;display:flex;flex-direction:column;gap:5px;">
+      <span style="display:flex;align-items:center;gap:6px;"><span style="width:11px;height:11px;border-radius:3px;border:2px solid #8B2E2E;background:rgba(139,46,46,.1);"></span>Batas miqat (ihram)</span>
+      <span style="display:flex;align-items:center;gap:6px;"><span style="width:11px;height:11px;border-radius:3px;border:2px dashed #4A7C3A;background:rgba(74,124,58,.12);"></span>Tanah Haram</span>
+    </div>
+  </div>
+
+  <div style="padding:16px 16px 108px;">
+    <!-- status card: swaps by state -->
+    <sc-if value="{{ warn }}" hint-placeholder-val="{{ false }}">
+      <div style="border-radius:15px;background:linear-gradient(150deg,#C44536,#9E2E22);color:#fff;padding:18px;box-shadow:0 10px 24px rgba(158,46,34,.28);">
+        <div style="display:flex;align-items:center;gap:11px;">
+          <div style="width:44px;height:44px;border-radius:12px;background:rgba(255,255,255,.18);display:flex;align-items:center;justify-content:center;animation:sospulse 1.6s infinite;"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m10.3 3.4-8 14A2 2 0 0 0 4 20.4h16a2 2 0 0 0 1.7-3l-8-14a2 2 0 0 0-3.4 0Z"/><path d="M12 9v4M12 17h.01"/></svg></div>
+          <div><div style="font:800 18px 'Plus Jakarta Sans';">Pakai ihram sekarang</div><div style="font:600 13px 'Plus Jakarta Sans';opacity:.9;margin-top:2px;">Batas miqat tinggal {{ distText }} lagi</div></div>
+        </div>
+        <div style="font:500 13px 'Plus Jakarta Sans';line-height:1.5;margin-top:12px;opacity:.92;">Jamaah tidak boleh melewati miqat tanpa berihram. Kenakan kain ihram, lalu tekan tombol di bawah setelah berniat.</div>
+      </div>
+    </sc-if>
+    <sc-if value="{{ ready }}" hint-placeholder-val="{{ false }}">
+      <div style="border-radius:15px;background:linear-gradient(150deg,#4A7C3A,#3A6330);color:#fff;padding:18px;box-shadow:0 10px 24px rgba(58,99,48,.26);">
+        <div style="display:flex;align-items:center;gap:11px;">
+          <div style="width:44px;height:44px;border-radius:12px;background:rgba(255,255,255,.18);display:flex;align-items:center;justify-content:center;"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="m20 6-11 11-5-5"/></svg></div>
+          <div><div style="font:800 18px 'Plus Jakarta Sans';">Kamu sudah berihram</div><div style="font:600 13px 'Plus Jakarta Sans';opacity:.9;margin-top:2px;">Niat umrah sudah dilafalkan</div></div>
+        </div>
+        <div style="font:500 13px 'Plus Jakarta Sans';line-height:1.5;margin-top:12px;opacity:.92;">Perbanyak talbiyah menuju Masjidil Haram. Jaga larangan ihram: jangan memakai wangi, menutup kepala (pria), atau memotong kuku/rambut.</div>
+      </div>
+    </sc-if>
+    <sc-if value="{{ approach }}" hint-placeholder-val="{{ true }}">
+      <div style="border-radius:15px;background:#fff;border:1px solid #ECE5D8;padding:18px;box-shadow:0 2px 6px rgba(92,58,30,.08);">
+        <div style="display:flex;align-items:center;gap:11px;">
+          <div style="width:44px;height:44px;border-radius:12px;background:#EFE7D9;color:#8B2E2E;display:flex;align-items:center;justify-content:center;"><svg width="23" height="23" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 21s-7-6.2-7-11a7 7 0 0 1 14 0c0 4.8-7 11-7 11Z"/><circle cx="12" cy="10" r="2.6"/></svg></div>
+          <div><div style="font:700 17px 'Plus Jakarta Sans';color:#1F1B16;">Menuju miqat</div><div style="font:600 13px 'Plus Jakarta Sans';color:#8C6B4A;margin-top:2px;">Belum berihram · masih aman</div></div>
+        </div>
+        <div style="font:500 13px 'Plus Jakarta Sans';line-height:1.5;color:#8C6B4A;margin-top:12px;">Kami akan memberi peringatan besar saat kamu ± 3 km dari batas. Siapkan kain ihram dari sekarang, ya.</div>
+      </div>
+    </sc-if>
+
+    <!-- distance + progress -->
+    <div style="background:#fff;border:1px solid #ECE5D8;border-radius:14px;padding:16px;margin-top:12px;box-shadow:0 2px 6px rgba(92,58,30,.08);">
+      <div style="display:flex;justify-content:space-between;align-items:baseline;">
+        <span style="font:500 12px 'Plus Jakarta Sans';color:#8C6B4A;">Jarak ke garis miqat</span>
+        <span style="font:700 22px 'JetBrains Mono';color:#8B2E2E;">{{ distText }}</span>
+      </div>
+      <div style="height:8px;background:#ECE5D8;border-radius:999px;margin-top:12px;overflow:hidden;">
+        <div style="{{ progStyle }}"></div>
+      </div>
+      <div style="display:flex;justify-content:space-between;font:500 11px 'Plus Jakarta Sans';color:#B89A7A;margin-top:6px;">
+        <span>Miqat</span><span>Perjalanan menuju batas</span>
+      </div>
+      <div style="font:600 11px 'Plus Jakarta Sans';color:#A5654E;margin-top:14px;text-align:center;background:#FBF2EE;border-radius:8px;padding:7px;">◂ Geser untuk simulasi mendekati batas ▸</div>
+      <input type="range" min="0" max="12000" step="100" value="{{ distNum }}" onInput="{{ onDist }}" style="width:100%;accent-color:#8B2E2E;margin-top:12px;">
+    </div>
+
+    <!-- ihram toggle -->
+    <button onClick="{{ onIhram }}" style="{{ ihramBtn }}">{{ ihramBtnText }}</button>
+
+    <!-- larangan / info -->
+    <div style="font:700 15px 'Plus Jakarta Sans';color:#1F1B16;margin:22px 2px 10px;">Batas &amp; larangan Tanah Haram</div>
+    <div style="background:#fff;border:1px solid #ECE5D8;border-radius:14px;padding:6px 16px;box-shadow:0 2px 6px rgba(92,58,30,.08);">
+      <div style="display:flex;gap:12px;padding:13px 0;border-bottom:1px solid #F0E9DC;"><span style="color:#4A7C3A;flex-shrink:0;"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m20 6-11 11-5-5"/></svg></span><span style="font:500 13px 'Plus Jakarta Sans';color:#5C3A1E;line-height:1.45;">Di dalam Tanah Haram dilarang berburu &amp; membunuh binatang liar.</span></div>
+      <div style="display:flex;gap:12px;padding:13px 0;border-bottom:1px solid #F0E9DC;"><span style="color:#4A7C3A;flex-shrink:0;"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m20 6-11 11-5-5"/></svg></span><span style="font:500 13px 'Plus Jakarta Sans';color:#5C3A1E;line-height:1.45;">Dilarang menebang pohon atau mencabut tanaman yang tumbuh sendiri.</span></div>
+      <div style="display:flex;gap:12px;padding:13px 0;"><span style="color:#4A7C3A;flex-shrink:0;"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m20 6-11 11-5-5"/></svg></span><span style="font:500 13px 'Plus Jakarta Sans';color:#5C3A1E;line-height:1.45;">Selama ihram: tidak memakai wangi-wangian, memotong rambut/kuku, atau menikah.</span></div>
+    </div>
+  </div>
+</div>
+</sc-if>
+
+<!-- ============ IBADAH / TUNTUNAN ============ -->
+<sc-if value="{{ isIbadah }}" hint-placeholder-val="{{ false }}">
+<div style="padding:16px 16px 108px;animation:softin .4s cubic-bezier(.32,.72,0,1);">
+  <div style="font:600 22px 'Fraunces';color:#1F1B16;letter-spacing:-.01em;">Tuntunan ibadah</div>
+  <div style="font:500 13px 'Plus Jakarta Sans';color:#8C6B4A;margin-top:2px;">Panduan langkah demi langkah, urut &amp; jelas.</div>
+
+  <div style="display:flex;background:#EFE7D9;border:1px solid #E5DDD0;border-radius:12px;padding:4px;gap:4px;margin-top:16px;">
+    <button onClick="{{ onUmrah }}" style="{{ tabUmrahStyle }}">Umrah</button>
+    <button onClick="{{ onHaji }}" style="{{ tabHajiStyle }}">Haji</button>
+  </div>
+
+  <div style="font:600 12px 'Plus Jakarta Sans';color:#8C6B4A;margin:16px 2px 0;">{{ ibadahSub }}</div>
+
+  <div style="margin-top:12px;display:flex;flex-direction:column;gap:10px;">
+    <sc-for list="{{ stages }}" as="st" hint-placeholder-count="5">
+      <div style="background:#fff;border:1px solid #ECE5D8;border-radius:14px;box-shadow:0 2px 6px rgba(92,58,30,.08);overflow:hidden;">
+        <button onClick="{{ st.onClick }}" style="width:100%;display:flex;align-items:center;gap:13px;padding:15px 16px;border:none;background:transparent;cursor:pointer;text-align:left;">
+          <div style="{{ st.numStyle }}">{{ st.n }}</div>
+          <div style="flex:1;">
+            <div style="font:700 15px 'Plus Jakarta Sans';color:#1F1B16;">{{ st.title }}</div>
+            <div style="font:500 12px 'Plus Jakarta Sans';color:#8C6B4A;margin-top:2px;">{{ st.sub }}</div>
+          </div>
+          <span style="{{ st.chip }}">{{ st.status }}</span>
+        </button>
+        <sc-if value="{{ st.open }}" hint-placeholder-val="{{ false }}">
+          <div style="padding:2px 16px 16px 61px;">
+            <div style="font:500 13px 'Plus Jakarta Sans';color:#5C3A1E;line-height:1.7;white-space:pre-line;">{{ st.steps }}</div>
+            <div style="margin-top:12px;background:#FBF6EA;border:1px solid #EDD9A6;border-radius:11px;padding:12px 14px;">
+              <div style="font:700 10px 'Plus Jakarta Sans';letter-spacing:.1em;text-transform:uppercase;color:#97751F;">Doa saat {{ st.title }}</div>
+              <div dir="rtl" style="font:700 20px 'Amiri',serif;color:#1F1B16;margin-top:8px;line-height:1.8;text-align:right;">{{ st.arabic }}</div>
+              <div style="font:500 12px 'Plus Jakarta Sans';color:#8C6B4A;margin-top:7px;line-height:1.5;font-style:italic;">{{ st.latin }}</div>
+            </div>
+          </div>
+        </sc-if>
+      </div>
+    </sc-for>
+  </div>
+</div>
+</sc-if>
+
+<!-- ============ DOA ============ -->
+<sc-if value="{{ isDoa }}" hint-placeholder-val="{{ false }}">
+<div style="padding:16px 16px 108px;animation:softin .4s cubic-bezier(.32,.72,0,1);">
+  <div style="font:600 22px 'Fraunces';color:#1F1B16;letter-spacing:-.01em;">Doa &amp; bacaan</div>
+  <div style="font:500 13px 'Plus Jakarta Sans';color:#8C6B4A;margin-top:2px;">Arab, latin, dan terjemahannya.</div>
+  <div style="margin-top:16px;display:flex;flex-direction:column;gap:10px;">
+    <sc-for list="{{ doaList }}" as="d" hint-placeholder-count="5">
+      <div style="background:#fff;border:1px solid #ECE5D8;border-radius:14px;box-shadow:0 2px 6px rgba(92,58,30,.08);overflow:hidden;">
+        <button onClick="{{ d.onClick }}" style="width:100%;display:flex;align-items:center;gap:12px;padding:15px 16px;border:none;background:transparent;cursor:pointer;text-align:left;">
+          <div style="width:38px;height:38px;border-radius:10px;background:#EAF2E4;color:#4A7C3A;display:flex;align-items:center;justify-content:center;flex-shrink:0;"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M11 5.5C9.5 4 7.5 3.5 5 3.5c-1 0-1.5.5-1.5 1.5v12c0 1 .5 1.4 1.5 1.4 2.3 0 4.2.5 6 2 1.8-1.5 3.7-2 6-2 1 0 1.5-.4 1.5-1.4v-12c0-1-.5-1.5-1.5-1.5-2.5 0-4.5.5-6 2M12 6.5v13.5"/></svg></div>
+          <div style="flex:1;">
+            <div style="font:700 14px 'Plus Jakarta Sans';color:#1F1B16;">{{ d.title }}</div>
+            <div style="font:500 12px 'Plus Jakarta Sans';color:#8C6B4A;margin-top:1px;">{{ d.when }}</div>
+          </div>
+          <span style="{{ d.caret }}"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#B89A7A" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg></span>
+        </button>
+        <sc-if value="{{ d.open }}" hint-placeholder-val="{{ false }}">
+          <div style="padding:0 16px 16px;">
+            <div dir="rtl" style="font:700 24px 'Amiri',serif;color:#1F1B16;line-height:2;text-align:right;background:#FBF6EA;border:1px solid #EDD9A6;border-radius:12px;padding:16px 18px;">{{ d.arabic }}</div>
+            <div style="font:500 13px 'Plus Jakarta Sans';color:#5C3A1E;margin-top:11px;line-height:1.6;font-style:italic;">{{ d.latin }}</div>
+            <div style="font:500 13px 'Plus Jakarta Sans';color:#8C6B4A;margin-top:8px;line-height:1.6;">“{{ d.arti }}”</div>
+          </div>
+        </sc-if>
+      </div>
+    </sc-for>
+  </div>
+</div>
+</sc-if>
+
+<!-- ============ JADWAL ============ -->
+<sc-if value="{{ isJadwal }}" hint-placeholder-val="{{ false }}">
+<div style="padding:16px 16px 108px;animation:softin .4s cubic-bezier(.32,.72,0,1);">
+  <div style="font:600 22px 'Fraunces';color:#1F1B16;letter-spacing:-.01em;">Jadwal &amp; agenda</div>
+  <div style="font:500 13px 'Plus Jakarta Sans';color:#8C6B4A;margin-top:2px;">Rangkaian ibadah rombongan SOC-14.</div>
+
+  <div style="margin-top:16px;position:relative;padding-left:8px;">
+    <sc-for list="{{ jadwal }}" as="j" hint-placeholder-count="5">
+      <div style="display:flex;gap:14px;">
+        <div style="display:flex;flex-direction:column;align-items:center;">
+          <div style="{{ j.dot }}"></div>
+          <div style="width:2px;flex:1;background:#E5DDD0;min-height:24px;"></div>
+        </div>
+        <div style="flex:1;padding-bottom:16px;">
+          <div style="font:700 11px 'JetBrains Mono';color:#8B2E2E;">{{ j.time }}</div>
+          <div style="background:#fff;border:1px solid #ECE5D8;border-radius:12px;padding:13px 15px;margin-top:6px;box-shadow:0 2px 6px rgba(92,58,30,.06);">
+            <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;">
+              <div style="font:700 14px 'Plus Jakarta Sans';color:#1F1B16;">{{ j.title }}</div>
+              <span style="{{ j.chip }}">{{ j.status }}</span>
+            </div>
+            <div style="font:500 12px 'Plus Jakarta Sans';color:#8C6B4A;margin-top:3px;display:flex;align-items:center;gap:5px;"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#B89A7A" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 21s-7-6.2-7-11a7 7 0 0 1 14 0c0 4.8-7 11-7 11Z"/><circle cx="12" cy="10" r="2.6"/></svg>{{ j.place }}</div>
+          </div>
+        </div>
+      </div>
+    </sc-for>
+  </div>
+</div>
+</sc-if>
+
+<!-- ============ SOS ============ -->
+<sc-if value="{{ isSos }}" hint-placeholder-val="{{ false }}">
+<div style="min-height:100%;background:linear-gradient(180deg,#7A1F1F 0%,#5C1717 100%);padding:18px 16px 108px;animation:softin .35s cubic-bezier(.32,.72,0,1);">
+  <div style="display:flex;align-items:center;justify-content:space-between;">
+    <div>
+      <div style="font:700 10px 'Plus Jakarta Sans';letter-spacing:.16em;text-transform:uppercase;color:rgba(255,240,235,.7);">Bantuan darurat</div>
+      <div style="font:600 24px 'Fraunces';color:#fff;margin-top:2px;">SOS</div>
+    </div>
+    <button onClick="{{ onBeranda }}" style="width:38px;height:38px;border-radius:999px;border:1px solid rgba(255,255,255,.25);background:rgba(255,255,255,.1);color:#fff;display:flex;align-items:center;justify-content:center;cursor:pointer;"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18M6 6l12 12"/></svg></button>
+  </div>
+
+  <sc-if value="{{ sosSent }}" hint-placeholder-val="{{ false }}">
+    <div style="margin-top:18px;background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.2);border-radius:16px;padding:20px;text-align:center;color:#fff;">
+      <div style="width:64px;height:64px;border-radius:999px;background:rgba(255,255,255,.16);display:flex;align-items:center;justify-content:center;margin:0 auto;animation:sospulse 1.6s infinite;"><svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m20 6-11 11-5-5"/></svg></div>
+      <div style="font:800 19px 'Plus Jakarta Sans';margin-top:14px;">Sinyal darurat terkirim</div>
+      <div style="font:500 13px 'Plus Jakarta Sans';opacity:.85;margin-top:6px;line-height:1.55;">Muthawwif &amp; petugas kloter menerima lokasi kamu secara real-time. Tetap di tempat bila memungkinkan.</div>
+      <div style="margin-top:14px;background:rgba(0,0,0,.18);border-radius:11px;padding:12px 14px;text-align:left;display:flex;align-items:center;gap:10px;">
+        <span style="width:9px;height:9px;border-radius:999px;background:#7BE28A;box-shadow:0 0 0 4px rgba(123,226,138,.25);"></span>
+        <span style="font:600 12px 'JetBrains Mono';color:#fff;">21.3891° N, 39.8579° E · dibagikan</span>
+      </div>
+      <button onClick="{{ onCancelSos }}" style="margin-top:16px;width:100%;border:1px solid rgba(255,255,255,.4);background:transparent;color:#fff;border-radius:11px;padding:12px;font:700 14px 'Plus Jakarta Sans';cursor:pointer;">Batalkan SOS</button>
+    </div>
+  </sc-if>
+
+  <sc-if value="{{ sosIdle }}" hint-placeholder-val="{{ true }}">
+    <div>
+      <div style="font:500 13px 'Plus Jakarta Sans';color:rgba(255,240,235,.85);margin-top:14px;line-height:1.5;">Pilih jenis keadaan darurat, lalu tekan &amp; tahan tombol SOS.</div>
+      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-top:14px;">
+        <button onClick="{{ onCatMedis }}" style="{{ catStMedis }}">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.6l-1-1a5.5 5.5 0 0 0-7.8 7.8l1 1L12 21l7.8-7.6 1-1a5.5 5.5 0 0 0 0-7.8Z"/></svg>
+          <span style="font:700 12px 'Plus Jakarta Sans';margin-top:8px;">Medis</span>
+        </button>
+        <button onClick="{{ onCatTersesat }}" style="{{ catStTersesat }}">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 21s-7-6.2-7-11a7 7 0 0 1 14 0c0 4.8-7 11-7 11Z"/><circle cx="12" cy="10" r="2.6"/></svg>
+          <span style="font:700 12px 'Plus Jakarta Sans';margin-top:8px;">Tersesat</span>
+        </button>
+        <button onClick="{{ onCatKehilangan }}" style="{{ catStKehilangan }}">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg>
+          <span style="font:700 12px 'Plus Jakarta Sans';margin-top:8px;">Kehilangan</span>
+        </button>
+      </div>
+
+      <button onClick="{{ onSendSos }}" style="margin-top:20px;width:100%;border:none;background:#fff;color:#9E2E22;border-radius:16px;padding:22px;font:800 20px 'Plus Jakarta Sans';cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:6px;box-shadow:0 12px 30px rgba(0,0,0,.25);animation:sospulse 2s infinite;">
+        <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2a10 10 0 1 0 10 10"/><path d="M12 2v6M12 22a10 10 0 0 0 7-17"/></svg>
+        Kirim SOS sekarang
+        <span style="font:600 12px 'Plus Jakarta Sans';color:#B4685C;">Lokasi kamu akan dibagikan</span>
+      </button>
+
+      <div style="display:flex;gap:10px;margin-top:12px;">
+        <button style="flex:1;border:none;background:rgba(255,255,255,.12);color:#fff;border-radius:12px;padding:14px;font:700 13px 'Plus Jakarta Sans';cursor:pointer;display:flex;align-items:center;justify-content:center;gap:7px;"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.9v2.9a2 2 0 0 1-2.2 2 19.8 19.8 0 0 1-8.6-3 19.5 19.5 0 0 1-6-6 19.8 19.8 0 0 1-3-8.7A2 2 0 0 1 4.1 2H7a2 2 0 0 1 2 1.7c.1 1 .4 1.9.7 2.8a2 2 0 0 1-.4 2.1L8.1 9.9a16 16 0 0 0 6 6l1.3-1.3a2 2 0 0 1 2.1-.4c.9.3 1.8.6 2.8.7a2 2 0 0 1 1.7 2Z"/></svg>Muthawwif</button>
+        <button style="flex:1;border:none;background:rgba(255,255,255,.12);color:#fff;border-radius:12px;padding:14px;font:700 13px 'Plus Jakarta Sans';cursor:pointer;display:flex;align-items:center;justify-content:center;gap:7px;"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M11 3 4 14h7l-1 7 7-11h-7l1-7Z"/></svg>Petugas 115</button>
+      </div>
+
+      <!-- medical id card -->
+      <div style="margin-top:20px;background:#F5F1E8;border-radius:16px;padding:16px;box-shadow:0 8px 20px rgba(0,0,0,.2);">
+        <div style="display:flex;align-items:center;gap:8px;"><span style="color:#C44536;"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.6l-1-1a5.5 5.5 0 0 0-7.8 7.8l1 1L12 21l7.8-7.6 1-1a5.5 5.5 0 0 0 0-7.8Z"/></svg></span><span style="font:700 13px 'Plus Jakarta Sans';color:#5C3A1E;">Kartu identitas &amp; medis</span></div>
+        <div style="height:1px;background:#E5DDD0;margin:12px 0;"></div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+          <div><div style="font:500 10px 'Plus Jakarta Sans';color:#8C6B4A;text-transform:uppercase;letter-spacing:.06em;">Nama</div><div style="font:700 13px 'Plus Jakarta Sans';color:#1F1B16;margin-top:2px;">H. Hidayat Kurnia</div></div>
+          <div><div style="font:500 10px 'Plus Jakarta Sans';color:#8C6B4A;text-transform:uppercase;letter-spacing:.06em;">Kloter</div><div style="font:700 13px 'JetBrains Mono';color:#1F1B16;margin-top:2px;">SOC-14</div></div>
+          <div><div style="font:500 10px 'Plus Jakarta Sans';color:#8C6B4A;text-transform:uppercase;letter-spacing:.06em;">Gol. darah</div><div style="font:700 13px 'Plus Jakarta Sans';color:#C44536;margin-top:2px;">B (Rh+)</div></div>
+          <div><div style="font:500 10px 'Plus Jakarta Sans';color:#8C6B4A;text-transform:uppercase;letter-spacing:.06em;">No. paspor</div><div style="font:700 13px 'JetBrains Mono';color:#1F1B16;margin-top:2px;">C4821990</div></div>
+          <div style="grid-column:1/3;"><div style="font:500 10px 'Plus Jakarta Sans';color:#8C6B4A;text-transform:uppercase;letter-spacing:.06em;">Riwayat medis</div><div style="font:600 13px 'Plus Jakarta Sans';color:#1F1B16;margin-top:2px;">Hipertensi · alergi penisilin</div></div>
+        </div>
+      </div>
+    </div>
+  </sc-if>
+</div>
+</sc-if>
+
+</div>
+<!-- ===================== /SCROLL ===================== -->
+
+<!-- SOS FAB -->
+<sc-if value="{{ showFab }}" hint-placeholder-val="{{ true }}">
+<button onClick="{{ onSosScreen }}" style="position:absolute;right:16px;bottom:82px;z-index:25;width:60px;height:60px;border-radius:999px;border:none;background:linear-gradient(150deg,#C44536,#9E2E22);color:#fff;cursor:pointer;box-shadow:0 8px 20px rgba(158,46,34,.45);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px;animation:sospulse 2.4s infinite;">
+  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2a10 10 0 1 0 10 10"/><path d="M12 2v6M12 22a10 10 0 0 0 7-17"/></svg>
+  <span style="font:800 10px 'Plus Jakarta Sans';letter-spacing:.05em;">SOS</span>
+</button>
+</sc-if>
+
+<!-- bottom nav -->
+<div style="flex-shrink:0;height:76px;background:rgba(255,255,255,.94);backdrop-filter:blur(10px);border-top:1px solid #ECE5D8;display:grid;grid-template-columns:repeat(5,1fr);padding-bottom:10px;z-index:20;">
+  <button onClick="{{ onBeranda }}" style="border:none;background:transparent;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;cursor:pointer;">
+    <span style="{{ navBeranda }}"><svg width="23" height="23" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9.5 12 3l9 6.5V20a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1Z"/></svg></span>
+    <span style="{{ navBerandaLbl }}">Beranda</span>
+  </button>
+  <button onClick="{{ onMiqat }}" style="border:none;background:transparent;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;cursor:pointer;">
+    <span style="{{ navMiqat }}"><svg width="23" height="23" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="m3 6 6-3 6 3 6-3v15l-6 3-6-3-6 3Z"/><path d="M9 3v15M15 6v15"/></svg></span>
+    <span style="{{ navMiqatLbl }}">Peta</span>
+  </button>
+  <button onClick="{{ onIbadah }}" style="border:none;background:transparent;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;cursor:pointer;">
+    <span style="{{ navIbadah }}"><svg width="23" height="23" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M2 4h6a3 3 0 0 1 3 3v13a2.5 2.5 0 0 0-2.5-2.5H2ZM22 4h-6a3 3 0 0 0-3 3v13a2.5 2.5 0 0 1 2.5-2.5H22Z"/></svg></span>
+    <span style="{{ navIbadahLbl }}">Ibadah</span>
+  </button>
+  <button onClick="{{ onDoa }}" style="border:none;background:transparent;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;cursor:pointer;">
+    <span style="{{ navDoa }}"><svg width="23" height="23" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M11 5.5C9.5 4 7.5 3.5 5 3.5c-1 0-1.5.5-1.5 1.5v12c0 1 .5 1.4 1.5 1.4 2.3 0 4.2.5 6 2 1.8-1.5 3.7-2 6-2 1 0 1.5-.4 1.5-1.4v-12c0-1-.5-1.5-1.5-1.5-2.5 0-4.5.5-6 2M12 6.5v13.5"/></svg></span>
+    <span style="{{ navDoaLbl }}">Doa</span>
+  </button>
+  <button onClick="{{ onJadwal }}" style="border:none;background:transparent;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;cursor:pointer;">
+    <span style="{{ navJadwal }}"><svg width="23" height="23" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4.5" width="18" height="16" rx="2.5"/><path d="M3 9h18M8 2.5v4M16 2.5v4"/></svg></span>
+    <span style="{{ navJadwalLbl }}">Jadwal</span>
+  </button>
+</div>
+
+<!-- home indicator -->
+<div style="position:absolute;bottom:7px;left:50%;transform:translateX(-50%);width:120px;height:5px;border-radius:999px;background:rgba(31,27,22,.28);z-index:30;"></div>
+
+</div>
+</div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:448,&quot;height&quot;:900}}">
+class Component extends DCLogic {
+  state = {
+    screen: 'beranda', mode: 'jamaah',
+    distance: 8600, ihram: false,
+    ibadahTab: 'umrah', openIbadah: 0, openDoa: 0,
+    sosCat: 'medis', sosSent: false,
+  };
+
+  renderVals() {
+    const s = this.state;
+    const scr = s.screen, jamaah = s.mode === 'jamaah';
+    const set = (o) => () => this.setState(o);
+
+    // ---- distance / geofence ----
+    const d = s.distance;
+    const distText = d >= 1000 ? (d / 1000).toFixed(1).replace('.', ',') + ' km'
+                               : Math.round(d / 10) * 10 + ' m';
+    const warn = d <= 3000 && !s.ihram;
+    const ready = s.ihram;
+    const approach = !warn && !s.ihram;
+    const t = Math.max(0, Math.min(1, 1 - d / 12000));
+    // marker travels from outer bottom toward the miqat ring (top ~ -135px from 42%)
+    const angle = -58 * Math.PI / 180;
+    const rOuter = 210, rRing = 135;
+    const r = rOuter - t * (rOuter - rRing);
+    const mx = 50 + (r * Math.cos(angle)) / 3.4;
+    const my = 42 - (r * Math.sin(angle)) / 3.4;
+    const markerStyle = { position: 'absolute', left: mx + '%', top: my + '%',
+      width: 20, height: 20, transform: 'translate(-50%,-50%)',
+      transition: 'left .18s cubic-bezier(.32,.72,0,1), top .18s cubic-bezier(.32,.72,0,1)' };
+    const progStyle = { width: Math.round(t * 100) + '%', height: '100%',
+      background: warn ? '#C44536' : '#4A7C3A', borderRadius: 999,
+      transition: 'width .18s ease' };
+
+    // ihram hero labels
+    const ihramTitle = s.ihram ? 'Sudah berihram' : 'Belum berihram';
+    const ihramBadgeBase = 'font:700 11px "Plus Jakarta Sans";padding:5px 11px;border-radius:999px;';
+    const ihramBadge = s.ihram
+      ? ihramBadgeBase + 'background:#DCEBD3;color:#3A6330;'
+      : ihramBadgeBase + 'background:#F3D9CD;color:#9E2E22;';
+    const ihramBadgeText = s.ihram ? 'AKTIF' : 'SIAPKAN';
+
+    const ihramBtnBase = 'margin-top:12px;width:100%;border:none;border-radius:13px;padding:16px;font:700 15px "Plus Jakarta Sans";cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;box-shadow:0 6px 16px rgba(92,58,30,.16);';
+    const ihramBtn = s.ihram
+      ? ihramBtnBase + 'background:#EFE7D9;color:#8B2E2E;box-shadow:none;border:1px solid #E5DDD0;'
+      : ihramBtnBase + 'background:#8B2E2E;color:#F5F1E8;';
+    const ihramBtnText = s.ihram ? 'Batalkan status ihram' : 'Saya sudah berihram & berniat';
+
+    // ---- mode toggle ----
+    const modeBase = 'border:none;border-radius:999px;padding:6px 13px;font:700 12px "Plus Jakarta Sans";cursor:pointer;';
+    const modeOn = 'background:#8B2E2E;color:#F5F1E8;';
+    const modeOff = 'background:transparent;color:#8C6B4A;';
+    const modeStJamaah = modeBase + (jamaah ? modeOn : modeOff);
+    const modeStMuth = modeBase + (jamaah ? modeOff : modeOn);
+
+    // ---- nav ----
+    const navIcon = (k) => 'display:flex;color:' + (scr === k ? '#8B2E2E' : '#A99476') + ';';
+    const navLbl = (k) => 'font:' + (scr === k ? 700 : 600) + ' 11px "Plus Jakarta Sans";color:' + (scr === k ? '#8B2E2E' : '#A99476') + ';';
+
+    // ---- ibadah data ----
+    const UMRAH = [
+      { n: 1, title: 'Ihram & niat', sub: 'Di miqat, sebelum masuk Makkah', status: 'Selesai', st: 'done',
+        steps: '• Mandi sunnah, wangi sebelum ihram\n• Kenakan 2 kain ihram (pria) / busana syar\u2019i (wanita)\n• Salat sunnah ihram 2 rakaat\n• Berniat umrah di miqat, lalu mulai talbiyah',
+        arabic: '\u0644\u064E\u0628\u0651\u064E\u064A\u0652\u0643\u064E \u0627\u0644\u0644\u0651\u064E\u0647\u064F\u0645\u0651\u064E \u0639\u064F\u0645\u0652\u0631\u064E\u0629\u064B', latin: 'Labbaikallahumma \u02BBumratan' },
+      { n: 2, title: 'Talbiyah', sub: 'Sepanjang jalan menuju Masjidil Haram', status: 'Berjalan', st: 'now',
+        steps: '• Perbanyak talbiyah dengan suara (pria) hingga tiba di Ka\u2019bah\n• Jaga larangan ihram\n• Perbanyak doa & istighfar',
+        arabic: '\u0644\u064E\u0628\u0651\u064E\u064A\u0652\u0643\u064E \u0644\u064E\u0627 \u0634\u064E\u0631\u0650\u064A\u0643\u064E \u0644\u064E\u0643\u064E \u0644\u064E\u0628\u0651\u064E\u064A\u0652\u0643', latin: 'Labbaika laa syariika laka labbaik' },
+      { n: 3, title: 'Tawaf', sub: '7 putaran mengelilingi Ka\u2019bah', status: 'Berikutnya', st: 'next',
+        steps: '• Mulai dari Hajar Aswad, Ka\u2019bah di sebelah kiri\n• 7 putaran berlawanan arah jarum jam\n• Salat 2 rakaat di belakang Maqam Ibrahim\n• Minum air Zamzam',
+        arabic: '\u0631\u064E\u0628\u0651\u064E\u0646\u064E\u0627 \u0622\u062A\u0650\u0646\u064E\u0627 \u0641\u0650\u064A \u0627\u0644\u062F\u0651\u064F\u0646\u0652\u064A\u064E\u0627 \u062D\u064E\u0633\u064E\u0646\u064E\u0629\u064B', latin: 'Rabbanaa aatinaa fid-dunyaa hasanah' },
+      { n: 4, title: 'Sa\u2019i', sub: '7 kali Shafa \u2013 Marwah', status: 'Berikutnya', st: 'next',
+        steps: '• Mulai dari bukit Shafa menuju Marwah\n• 7 kali perjalanan (Shafa\u2192Marwah = 1)\n• Pria berlari kecil di antara pilar hijau\n• Berdoa menghadap Ka\u2019bah di tiap bukit',
+        arabic: '\u0625\u0650\u0646\u0651\u064E \u0627\u0644\u0635\u0651\u064E\u0641\u064E\u0627 \u0648\u064E\u0627\u0644\u0652\u0645\u064E\u0631\u0652\u0648\u064E\u0629\u064E \u0645\u0650\u0646\u0652 \u0634\u064E\u0639\u064E\u0627\u0626\u0650\u0631\u0650 \u0627\u0644\u0644\u0651\u064E\u0647', latin: 'Innash-shafaa wal-marwata min sya\u02BBaa\u2019irillah' },
+      { n: 5, title: 'Tahallul', sub: 'Mencukur / memotong rambut', status: 'Berikutnya', st: 'next',
+        steps: '• Pria: cukur gundul (afdhal) atau potong sebagian\n• Wanita: potong ujung rambut seukuran ruas jari\n• Dengan tahallul, ibadah umrah selesai & larangan ihram gugur',
+        arabic: '\u0627\u0644\u0652\u062D\u064E\u0645\u0652\u062F\u064F \u0644\u0650\u0644\u0651\u064E\u0647\u0650 \u0627\u0644\u0651\u064E\u0630\u0650\u064A \u0642\u064E\u0636\u064E\u0649 \u0639\u064E\u0646\u0651\u064E\u0627 \u0646\u064F\u0633\u064F\u0643\u064E\u0646\u064E\u0627', latin: 'Alhamdulillaahil-ladzii qadhaa \u02BBannaa nusukanaa' },
+    ];
+    const HAJI = [
+      { n: 1, title: 'Ihram haji', sub: '8 Dzulhijjah dari Makkah', status: 'Berikutnya', st: 'next',
+        steps: '• Berihram & niat haji dari tempat menginap\n• Menuju Mina, bermalam (Tarwiyah)\n• Perbanyak talbiyah',
+        arabic: '\u0644\u064E\u0628\u0651\u064E\u064A\u0652\u0643\u064E \u0627\u0644\u0644\u0651\u064E\u0647\u064F\u0645\u0651\u064E \u062D\u064E\u062C\u0651\u064B\u0627', latin: 'Labbaikallahumma hajjan' },
+      { n: 2, title: 'Wukuf di Arafah', sub: '9 Dzulhijjah \u2014 rukun utama', status: 'Berikutnya', st: 'next',
+        steps: '• Hadir di Arafah sejak tergelincir matahari hingga maghrib\n• Perbanyak doa, dzikir, istighfar\n• Puncak ibadah haji \u2014 tak sah haji tanpa wukuf',
+        arabic: '\u0644\u064E\u0627 \u0625\u0650\u0644\u064E\u0670\u0647\u064E \u0625\u0650\u0644\u0651\u064E\u0627 \u0627\u0644\u0644\u0651\u064E\u0647\u064F \u0648\u064E\u062D\u0652\u062F\u064E\u0647\u064F \u0644\u064E\u0627 \u0634\u064E\u0631\u0650\u064A\u0643\u064E \u0644\u064E\u0647', latin: 'Laa ilaaha illallaahu wahdahu laa syariika lah' },
+      { n: 3, title: 'Mabit di Muzdalifah', sub: 'Malam 10 Dzulhijjah', status: 'Berikutnya', st: 'next',
+        steps: '• Bermalam sejenak di Muzdalifah\n• Mengumpulkan batu kerikil untuk lontar jumrah\n• Salat Maghrib & Isya dijamak',
+        arabic: '\u0641\u064E\u0627\u0630\u0652\u0643\u064F\u0631\u064F\u0648\u0627 \u0627\u0644\u0644\u0651\u064E\u0647\u064E \u0639\u0650\u0646\u0652\u062F\u064E \u0627\u0644\u0652\u0645\u064E\u0634\u0652\u0639\u064E\u0631\u0650 \u0627\u0644\u0652\u062D\u064E\u0631\u064E\u0627\u0645', latin: 'Fadzkurullaaha \u02BBindal-masy\u02BBaril-haraam' },
+      { n: 4, title: 'Mina & lontar jumrah', sub: '10\u201313 Dzulhijjah', status: 'Berikutnya', st: 'next',
+        steps: '• Lontar Jumrah Aqabah (10 Dzulhijjah), 7 kerikil\n• Tahallul awal: cukur rambut\n• Hari Tasyriq: lontar 3 jumrah tiap hari\n• Mabit di Mina',
+        arabic: '\u0627\u0644\u0644\u0651\u064E\u0647\u064F \u0623\u064E\u0643\u0652\u0628\u064E\u0631', latin: 'Allaahu akbar (tiap lemparan kerikil)' },
+      { n: 5, title: 'Tawaf Ifadah & Sa\u2019i', sub: 'Rukun haji di Masjidil Haram', status: 'Berikutnya', st: 'next',
+        steps: '• Kembali ke Makkah untuk Tawaf Ifadah\n• Dilanjutkan Sa\u2019i Shafa\u2013Marwah\n• Tahallul tsani: seluruh larangan ihram gugur',
+        arabic: '\u0631\u064E\u0628\u0651\u064E\u0646\u064E\u0627 \u062A\u064E\u0642\u064E\u0628\u0651\u064E\u0644\u0652 \u0645\u0650\u0646\u0651\u064E\u0627', latin: 'Rabbanaa taqabbal minnaa' },
+      { n: 6, title: 'Tawaf Wada\u2019', sub: 'Sebelum meninggalkan Makkah', status: 'Berikutnya', st: 'next',
+        steps: '• Tawaf perpisahan 7 putaran\n• Ibadah penutup sebelum pulang\n• Berdoa memohon diterima & bisa kembali',
+        arabic: '\u0627\u0644\u0644\u0651\u064E\u0647\u064F\u0645\u0651\u064E \u0644\u064E\u0627 \u062A\u064E\u062C\u0652\u0639\u064E\u0644\u0652\u0647\u064F \u0622\u062E\u0650\u0631\u064E \u0627\u0644\u0652\u0639\u064E\u0647\u0652\u062F', latin: 'Allaahumma laa taj\u02BBalhu aakhiral-\u02BBahd' },
+    ];
+    const raw = s.ibadahTab === 'umrah' ? UMRAH : HAJI;
+    const chipFor = (st) => {
+      const b = 'font:700 10px "Plus Jakarta Sans";padding:4px 9px;border-radius:999px;white-space:nowrap;';
+      if (st === 'done') return b + 'background:#DCEBD3;color:#3A6330;';
+      if (st === 'now') return b + 'background:#FAEFC9;color:#97751F;';
+      return b + 'background:#EFE7D9;color:#8C6B4A;';
+    };
+    const numStyleFor = (st, open) => {
+      const b = 'width:34px;height:34px;border-radius:10px;display:flex;align-items:center;justify-content:center;font:700 15px "Plus Jakarta Sans";flex-shrink:0;';
+      if (st === 'done') return b + 'background:#4A7C3A;color:#fff;';
+      if (st === 'now') return b + 'background:#8B2E2E;color:#fff;';
+      return b + (open ? 'background:#8B2E2E;color:#fff;' : 'background:#EFE7D9;color:#8B2E2E;');
+    };
+    const stages = raw.map((x, i) => ({
+      ...x, open: s.openIbadah === i,
+      onClick: () => this.setState({ openIbadah: s.openIbadah === i ? -1 : i }),
+      chip: chipFor(x.st), numStyle: numStyleFor(x.st, s.openIbadah === i),
+    }));
+    const ibadahSub = s.ibadahTab === 'umrah'
+      ? '5 tahap · ketuk untuk membuka langkah & doa'
+      : '6 tahap · ketuk untuk membuka langkah & doa';
+
+    // ---- doa ----
+    const DOA = [
+      { title: 'Niat umrah', when: 'Di miqat', arabic: '\u0644\u064E\u0628\u0651\u064E\u064A\u0652\u0643\u064E \u0627\u0644\u0644\u0651\u064E\u0647\u064F\u0645\u0651\u064E \u0628\u0650\u0639\u064F\u0645\u0652\u0631\u064E\u0629', latin: 'Labbaikallahumma bi \u02BBumrah', arti: 'Aku penuhi panggilan-Mu ya Allah untuk berumrah.' },
+      { title: 'Talbiyah', when: 'Sepanjang perjalanan ihram', arabic: '\u0644\u064E\u0628\u0651\u064E\u064A\u0652\u0643\u064E \u0627\u0644\u0644\u0651\u064E\u0647\u064F\u0645\u0651\u064E \u0644\u064E\u0628\u0651\u064E\u064A\u0652\u0643\u060C \u0644\u064E\u0628\u0651\u064E\u064A\u0652\u0643\u064E \u0644\u064E\u0627 \u0634\u064E\u0631\u0650\u064A\u0643\u064E \u0644\u064E\u0643\u064E \u0644\u064E\u0628\u0651\u064E\u064A\u0652\u0643', latin: 'Labbaikallahumma labbaik, labbaika laa syariika laka labbaik', arti: 'Aku penuhi panggilan-Mu, tiada sekutu bagi-Mu, aku penuhi panggilan-Mu.' },
+      { title: 'Doa masuk Masjidil Haram', when: 'Saat memasuki masjid', arabic: '\u0627\u0644\u0644\u0651\u064E\u0647\u064F\u0645\u0651\u064E \u0627\u0641\u0652\u062A\u064E\u062D\u0652 \u0644\u0650\u064A \u0623\u064E\u0628\u0652\u0648\u064E\u0627\u0628\u064E \u0631\u064E\u062D\u0652\u0645\u064E\u062A\u0650\u0643', latin: 'Allaahummaftah lii abwaaba rahmatik', arti: 'Ya Allah, bukakanlah untukku pintu-pintu rahmat-Mu.' },
+      { title: 'Doa melihat Ka\u2019bah', when: 'Pertama melihat Ka\u2019bah', arabic: '\u0627\u0644\u0644\u0651\u064E\u0647\u064F\u0645\u0651\u064E \u0632\u0650\u062F\u0652 \u0647\u064E\u0630\u064E\u0627 \u0627\u0644\u0652\u0628\u064E\u064A\u0652\u062A\u064E \u062A\u064E\u0634\u0652\u0631\u0650\u064A\u0641\u064B\u0627 \u0648\u064E\u062A\u064E\u0639\u0652\u0638\u0650\u064A\u0645\u064B\u0627', latin: 'Allaahumma zid haadzal-baita tasyriifan wa ta\u02BBzhiiman', arti: 'Ya Allah, tambahkanlah kemuliaan dan keagungan pada Baitullah ini.' },
+      { title: 'Doa sa\u2019i di Shafa & Marwah', when: 'Di atas kedua bukit', arabic: '\u0625\u0650\u0646\u0651\u064E \u0627\u0644\u0635\u0651\u064E\u0641\u064E\u0627 \u0648\u064E\u0627\u0644\u0652\u0645\u064E\u0631\u0652\u0648\u064E\u0629\u064E \u0645\u0650\u0646\u0652 \u0634\u064E\u0639\u064E\u0627\u0626\u0650\u0631\u0650 \u0627\u0644\u0644\u0651\u064E\u0647', latin: 'Innash-shafaa wal-marwata min sya\u02BBaa\u2019irillah', arti: 'Sesungguhnya Shafa dan Marwah termasuk syiar-syiar Allah.' },
+      { title: 'Doa wukuf di Arafah', when: '9 Dzulhijjah', arabic: '\u0644\u064E\u0627 \u0625\u0650\u0644\u064E\u0670\u0647\u064E \u0625\u0650\u0644\u0651\u064E\u0627 \u0627\u0644\u0644\u0651\u064E\u0647\u064F \u0648\u064E\u062D\u0652\u062F\u064E\u0647\u064F \u0644\u064E\u0627 \u0634\u064E\u0631\u0650\u064A\u0643\u064E \u0644\u064E\u0647', latin: 'Laa ilaaha illallaahu wahdahu laa syariika lah', arti: 'Tiada Tuhan selain Allah, Yang Maha Esa, tiada sekutu bagi-Nya.' },
+    ];
+    const doaList = DOA.map((x, i) => ({
+      ...x, open: s.openDoa === i,
+      onClick: () => this.setState({ openDoa: s.openDoa === i ? -1 : i }),
+      caret: 'display:flex;transition:transform .2s;transform:rotate(' + (s.openDoa === i ? 180 : 0) + 'deg);',
+    }));
+
+    // ---- jadwal ----
+    const dotDone = 'width:14px;height:14px;border-radius:999px;background:#4A7C3A;border:3px solid #DCEBD3;';
+    const dotNow = 'width:14px;height:14px;border-radius:999px;background:#8B2E2E;border:3px solid #F3D9CD;';
+    const dotNext = 'width:14px;height:14px;border-radius:999px;background:#D8CBB2;border:3px solid #EFE7D9;';
+    const jChip = (st) => {
+      const b = 'font:700 10px "Plus Jakarta Sans";padding:3px 8px;border-radius:999px;white-space:nowrap;flex-shrink:0;';
+      if (st === 'done') return b + 'background:#DCEBD3;color:#3A6330;';
+      if (st === 'now') return b + 'background:#FAEFC9;color:#97751F;';
+      return b + 'background:#EFE7D9;color:#8C6B4A;';
+    };
+    const jadwal = [
+      { time: '13 JUL · 21:00', title: 'Tiba di Madinah', place: 'Bandara AMAA', status: 'Selesai', st: 'done' },
+      { time: '14 JUL · 08:30', title: 'Berangkat ke miqat Bir Ali', place: 'Dzulhulaifah', status: 'Hari ini', st: 'now' },
+      { time: '14 JUL · 14:00', title: 'Umrah wajib', place: 'Masjidil Haram', status: 'Nanti', st: 'next' },
+      { time: '08 DZH · 06:00', title: 'Ihram haji \u2192 Mina', place: 'Mina', status: 'Nanti', st: 'next' },
+      { time: '09 DZH · 12:00', title: 'Wukuf di Arafah', place: 'Padang Arafah', status: 'Nanti', st: 'next' },
+      { time: '10 DZH · 05:00', title: 'Lontar Jumrah Aqabah', place: 'Mina', status: 'Nanti', st: 'next' },
+    ].map((x) => ({ ...x, dot: x.st === 'done' ? dotDone : x.st === 'now' ? dotNow : dotNext, chip: jChip(x.st) }));
+
+    // ---- rombongan (muthawwif) ----
+    const avB = 'width:38px;height:38px;border-radius:999px;display:flex;align-items:center;justify-content:center;font:700 13px "Plus Jakarta Sans";flex-shrink:0;';
+    const rChip = (st) => {
+      const b = 'font:700 10px "Plus Jakarta Sans";padding:4px 10px;border-radius:999px;white-space:nowrap;';
+      if (st === 'sos') return b + 'background:#F3D9CD;color:#9E2E22;';
+      if (st === 'attn') return b + 'background:#FAEFC9;color:#97751F;';
+      return b + 'background:#DCEBD3;color:#3A6330;';
+    };
+    const rombongan = [
+      { init: 'RH', name: 'Ibu Rohmah', place: 'SOS medis · dekat Marwah', status: 'SOS', st: 'sos', av: '#C44536' },
+      { init: 'SM', name: 'Pak Sumadi', place: 'Terpisah dari rombongan', status: 'Perhatian', st: 'attn', av: '#D4A437' },
+      { init: 'AH', name: 'H. Hidayat', place: 'Menuju miqat Bir Ali', status: 'Aman', st: 'ok', av: '#8B2E2E' },
+      { init: 'SR', name: 'Hj. Sari', place: 'Di hotel · Ajyad', status: 'Aman', st: 'ok', av: '#4A7C3A' },
+      { init: 'MZ', name: 'Pak Zainal', place: 'Masjidil Haram', status: 'Aman', st: 'ok', av: '#5C3A1E' },
+    ].map((x) => ({ ...x, avStyle: avB + 'background:' + x.av + ';color:' + (x.st === 'attn' ? '#3A2A1E' : '#F5F1E8') + ';', chip: rChip(x.st) }));
+
+    // ---- sos categories ----
+    const catSt = (id) => {
+      const on = s.sosCat === id;
+      return 'border:1px solid ' + (on ? 'rgba(255,255,255,.9)' : 'rgba(255,255,255,.22)') + ';background:' + (on ? 'rgba(255,255,255,.16)' : 'rgba(255,255,255,.06)') + ';color:#fff;opacity:' + (on ? 1 : 0.72) + ';border-radius:14px;padding:15px 8px;cursor:pointer;display:flex;flex-direction:column;align-items:center;';
+    };
+
+    return {
+      // screen flags
+      isMiqat: scr === 'miqat', isIbadah: scr === 'ibadah', isDoa: scr === 'doa',
+      isJadwal: scr === 'jadwal', isSos: scr === 'sos',
+      homeJamaah: scr === 'beranda' && jamaah,
+      homeMuth: scr === 'beranda' && !jamaah,
+      showFab: scr !== 'sos', sosSent: s.sosSent, sosIdle: !s.sosSent,
+      // nav handlers
+      onBeranda: set({ screen: 'beranda' }), onMiqat: set({ screen: 'miqat' }),
+      onIbadah: set({ screen: 'ibadah' }), onDoa: set({ screen: 'doa' }),
+      onJadwal: set({ screen: 'jadwal' }), onSosScreen: set({ screen: 'sos' }),
+      // nav styles
+      navBeranda: navIcon('beranda'), navBerandaLbl: navLbl('beranda'),
+      navMiqat: navIcon('miqat'), navMiqatLbl: navLbl('miqat'),
+      navIbadah: navIcon('ibadah'), navIbadahLbl: navLbl('ibadah'),
+      navDoa: navIcon('doa'), navDoaLbl: navLbl('doa'),
+      navJadwal: navIcon('jadwal'), navJadwalLbl: navLbl('jadwal'),
+      // mode
+      onJamaah: set({ mode: 'jamaah', screen: 'beranda' }),
+      onMuth: set({ mode: 'muthawwif', screen: 'beranda' }),
+      modeStJamaah, modeStMuth,
+      // geofence
+      distText, distNum: d, warn, ready, approach, markerStyle, progStyle,
+      onDist: (e) => this.setState({ distance: +e.target.value }),
+      ihramTitle, ihramBadge, ihramBadgeText,
+      ihramBtn, ihramBtnText, onIhram: () => this.setState({ ihram: !s.ihram }),
+      // ibadah
+      stages, ibadahSub,
+      tabUmrahStyle: 'flex:1;border:none;border-radius:9px;padding:10px;font:700 14px "Plus Jakarta Sans";cursor:pointer;' + (s.ibadahTab === 'umrah' ? 'background:#8B2E2E;color:#F5F1E8;' : 'background:transparent;color:#8C6B4A;'),
+      tabHajiStyle: 'flex:1;border:none;border-radius:9px;padding:10px;font:700 14px "Plus Jakarta Sans";cursor:pointer;' + (s.ibadahTab === 'haji' ? 'background:#8B2E2E;color:#F5F1E8;' : 'background:transparent;color:#8C6B4A;'),
+      onUmrah: () => this.setState({ ibadahTab: 'umrah', openIbadah: 0 }),
+      onHaji: () => this.setState({ ibadahTab: 'haji', openIbadah: 0 }),
+      // doa
+      doaList,
+      // jadwal
+      jadwal,
+      // muthawwif
+      rombongan,
+      // sos
+      catStMedis: catSt('medis'), catStTersesat: catSt('tersesat'), catStKehilangan: catSt('kehilangan'),
+      onCatMedis: set({ sosCat: 'medis' }), onCatTersesat: set({ sosCat: 'tersesat' }), onCatKehilangan: set({ sosCat: 'kehilangan' }),
+      onSendSos: () => this.setState({ sosSent: true }),
+      onCancelSos: () => this.setState({ sosSent: false }),
+    };
+  }
+}
+</script>
+</body>
+</html>

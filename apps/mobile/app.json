@@ -1,0 +1,43 @@
+{
+  "expo": {
+    "name": "Mabrur",
+    "slug": "mabrur",
+    "version": "0.1.0",
+    "scheme": "mabrur",
+    "platforms": [
+      "ios",
+      "android"
+    ],
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "light",
+    "newArchEnabled": true,
+    "splash": {
+      "backgroundColor": "#F5F1E8"
+    },
+    "ios": {
+      "bundleIdentifier": "app.mabrur",
+      "supportsTablet": true,
+      "infoPlist": {
+        "NSLocationWhenInUseUsageDescription": "Mabrur memerlukan lokasi untuk fitur geofence miqat dan SOS.",
+        "NSLocationAlwaysUsageDescription": "Mabrur memerlukan lokasi di latar belakang untuk peringatan batas miqat."
+      }
+    },
+    "android": {
+      "package": "app.mabrur",
+      "adaptiveIcon": {
+        "backgroundColor": "#8B2E2E"
+      }
+    },
+    "plugins": [
+      "expo-router",
+      "expo-secure-store",
+      "expo-sqlite",
+      "expo-font",
+      "expo-splash-screen",
+      "expo-status-bar"
+    ],
+    "extra": {
+      "apiUrl": "http://localhost:3000"
+    }
+  }
+}

@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 120" width="120" height="120">
+  
+  <defs>
+    <pattern id="parang" x="0" y="0" width="60" height="60" patternUnits="userSpaceOnUse" patternTransform="rotate(-45)">
+      <g fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round">
+        <path d="M 0 30 Q 15 15 30 30 Q 45 45 60 30"></path>
+        <path d="M 0 50 Q 15 35 30 50 Q 45 65 60 50" opacity="0.6"></path>
+        <path d="M 0 10 Q 15 -5 30 10 Q 45 25 60 10" opacity="0.6"></path>
+      </g>
+    </pattern>
+  </defs>
+  <rect width="120" height="120" fill="url(#parang)" color="#8B2E2E"></rect>
+</svg>
