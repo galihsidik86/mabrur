@@ -1,8 +1,7 @@
 import app from './app';
 import { config } from './config';
+import { logger } from './logger';
 
 app.listen(config.PORT, () => {
-  console.log(
-    `[mabrur] Server berjalan di port ${config.PORT} (${config.NODE_ENV})`,
-  );
+  logger.info({ port: config.PORT, env: config.NODE_ENV }, 'Server Mabrur berjalan');
 });

@@ -3,6 +3,7 @@ import cors from 'cors';
 import helmet from 'helmet';
 import compression from 'compression';
 import morgan from 'morgan';
+import { logger } from './logger';
 import { errorHandler } from './middleware/error-handler';
 import authRoutes from './routes/auth';
 import userRoutes from './routes/users';

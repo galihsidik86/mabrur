@@ -5,6 +5,10 @@ import { db } from '../db';
 import { config } from '../config';
 import { AppError } from '../middleware/error-handler';
 import { audit } from './audit.service';
+import { logger } from '../logger';
+
+const loginFailures = new Map<string, { count: number; last: number }>();
+const ALERT_THRESHOLD = 5;
 
 const ACCESS_EXPIRY = '15m';
 const REFRESH_EXPIRY_DAYS = 30;
@@ -13,14 +17,29 @@ function hashToken(token: string): string {
   return crypto.createHash('sha256').update(token).digest('hex');
 }
 
+function trackLoginFailure(phone: string) {
+  const now = Date.now();
+  const entry = loginFailures.get(phone) || { count: 0, last: now };
+  // Reset if last failure was > 15 minutes ago
+  if (now - entry.last > 15 * 60 * 1000) entry.count = 0;
+  entry.count++;
+  entry.last = now;
+  loginFailures.set(phone, entry);
+  if (entry.count >= ALERT_THRESHOLD) {
+    logger.warn({ phone, attempts: entry.count }, 'SECURITY: Login gagal berulang — kemungkinan brute force');
+  }
+}
+
 export async function login(phone: string, password: string) {
   const user = await db('users').where({ phone, is_active: true }).first();
   if (!user) {
+    trackLoginFailure(phone);
     throw new AppError(401, 'Nomor HP atau password salah', 'AUTH_FAILED');
   }
 
   const valid = await bcrypt.compare(password, user.password_hash);
   if (!valid) {
+    trackLoginFailure(phone);
     throw new AppError(401, 'Nomor HP atau password salah', 'AUTH_FAILED');
   }
 
@@ -70,9 +89,7 @@ export async function refresh(refreshToken: string) {
     throw new AppError(401, 'Pengguna tidak ditemukan atau tidak aktif', 'TOKEN_INVALID');
   }
 
-  // Rotate: hapus token lama, buat baru
-  await db('refresh_tokens').where('id', stored.id).delete();
-
+  // Rotate: hapus token lama, buat baru (atomic transaction)
   const accessToken = jwt.sign(
     { sub: user.id, role: user.role },
     config.JWT_SECRET,
@@ -84,10 +101,13 @@ export async function refresh(refreshToken: string) {
     Date.now() + REFRESH_EXPIRY_DAYS * 24 * 60 * 60 * 1000,
   );
 
-  await db('refresh_tokens').insert({
-    user_id: user.id,
-    token_hash: hashToken(newRefreshToken),
-    expires_at: expiresAt,
+  await db.transaction(async (trx) => {
+    await trx('refresh_tokens').where('id', stored.id).delete();
+    await trx('refresh_tokens').insert({
+      user_id: user.id,
+      token_hash: hashToken(newRefreshToken),
+      expires_at: expiresAt,
+    });
   });
 
   return {
