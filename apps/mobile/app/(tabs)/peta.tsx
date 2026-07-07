@@ -153,17 +153,23 @@ export default function PetaScreen() {
 
   return (
     <SafeAreaView style={s.safe} edges={['top']}>
-      {/* Map Tab Selector */}
-      <ScrollView horizontal showsHorizontalScrollIndicator={false}
-        style={{ maxHeight: 48, borderBottomWidth: 1, borderBottomColor: colors.border }}
-        contentContainerStyle={{ paddingHorizontal: 12, paddingVertical: 8, gap: 6 }}>
-        {mapTabs.map((t) => (
-          <TouchableOpacity key={t.id} onPress={() => setMapTab(t.id)}
-            style={{ paddingHorizontal: 16, paddingVertical: 7, borderRadius: 999, backgroundColor: mapTab === t.id ? colors.primary : colors.card, borderWidth: 1, borderColor: mapTab === t.id ? colors.primary : colors.border }}>
-            <Text style={{ fontSize: 13, fontFamily: 'PlusJakartaSans_700Bold', color: mapTab === t.id ? '#fff' : colors.textMuted }}>{t.label}</Text>
-          </TouchableOpacity>
-        ))}
-      </ScrollView>
+      {/* Map Tab Selector — fixed di atas, tidak tertutup maps */}
+      <View style={{
+        backgroundColor: colors.bg, zIndex: 10, elevation: 4,
+        borderBottomWidth: 1, borderBottomColor: colors.border,
+        shadowColor: '#000', shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.08, shadowRadius: 4,
+      }}>
+        <ScrollView horizontal showsHorizontalScrollIndicator={false}
+          contentContainerStyle={{ paddingHorizontal: 12, paddingVertical: 10, gap: 6 }}>
+          {mapTabs.map((t) => (
+            <TouchableOpacity key={t.id} onPress={() => setMapTab(t.id)}
+              style={{ paddingHorizontal: 16, paddingVertical: 8, borderRadius: 999, backgroundColor: mapTab === t.id ? colors.primary : colors.card, borderWidth: 1, borderColor: mapTab === t.id ? colors.primary : colors.border }}>
+              <Text style={{ fontSize: 13, fontFamily: 'PlusJakartaSans_700Bold', color: mapTab === t.id ? '#fff' : colors.textMuted }}>{t.label}</Text>
+            </TouchableOpacity>
+          ))}
+        </ScrollView>
+      </View>
 
       {/* ===== REAL MAP ===== */}
       {mapTab === 'realmap' && (
