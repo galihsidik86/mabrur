@@ -1,6 +1,7 @@
 import { db } from '../db';
 import { AppError } from '../middleware/error-handler';
 import { audit } from './audit.service';
+import { notifyGroupMuthawwif } from './push.service';
 
 const FIELDS = [
   'sos_alerts.id', 'sos_alerts.user_id', 'sos_alerts.group_id',
@@ -34,6 +35,18 @@ export async function create(
     .returning('*');
 
   await audit(userId, 'sos.create', 'sos_alerts', sos.id, { category: data.category });
+
+  // Push notification ke muthawwif
+  if (membership?.group_id) {
+    const user = await db('users').where('id', userId).select('name').first();
+    const catLabel: Record<string, string> = { medis: 'Medis', tersesat: 'Tersesat', kehilangan: 'Kehilangan' };
+    notifyGroupMuthawwif(
+      membership.group_id,
+      'SOS Darurat',
+      `${user?.name || 'Jamaah'} butuh bantuan (${catLabel[data.category] || data.category})`,
+      { type: 'sos', sosId: sos.id },
+    ).catch(() => {});
+  }
   return sos;
 }
 

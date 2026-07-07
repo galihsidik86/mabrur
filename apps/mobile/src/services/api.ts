@@ -134,6 +134,12 @@ export const api = {
   getGroupSos: (groupId: string) =>
     request<any[]>(`/groups/${groupId}/sos`),
 
+  registerPushToken: (token: string) =>
+    request<any>('/auth/push-token', {
+      method: 'POST',
+      body: JSON.stringify({ token }),
+    }),
+
   getMemberStatuses: (groupId: string) =>
     request<{
       stats: { total: number; safe: number; attention: number };

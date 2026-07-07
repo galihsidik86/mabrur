@@ -6,11 +6,12 @@
     "scheme": "mabrur",
     "platforms": [
       "ios",
-      "android"
+      "android",
+      "web"
     ],
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
-    "newArchEnabled": true,
+    "newArchEnabled": false,
     "splash": {
       "backgroundColor": "#F5F1E8"
     },
@@ -37,7 +38,7 @@
       "expo-status-bar"
     ],
     "extra": {
-      "apiUrl": "http://localhost:3000"
+      "apiUrl": "https://disobey-scavenger-darwinism.ngrok-free.dev"
     }
   }
 }

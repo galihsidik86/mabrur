@@ -5,6 +5,7 @@ import { validate } from '../middleware/validate';
 import { authenticate } from '../middleware/auth';
 import * as authService from '../services/auth.service';
 import * as userService from '../services/user.service';
+import { savePushToken } from '../services/push.service';
 
 const router = Router();
 
@@ -76,6 +77,19 @@ router.get(
     try {
       const user = await userService.getUser(req.auth!.sub);
       res.json({ data: user });
+    } catch (err) {
+      next(err);
+    }
+  },
+);
+
+router.post(
+  '/push-token',
+  authenticate,
+  async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      await savePushToken(req.auth!.sub, req.body.token);
+      res.json({ data: { ok: true } });
     } catch (err) {
       next(err);
     }
