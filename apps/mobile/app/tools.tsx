@@ -10,7 +10,12 @@ import { Magnetometer } from 'expo-sensors';
 import { activateKeepAwakeAsync, deactivateKeepAwake } from 'expo-keep-awake';
 import { colors, radius } from '../src/theme';
 import { api } from '../src/services/api';
-import { getPosition } from '../src/services/location';
+import { getPosition, requestPermission } from '../src/services/location';
+import {
+  TawafTracker, SaiTracker, detectNearestJamarat,
+  watchSacredLocation, KAABAH, SAFA, MARWAH,
+  type SaiZone,
+} from '../src/services/sacred-zones';
 
 type Tab = 'hub' | 'tawaf' | 'sai' | 'tasbih' | 'jumrah' | 'wukuf' | 'qiblat' | 'shalat' | 'checklist' | 'kurs' | 'frasa' | 'kesehatan';
 
@@ -57,26 +62,131 @@ const rc = StyleSheet.create({
   doneText: { fontSize: 14, fontFamily: 'PlusJakartaSans_700Bold', color: colors.greenDark },
 });
 
-// ==================== TAWAF / SAI ====================
+// ==================== TAWAF (GPS-ASSISTED) ====================
 function TawafSaiTab({ type }: { type: 'tawaf' | 'sai' }) {
   const [count, setCount] = useState(0);
-  const label = type === 'tawaf' ? 'Putaran Tawaf' : 'Perjalanan Sa\'i';
-  const direction = type === 'sai' ? (count % 2 === 0 ? 'Shafa → Marwah' : 'Marwah → Shafa') : `Putaran ${count + 1}`;
+  const [autoMode, setAutoMode] = useState(false);
+  const [gpsStatus, setGpsStatus] = useState<string>('');
+  const [saiZone, setSaiZone] = useState<SaiZone>('between');
+  const trackerRef = useRef<TawafTracker | SaiTracker | null>(null);
+  const watchRef = useRef<{ remove: () => void } | null>(null);
 
-  useEffect(() => { activateKeepAwakeAsync('counter'); return () => { deactivateKeepAwake('counter'); }; }, []);
+  const label = type === 'tawaf' ? 'Putaran Tawaf' : "Perjalanan Sa'i";
+  const direction = type === 'sai'
+    ? (count % 2 === 0 ? 'Shafa → Marwah' : 'Marwah → Shafa')
+    : `Putaran ${count + 1}`;
+
+  useEffect(() => {
+    activateKeepAwakeAsync('counter');
+    return () => { deactivateKeepAwake('counter'); watchRef.current?.remove(); };
+  }, []);
+
+  const startAuto = async () => {
+    const granted = await requestPermission();
+    if (!granted) { setGpsStatus('Izin lokasi ditolak'); return; }
+
+    setAutoMode(true);
+    setGpsStatus('Mencari GPS...');
+
+    if (type === 'tawaf') {
+      const tracker = new TawafTracker();
+      tracker.onChange = (rounds) => {
+        setCount(rounds);
+        Vibration.vibrate([0, 200, 100, 200]);
+      };
+      trackerRef.current = tracker;
+
+      watchRef.current = watchSacredLocation((lat, lng) => {
+        tracker.update(lat, lng);
+        const dist = Math.round(
+          Math.sqrt((lat - KAABAH.lat) ** 2 + (lng - KAABAH.lng) ** 2) * 111000
+        );
+        setGpsStatus(`GPS aktif · ${dist}m dari Ka'bah`);
+      });
+    } else {
+      const tracker = new SaiTracker();
+      tracker.onChange = (legs, zone) => {
+        setCount(legs);
+        setSaiZone(zone);
+        Vibration.vibrate([0, 200, 100, 200]);
+      };
+      trackerRef.current = tracker;
+
+      watchRef.current = watchSacredLocation((lat, lng) => {
+        tracker.update(lat, lng);
+        const dS = Math.round(
+          Math.sqrt((lat - SAFA.lat) ** 2 + (lng - SAFA.lng) ** 2) * 111000
+        );
+        const dM = Math.round(
+          Math.sqrt((lat - MARWAH.lat) ** 2 + (lng - MARWAH.lng) ** 2) * 111000
+        );
+        setGpsStatus(`Safa: ${dS}m · Marwah: ${dM}m`);
+      });
+    }
+  };
+
+  const stopAuto = () => {
+    watchRef.current?.remove();
+    watchRef.current = null;
+    setAutoMode(false);
+    setGpsStatus('');
+  };
 
   return (
     <View style={tc.wrap}>
+      {/* Mode toggle */}
+      <View style={tc.modeToggle}>
+        <TouchableOpacity
+          style={[tc.modeToggleBtn, !autoMode && tc.modeToggleBtnActive]}
+          onPress={stopAuto}>
+          <Ionicons name="hand-left" size={16} color={!autoMode ? '#fff' : colors.textMuted} />
+          <Text style={[tc.modeToggleText, !autoMode && { color: '#fff' }]}>Manual</Text>
+        </TouchableOpacity>
+        <TouchableOpacity
+          style={[tc.modeToggleBtn, autoMode && tc.modeToggleBtnActive]}
+          onPress={startAuto}>
+          <Ionicons name="navigate" size={16} color={autoMode ? '#fff' : colors.textMuted} />
+          <Text style={[tc.modeToggleText, autoMode && { color: '#fff' }]}>Auto GPS</Text>
+        </TouchableOpacity>
+      </View>
+
+      {autoMode && gpsStatus ? (
+        <View style={tc.gpsBar}>
+          <View style={tc.gpsDot} />
+          <Text style={tc.gpsText}>{gpsStatus}</Text>
+        </View>
+      ) : null}
+
+      {autoMode && type === 'sai' && saiZone !== 'between' ? (
+        <View style={[tc.zoneIndicator, { backgroundColor: saiZone === 'safa' ? colors.greenLight : colors.goldLight }]}>
+          <Text style={{ fontSize: 14, fontFamily: 'PlusJakartaSans_700Bold', color: saiZone === 'safa' ? colors.greenDark : '#97751F' }}>
+            📍 Kamu di {saiZone === 'safa' ? 'Bukit Safa' : 'Bukit Marwah'}
+          </Text>
+        </View>
+      ) : null}
+
       <RingCounter count={count} target={7} label={label}
         arabic={type === 'tawaf' ? 'طَوَاف' : 'سَعْي'}
         subtitle={count < 7 ? direction : undefined}
-        onTap={() => { if (count < 7) { setCount(count + 1); Vibration.vibrate(50); if (count + 1 >= 7) Vibration.vibrate([0, 200, 100, 200]); } }}
+        onTap={() => {
+          if (autoMode) return; // auto mode handles counting
+          if (count < 7) { setCount(count + 1); Vibration.vibrate(50); if (count + 1 >= 7) Vibration.vibrate([0, 200, 100, 200]); }
+        }}
       />
+
+      {autoMode && (
+        <Text style={tc.autoHint}>
+          {type === 'tawaf'
+            ? 'Putaran terhitung otomatis saat melewati Hajar Aswad'
+            : 'Perjalanan terhitung otomatis saat sampai di Safa/Marwah'}
+        </Text>
+      )}
+
       <View style={tc.btns}>
         <TouchableOpacity style={tc.undoBtn} onPress={() => setCount(Math.max(0, count - 1))}>
           <Ionicons name="arrow-undo" size={18} color={colors.textMuted} /><Text style={tc.undoBtnText}>Undo</Text>
         </TouchableOpacity>
-        <TouchableOpacity style={tc.undoBtn} onPress={() => setCount(0)}>
+        <TouchableOpacity style={tc.undoBtn} onPress={() => { setCount(0); if (type === 'tawaf' && trackerRef.current instanceof TawafTracker) trackerRef.current.reset(); if (type === 'sai' && trackerRef.current instanceof SaiTracker) trackerRef.current.reset(); }}>
           <Ionicons name="refresh" size={18} color={colors.textMuted} /><Text style={tc.undoBtnText}>Reset</Text>
         </TouchableOpacity>
       </View>
@@ -147,12 +257,31 @@ const JAMARAT = [
 
 function JumrahTab() {
   const [day, setDay] = useState(0);
-  // day 0 = 10 Dzulhijjah (only Aqabah), days 1-3 = 11-13 (all 3)
   const [stones, setStones] = useState(() =>
     Array.from({ length: 4 }, () => Array.from({ length: 3 }, () => 0))
   );
+  const [nearestJam, setNearestJam] = useState<string | null>(null);
+  const [autoMode, setAutoMode] = useState(false);
+  const watchRef = useRef<{ remove: () => void } | null>(null);
 
-  useEffect(() => { activateKeepAwakeAsync('jumrah'); return () => { deactivateKeepAwake('jumrah'); }; }, []);
+  useEffect(() => {
+    activateKeepAwakeAsync('jumrah');
+    return () => { deactivateKeepAwake('jumrah'); watchRef.current?.remove(); };
+  }, []);
+
+  const startAutoJumrah = async () => {
+    const granted = await requestPermission();
+    if (!granted) return;
+    setAutoMode(true);
+    watchRef.current = watchSacredLocation((lat, lng) => {
+      const nearest = detectNearestJamarat(lat, lng);
+      if (nearest) {
+        setNearestJam(`📍 Dekat ${nearest.name} (${nearest.distance}m)`);
+      } else {
+        setNearestJam(null);
+      }
+    });
+  };
 
   const throwStone = (j: number) => {
     const next = stones.map((d) => [...d]);
@@ -165,6 +294,20 @@ function JumrahTab() {
 
   return (
     <View style={tc.wrap}>
+      {/* Auto GPS toggle */}
+      {!autoMode ? (
+        <TouchableOpacity style={[tc.modeToggleBtn, { alignSelf: 'center', marginBottom: 12 }]} onPress={startAutoJumrah}>
+          <Ionicons name="navigate" size={14} color={colors.textMuted} />
+          <Text style={tc.modeToggleText}>Aktifkan deteksi jamarat otomatis</Text>
+        </TouchableOpacity>
+      ) : nearestJam ? (
+        <View style={[tc.gpsBar, { backgroundColor: colors.goldLight }]}>
+          <Text style={[tc.gpsText, { color: '#97751F' }]}>{nearestJam}</Text>
+        </View>
+      ) : (
+        <View style={tc.gpsBar}><View style={tc.gpsDot} /><Text style={tc.gpsText}>GPS aktif · mendeteksi jamarat terdekat...</Text></View>
+      )}
+
       <View style={{ flexDirection: 'row', gap: 6, justifyContent: 'center', marginBottom: 16 }}>
         {dayLabels.map((d, i) => (
           <TouchableOpacity key={i} onPress={() => setDay(i)}
@@ -586,6 +729,15 @@ const tc = StyleSheet.create({
   primaryBtn: { backgroundColor: colors.primary, borderRadius: radius.md, padding: 14, alignItems: 'center' },
   primaryBtnText: { fontSize: 15, fontFamily: 'PlusJakartaSans_700Bold', color: colors.textOnPrimary },
   resetText: { textAlign: 'center', marginTop: 16, fontSize: 13, fontFamily: 'PlusJakartaSans_600SemiBold', color: colors.textFaint },
+  modeToggle: { flexDirection: 'row', backgroundColor: colors.surface, borderRadius: 999, padding: 3, gap: 2, marginBottom: 12, alignSelf: 'center' },
+  modeToggleBtn: { flexDirection: 'row', alignItems: 'center', gap: 5, paddingHorizontal: 16, paddingVertical: 8, borderRadius: 999 },
+  modeToggleBtnActive: { backgroundColor: colors.primary },
+  modeToggleText: { fontSize: 12, fontFamily: 'PlusJakartaSans_700Bold', color: colors.textMuted },
+  gpsBar: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, backgroundColor: colors.greenLight, borderRadius: 10, padding: 10, marginBottom: 12 },
+  gpsDot: { width: 8, height: 8, borderRadius: 999, backgroundColor: colors.green },
+  gpsText: { fontSize: 12, fontFamily: 'PlusJakartaSans_600SemiBold', color: colors.greenDark },
+  zoneIndicator: { borderRadius: 10, padding: 10, marginBottom: 8, alignItems: 'center' },
+  autoHint: { fontSize: 12, fontFamily: 'PlusJakartaSans_500Medium', color: colors.textFaint, textAlign: 'center', marginTop: 12, fontStyle: 'italic' },
   checkProgress: { fontSize: 14, fontFamily: 'PlusJakartaSans_700Bold', color: colors.primary, textAlign: 'center', marginBottom: 12 },
   input: { backgroundColor: colors.card, borderWidth: 1, borderColor: colors.border, borderRadius: 10, paddingHorizontal: 14, paddingVertical: 10, fontSize: 14, fontFamily: 'PlusJakartaSans_500Medium', color: colors.text },
   inputLabel: { fontSize: 12, fontFamily: 'PlusJakartaSans_600SemiBold', color: colors.textMuted, marginBottom: 4, marginTop: 12 },
