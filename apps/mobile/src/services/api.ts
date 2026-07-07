@@ -172,6 +172,31 @@ export const api = {
   updateSchedule: (id: string, data: any) =>
     request<any>(`/schedules/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
 
+  // Worship tools
+  createCounter: (type: string, target?: number, label?: string) =>
+    request<any>('/counter', { method: 'POST', body: JSON.stringify({ type, target, label }) }),
+  incrementCounter: (id: string) =>
+    request<any>(`/counter/${id}`, { method: 'PATCH' }),
+  getChecklist: () => request<any[]>('/checklist'),
+  addChecklist: (text: string) =>
+    request<any>('/checklist', { method: 'POST', body: JSON.stringify({ text }) }),
+  toggleChecklist: (id: string, checked: boolean) =>
+    request<any>(`/checklist/${id}`, { method: 'PATCH', body: JSON.stringify({ checked }) }),
+  getPhrases: () => request<any[]>('/phrases'),
+  getHealthTips: () => request<any[]>('/health-tips'),
+  getPrayerTimes: (lat?: number, lng?: number) =>
+    request<any>(`/prayer-times${lat ? `?lat=${lat}&lng=${lng}` : ''}`),
+  getCurrency: () => request<any>('/currency'),
+  saveLocation: (name: string, lat: number, lng: number) =>
+    request<any>('/saved-locations', { method: 'POST', body: JSON.stringify({ name, lat, lng }) }),
+  saveLogbook: (date: string, content: string, mood?: string) =>
+    request<any>('/logbook', { method: 'POST', body: JSON.stringify({ date, content, mood }) }),
+  getLogbook: () => request<any[]>('/logbook'),
+  bookmarkDua: (duaId: string) =>
+    request<any>(`/dua-bookmarks/${duaId}`, { method: 'POST' }),
+  unbookmarkDua: (duaId: string) =>
+    request<any>(`/dua-bookmarks/${duaId}`, { method: 'DELETE' }),
+
   // Enhancements
   uploadPhoto: (base64: string) =>
     request<{ url: string }>('/upload/photo', { method: 'POST', body: JSON.stringify({ base64 }) }),

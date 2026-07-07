@@ -117,6 +117,7 @@ export default function RootLayout() {
         <Stack.Screen name="chat" />
         <Stack.Screen name="onboarding" options={{ presentation: 'fullScreenModal' }} />
         <Stack.Screen name="rating" />
+        <Stack.Screen name="tools" />
       </Stack>
     </>
   );

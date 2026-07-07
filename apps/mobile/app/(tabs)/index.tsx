@@ -111,6 +111,10 @@ export default function BerandaScreen() {
     { label: 'Doa', icon: 'reader-outline', route: '/doa', color: colors.green },
     { label: 'Jadwal', icon: 'calendar-outline', route: '/jadwal', color: colors.gold },
     { label: 'Peta', icon: 'map-outline', route: '/peta', color: colors.primary },
+    { label: 'Counter', icon: 'refresh-circle-outline', route: '/tools', color: colors.green },
+    { label: 'Kiblat', icon: 'compass-outline', route: '/tools', color: colors.gold },
+    { label: 'Shalat', icon: 'time-outline', route: '/tools', color: colors.primary },
+    { label: 'Ceklis', icon: 'checkbox-outline', route: '/tools', color: colors.green },
   ];
 
   return (
