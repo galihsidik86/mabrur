@@ -49,6 +49,13 @@ export async function initDB(): Promise<void> {
       warning_radius INTEGER NOT NULL DEFAULT 3000
     );
 
+    CREATE TABLE IF NOT EXISTS chat_queue (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      group_id TEXT NOT NULL,
+      text TEXT NOT NULL,
+      created_at TEXT NOT NULL DEFAULT (datetime('now'))
+    );
+
     CREATE TABLE IF NOT EXISTS ihram_local (
       id INTEGER PRIMARY KEY CHECK (id = 1),
       is_ihram INTEGER NOT NULL DEFAULT 0,
@@ -185,6 +192,23 @@ export async function getGroupMembers(
     'SELECT user_id, name, phone, role_in_group FROM group_members WHERE group_id = ?',
     [groupId],
   );
+}
+
+// ==================== Chat Queue (Offline) ====================
+
+export async function queueMessage(groupId: string, text: string): Promise<void> {
+  const d = getDB();
+  await d.runAsync('INSERT INTO chat_queue (group_id, text) VALUES (?, ?)', [groupId, text]);
+}
+
+export async function getQueuedMessages(): Promise<Array<{ id: number; group_id: string; text: string }>> {
+  const d = getDB();
+  return d.getAllAsync('SELECT * FROM chat_queue ORDER BY id');
+}
+
+export async function clearQueuedMessage(id: number): Promise<void> {
+  const d = getDB();
+  await d.runAsync('DELETE FROM chat_queue WHERE id = ?', [id]);
 }
 
 // ==================== Miqat Zones ====================

@@ -6,7 +6,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useAuthStore } from '../src/stores/auth';
 import { colors } from '../src/theme';
 import { api } from '../src/services/api';
-import { getGroups } from '../src/services/db';
+import { getGroups, queueMessage, getQueuedMessages, clearQueuedMessage } from '../src/services/db';
 
 interface Message {
   id: string;
@@ -38,6 +38,14 @@ export default function ChatScreen() {
       const groups = await getGroups();
       if (groups.length > 0) {
         setGroupId(groups[0].id);
+        // Flush queued messages
+        const queued = await getQueuedMessages();
+        for (const q of queued) {
+          try {
+            await api.sendMessage(q.group_id, q.text);
+            await clearQueuedMessage(q.id);
+          } catch { break; }
+        }
         await load(groups[0].id);
         pollRef.current = setInterval(() => load(groups[0].id), 5000);
       }
@@ -53,7 +61,16 @@ export default function ChatScreen() {
       setMessages((prev) => [...prev, msg]);
       setInput('');
       setTimeout(() => flatListRef.current?.scrollToEnd(), 100);
-    } catch {}
+    } catch {
+      // Offline — queue locally
+      await queueMessage(groupId, input.trim());
+      setMessages((prev) => [...prev, {
+        id: `local-${Date.now()}`, text: input.trim(),
+        user_id: user?.id || '', user_name: user?.name || '',
+        created_at: new Date().toISOString(),
+      }]);
+      setInput('');
+    }
     setSending(false);
   };
 

@@ -18,6 +18,7 @@ import {
   registerPushToken,
 } from '../src/services/notification';
 import { startBackgroundLocation } from '../src/services/background';
+import { scheduleUpcomingNotifications } from '../src/services/schedule-notify';
 import { api } from '../src/services/api';
 import Constants from 'expo-constants';
 
@@ -71,6 +72,9 @@ export default function RootLayout() {
 
       // Start background location
       await startBackgroundLocation();
+
+      // Schedule reminders for upcoming agenda
+      await scheduleUpcomingNotifications();
     })();
   }, [isAuthenticated]);
 
@@ -112,6 +116,7 @@ export default function RootLayout() {
         <Stack.Screen name="profile" />
         <Stack.Screen name="chat" />
         <Stack.Screen name="onboarding" options={{ presentation: 'fullScreenModal' }} />
+        <Stack.Screen name="rating" />
       </Stack>
     </>
   );

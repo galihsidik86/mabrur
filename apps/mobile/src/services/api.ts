@@ -172,6 +172,16 @@ export const api = {
   updateSchedule: (id: string, data: any) =>
     request<any>(`/schedules/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
 
+  // Enhancements
+  uploadPhoto: (base64: string) =>
+    request<{ url: string }>('/upload/photo', { method: 'POST', body: JSON.stringify({ base64 }) }),
+  setSosPhoto: (sosId: string, photoUrl: string) =>
+    request<any>(`/sos/${sosId}/photo`, { method: 'PATCH', body: JSON.stringify({ photo_url: photoUrl }) }),
+  submitRating: (rating: number, feedback?: string) =>
+    request<any>('/ratings', { method: 'POST', body: JSON.stringify({ rating, feedback }) }),
+  setTheme: (theme: string) =>
+    request<any>('/theme', { method: 'PATCH', body: JSON.stringify({ theme }) }),
+
   getMemberStatuses: (groupId: string) =>
     request<{
       stats: { total: number; safe: number; attention: number };

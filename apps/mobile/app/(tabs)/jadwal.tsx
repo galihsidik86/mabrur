@@ -3,13 +3,17 @@ import {
   View,
   Text,
   ScrollView,
+  TouchableOpacity,
+  TextInput,
   StyleSheet,
   ActivityIndicator,
+  Alert,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { colors, radius } from '../../src/theme';
 import { api } from '../../src/services/api';
+import { useAuthStore } from '../../src/stores/auth';
 import {
   getGroups,
   saveSchedules,
@@ -46,9 +50,16 @@ const chipColors = {
 };
 
 export default function JadwalScreen() {
+  const user = useAuthStore((s) => s.user);
+  const canEdit = user?.role === 'muthawwif' || user?.role === 'admin';
   const [schedules, setSchedules] = useState<Schedule[]>([]);
   const [loading, setLoading] = useState(true);
   const [groupName, setGroupName] = useState('');
+  const [groupId, setGroupId] = useState('');
+  const [showForm, setShowForm] = useState(false);
+  const [formTitle, setFormTitle] = useState('');
+  const [formLocation, setFormLocation] = useState('');
+  const [formTime, setFormTime] = useState('');
 
   const load = useCallback(async () => {
     const groups = await getGroups();
@@ -57,6 +68,7 @@ export default function JadwalScreen() {
       return;
     }
     const group = groups[0];
+    setGroupId(group.id);
     setGroupName(`${group.name} · ${group.kloter_code}`);
 
     // Offline-first
@@ -83,6 +95,38 @@ export default function JadwalScreen() {
         <Text style={s.title}>Jadwal & agenda</Text>
         <Text style={s.sub}>
           {groupName ? `Rangkaian ibadah ${groupName}.` : 'Rangkaian ibadah rombongan.'}
+        </Text>
+
+        {canEdit && (
+          <View style={{ marginTop: 12 }}>
+            <TouchableOpacity onPress={() => setShowForm(!showForm)}
+              style={{ backgroundColor: colors.primary, borderRadius: 10, padding: 11, alignItems: 'center', flexDirection: 'row', justifyContent: 'center', gap: 6 }}>
+              <Ionicons name={showForm ? 'close' : 'add'} size={18} color={colors.textOnPrimary} />
+              <Text style={{ fontSize: 13, fontFamily: 'PlusJakartaSans_700Bold', color: colors.textOnPrimary }}>{showForm ? 'Tutup' : 'Tambah Jadwal'}</Text>
+            </TouchableOpacity>
+            {showForm && (
+              <View style={{ marginTop: 10, backgroundColor: colors.card, borderWidth: 1, borderColor: colors.border, borderRadius: 12, padding: 14 }}>
+                <TextInput placeholder="Judul agenda" value={formTitle} onChangeText={setFormTitle}
+                  style={{ borderWidth: 1, borderColor: colors.border, borderRadius: 8, padding: 10, fontSize: 13, fontFamily: 'PlusJakartaSans_500Medium', color: colors.text, marginBottom: 8 }} placeholderTextColor={colors.textFaint} />
+                <TextInput placeholder="Lokasi" value={formLocation} onChangeText={setFormLocation}
+                  style={{ borderWidth: 1, borderColor: colors.border, borderRadius: 8, padding: 10, fontSize: 13, fontFamily: 'PlusJakartaSans_500Medium', color: colors.text, marginBottom: 8 }} placeholderTextColor={colors.textFaint} />
+                <TextInput placeholder="Waktu (YYYY-MM-DDTHH:MM)" value={formTime} onChangeText={setFormTime}
+                  style={{ borderWidth: 1, borderColor: colors.border, borderRadius: 8, padding: 10, fontSize: 13, fontFamily: 'PlusJakartaSans_500Medium', color: colors.text, marginBottom: 8 }} placeholderTextColor={colors.textFaint} />
+                <TouchableOpacity onPress={async () => {
+                  if (!formTitle || !formTime || !groupId) { Alert.alert('', 'Judul dan waktu wajib diisi'); return; }
+                  try {
+                    await api.createSchedule(groupId, { title: formTitle, location_name: formLocation, start_time: new Date(formTime).toISOString() });
+                    setFormTitle(''); setFormLocation(''); setFormTime(''); setShowForm(false); load();
+                  } catch (e: any) { Alert.alert('Gagal', e.message); }
+                }} style={{ backgroundColor: colors.green, borderRadius: 8, padding: 11, alignItems: 'center' }}>
+                  <Text style={{ fontSize: 13, fontFamily: 'PlusJakartaSans_700Bold', color: '#fff' }}>Simpan</Text>
+                </TouchableOpacity>
+              </View>
+            )}
+          </View>
+        )}
+
+        <Text style={s.sub}>
         </Text>
 
         {loading && schedules.length === 0 ? (

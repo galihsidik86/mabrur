@@ -7,12 +7,14 @@ import { useAuthStore } from '../src/stores/auth';
 import { colors, radius } from '../src/theme';
 import { api } from '../src/services/api';
 import { useI18n } from '../src/services/i18n';
+import { useTheme } from '../src/services/darkmode';
 
 export default function ProfileScreen() {
   const router = useRouter();
   const user = useAuthStore((s) => s.user);
   const logout = useAuthStore((s) => s.logout);
   const { t, lang, setLang } = useI18n();
+  const { isDark, toggle: toggleDark } = useTheme();
 
   const [name, setName] = useState(user?.name || '');
   const [password, setPassword] = useState('');
@@ -114,6 +116,27 @@ export default function ProfileScreen() {
             <Text style={s.saveBtnText}>{saving ? t('common.loading') : t('common.save')}</Text>
           </TouchableOpacity>
         </View>
+
+        {/* Dark Mode */}
+        <Text style={s.sectionTitle}>Tampilan</Text>
+        <TouchableOpacity onPress={() => { toggleDark(); api.setTheme(isDark ? 'light' : 'dark').catch(() => {}); }}
+          style={{ backgroundColor: colors.card, borderWidth: 1, borderColor: colors.border, borderRadius: 12, padding: 14, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+            <Ionicons name={isDark ? 'moon' : 'sunny'} size={20} color={colors.primary} />
+            <Text style={{ fontSize: 14, fontFamily: 'PlusJakartaSans_600SemiBold', color: colors.text }}>Dark Mode</Text>
+          </View>
+          <View style={{ width: 44, height: 24, borderRadius: 12, backgroundColor: isDark ? colors.primary : colors.border, justifyContent: 'center', padding: 2 }}>
+            <View style={{ width: 20, height: 20, borderRadius: 10, backgroundColor: '#fff', alignSelf: isDark ? 'flex-end' : 'flex-start' }} />
+          </View>
+        </TouchableOpacity>
+
+        {/* Rating */}
+        <TouchableOpacity onPress={() => router.push('/rating')}
+          style={{ marginTop: 12, backgroundColor: colors.card, borderWidth: 1, borderColor: colors.border, borderRadius: 12, padding: 14, flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+          <Ionicons name="star" size={20} color={colors.gold} />
+          <Text style={{ fontSize: 14, fontFamily: 'PlusJakartaSans_600SemiBold', color: colors.text, flex: 1 }}>Beri Rating & Feedback</Text>
+          <Ionicons name="chevron-forward" size={18} color={colors.textFaint} />
+        </TouchableOpacity>
 
         <TouchableOpacity style={s.logoutBtn} onPress={logout}>
           <Ionicons name="log-out-outline" size={18} color={colors.danger} />

@@ -13,6 +13,8 @@ import geofenceRoutes from './routes/geofence';
 import monitoringRoutes from './routes/monitoring';
 import sosRoutes from './routes/sos';
 import featuresRoutes from './routes/features';
+import enhancementsRoutes from './routes/enhancements';
+import path from 'path';
 import { db } from './db';
 
 const app = express();
@@ -43,6 +45,8 @@ app.use('/', geofenceRoutes);
 app.use('/', monitoringRoutes);
 app.use('/', sosRoutes);
 app.use('/', featuresRoutes);
+app.use('/', enhancementsRoutes);
+app.use('/uploads', express.static(path.resolve(__dirname, '../uploads')));
 
 // 404
 app.use((_req, res) => {

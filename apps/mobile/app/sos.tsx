@@ -7,7 +7,9 @@ import {
   ScrollView,
   ActivityIndicator,
   Alert,
+  Image,
 } from 'react-native';
+import * as ImagePicker from 'expo-image-picker';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -35,6 +37,7 @@ export default function SosScreen() {
   const [kloter, setKloter] = useState('');
   const [history, setHistory] = useState<any[]>([]);
   const [showHistory, setShowHistory] = useState(false);
+  const [photo, setPhoto] = useState<string | null>(null);
 
   useEffect(() => {
     (async () => {
@@ -60,6 +63,13 @@ export default function SosScreen() {
       const pos = await getPosition();
       const sos = await api.sendSos(category, pos?.lat, pos?.lng);
       setSosId(sos.id);
+      // Upload photo if taken
+      if (photo) {
+        try {
+          const { url } = await api.uploadPhoto(photo);
+          await api.setSosPhoto(sos.id, url);
+        } catch {}
+      }
       setSent(true);
     } catch (err: any) {
       Alert.alert('Gagal', err.message || 'Tidak dapat mengirim SOS');
@@ -138,6 +148,20 @@ export default function SosScreen() {
                 </TouchableOpacity>
               ))}
             </View>
+
+            {/* Photo */}
+            <TouchableOpacity
+              style={{ marginTop: 14, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, backgroundColor: 'rgba(255,255,255,0.1)', borderRadius: 12, padding: 12, borderWidth: 1, borderColor: 'rgba(255,255,255,0.2)' }}
+              onPress={async () => {
+                const result = await ImagePicker.launchCameraAsync({ base64: true, quality: 0.5 });
+                if (!result.canceled && result.assets[0].base64) setPhoto(result.assets[0].base64);
+              }}
+            >
+              <Ionicons name={photo ? 'checkmark-circle' : 'camera-outline'} size={20} color="#fff" />
+              <Text style={{ fontSize: 13, fontFamily: 'PlusJakartaSans_600SemiBold', color: '#fff' }}>
+                {photo ? 'Foto terlampir' : 'Ambil foto (opsional)'}
+              </Text>
+            </TouchableOpacity>
 
             {/* SOS Button */}
             <TouchableOpacity
