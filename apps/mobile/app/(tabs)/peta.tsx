@@ -27,15 +27,24 @@ import {
   type MiqatZone,
   type NearestResult,
 } from '../../src/services/location';
+import { useAuthStore } from '../../src/stores/auth';
+import { getGroups } from '../../src/services/db';
+import MapViewComponent from '../../src/components/MapView';
+import { ARAFAH_BOUNDARY, ARAFAH_CENTER, KAABAH } from '../../src/services/sacred-zones';
 
 const MAP_HEIGHT = 300;
 const screenW = Dimensions.get('window').width;
 
 export default function PetaScreen() {
+  const user = useAuthStore((s) => s.user);
+  const isMuthawwif = user?.role === 'muthawwif' || user?.role === 'admin';
   const [zones, setZones] = useState<MiqatZone[]>([]);
   const [nearest, setNearest] = useState<NearestResult | null>(null);
   const [isIhram, setIsIhram] = useState(false);
   const [hasLocation, setHasLocation] = useState(false);
+  const [userPos, setUserPos] = useState<{ lat: number; lng: number } | null>(null);
+  const [mapTab, setMapTab] = useState<'miqat' | 'realmap' | 'arafah' | 'monitor'>('miqat');
+  const [memberLocs, setMemberLocs] = useState<any[]>([]);
   const watchRef = useRef<{ remove: () => void } | null>(null);
 
   const distance = nearest?.distance ?? 12000;
@@ -85,6 +94,7 @@ export default function PetaScreen() {
     // Watch
     watchRef.current = watchPosition((lat, lng, acc) => {
       setHasLocation(true);
+      setUserPos({ lat, lng });
       const n = findNearest(lat, lng, z);
       setNearest(n);
       if (n) saveIhramLocal({ is_ihram: isIhram, distance_meters: n.distance, nearest_miqat: n.zone.name });
@@ -108,6 +118,25 @@ export default function PetaScreen() {
     try { await api.toggleIhram(next, 'umrah'); } catch {}
   };
 
+  // Load member locations for muthawwif monitoring
+  useEffect(() => {
+    if (!isMuthawwif || mapTab !== 'monitor') return;
+    let timer: ReturnType<typeof setInterval>;
+    (async () => {
+      const groups = await getGroups();
+      if (groups.length === 0) return;
+      const loadMembers = async () => {
+        try {
+          const data = await api.getMemberStatuses(groups[0].id);
+          setMemberLocs(data.members.filter((m: any) => m.location));
+        } catch {}
+      };
+      await loadMembers();
+      timer = setInterval(loadMembers, 15000);
+    })();
+    return () => clearInterval(timer);
+  }, [mapTab, isMuthawwif]);
+
   // Marker position on stylized map
   const angle = (-58 * Math.PI) / 180;
   const rOuter = 120, rRing = 75;
@@ -115,8 +144,114 @@ export default function PetaScreen() {
   const mx = 50 + (r * Math.cos(angle)) / 3;
   const my = 44 - (r * Math.sin(angle)) / 3;
 
+  const mapTabs: Array<{ id: typeof mapTab; label: string }> = [
+    { id: 'miqat', label: 'Miqat' },
+    { id: 'realmap', label: 'Peta' },
+    { id: 'arafah', label: 'Arafah' },
+    ...(isMuthawwif ? [{ id: 'monitor' as const, label: 'Monitor' }] : []),
+  ];
+
   return (
     <SafeAreaView style={s.safe} edges={['top']}>
+      {/* Map Tab Selector */}
+      <ScrollView horizontal showsHorizontalScrollIndicator={false}
+        style={{ maxHeight: 48, borderBottomWidth: 1, borderBottomColor: colors.border }}
+        contentContainerStyle={{ paddingHorizontal: 12, paddingVertical: 8, gap: 6 }}>
+        {mapTabs.map((t) => (
+          <TouchableOpacity key={t.id} onPress={() => setMapTab(t.id)}
+            style={{ paddingHorizontal: 16, paddingVertical: 7, borderRadius: 999, backgroundColor: mapTab === t.id ? colors.primary : colors.card, borderWidth: 1, borderColor: mapTab === t.id ? colors.primary : colors.border }}>
+            <Text style={{ fontSize: 13, fontFamily: 'PlusJakartaSans_700Bold', color: mapTab === t.id ? '#fff' : colors.textMuted }}>{t.label}</Text>
+          </TouchableOpacity>
+        ))}
+      </ScrollView>
+
+      {/* ===== REAL MAP ===== */}
+      {mapTab === 'realmap' && (
+        <ScrollView style={s.scroll} contentContainerStyle={s.content}>
+          <MapViewComponent
+            height={400}
+            zoom={14}
+            userLocation={userPos}
+            center={userPos || { lat: KAABAH.lat, lng: KAABAH.lng }}
+            markers={[
+              { lat: KAABAH.lat, lng: KAABAH.lng, icon: '🕋', name: "Ka'bah" },
+              ...zones.filter((z) => z.zone_type === 'miqat').map((z) => ({
+                lat: z.center_lat, lng: z.center_lng, name: z.name, color: '#8B2E2E',
+                popup: `<b>${z.name}</b><br/>Radius: ${z.radius_meters}m`,
+              })),
+            ]}
+            circles={zones.map((z) => ({
+              lat: z.center_lat, lng: z.center_lng, radius: z.zone_type === 'haram' ? z.radius_meters : z.warning_radius,
+              color: z.zone_type === 'haram' ? '#4A7C3A' : '#8B2E2E',
+              fillOpacity: 0.08,
+              label: z.name,
+            }))}
+          />
+          {nearest && (
+            <View style={{ padding: 16 }}>
+              <Text style={{ fontSize: 14, fontFamily: 'PlusJakartaSans_700Bold', color: colors.text }}>Miqat terdekat: {nearest.zone.name}</Text>
+              <Text style={{ fontSize: 22, fontFamily: 'PlusJakartaSans_800ExtraBold', color: colors.primary, marginTop: 4 }}>{formatDistance(nearest.distance)}</Text>
+            </View>
+          )}
+        </ScrollView>
+      )}
+
+      {/* ===== ARAFAH MAP ===== */}
+      {mapTab === 'arafah' && (
+        <ScrollView style={s.scroll} contentContainerStyle={s.content}>
+          <MapViewComponent
+            height={400}
+            zoom={14}
+            center={ARAFAH_CENTER}
+            userLocation={userPos}
+            markers={[
+              { lat: ARAFAH_CENTER.lat, lng: ARAFAH_CENTER.lng, icon: '⛰️', name: 'Jabal Rahmah' },
+              { lat: 21.3630, lng: 39.9760, icon: '🕌', name: 'Masjid Namirah (batas rawan!)' },
+            ]}
+            polygons={[{
+              coords: ARAFAH_BOUNDARY,
+              color: '#4A7C3A', fillColor: '#4A7C3A', fillOpacity: 0.12,
+              label: 'Batas Padang Arafah — wukuf sah di dalam area ini',
+            }]}
+          />
+          <View style={{ padding: 16 }}>
+            <Text style={{ fontSize: 15, fontFamily: 'PlusJakartaSans_700Bold', color: colors.text }}>Area Wukuf Arafah</Text>
+            <Text style={{ fontSize: 13, fontFamily: 'PlusJakartaSans_500Medium', color: colors.textMuted, marginTop: 4, lineHeight: 20 }}>
+              Area hijau = batas Padang Arafah. Wukuf HANYA sah di dalam area ini.{'\n'}
+              🕌 Masjid Namirah: sebagian di luar Arafah — hati-hati!{'\n'}
+              Gunakan fitur Wukuf di Alat Ibadah untuk monitoring posisi real-time.
+            </Text>
+          </View>
+        </ScrollView>
+      )}
+
+      {/* ===== MONITORING MAP (MUTHAWWIF) ===== */}
+      {mapTab === 'monitor' && isMuthawwif && (
+        <ScrollView style={s.scroll} contentContainerStyle={s.content}>
+          <MapViewComponent
+            height={400}
+            zoom={13}
+            center={userPos || { lat: KAABAH.lat, lng: KAABAH.lng }}
+            userLocation={userPos}
+            markers={memberLocs.map((m: any) => ({
+              lat: m.location.lat, lng: m.location.lng,
+              name: m.name,
+              color: m.status === 'safe' ? '#4A7C3A' : '#C44536',
+              pulse: m.status === 'attention',
+              popup: `<b>${m.name}</b><br/>${m.status === 'safe' ? '✅ Aman' : '⚠️ Perlu perhatian'}${m.nearest_miqat ? '<br/>' + m.nearest_miqat.name + ': ' + (m.nearest_miqat.distance/1000).toFixed(1) + 'km' : ''}`,
+            }))}
+          />
+          <View style={{ padding: 16 }}>
+            <Text style={{ fontSize: 15, fontFamily: 'PlusJakartaSans_700Bold', color: colors.text }}>{memberLocs.length} jamaah di peta</Text>
+            <Text style={{ fontSize: 12, fontFamily: 'PlusJakartaSans_500Medium', color: colors.textMuted, marginTop: 2 }}>
+              🟢 Aman · 🔴 Perlu perhatian · Auto-refresh tiap 15 detik
+            </Text>
+          </View>
+        </ScrollView>
+      )}
+
+      {/* ===== MIQAT (existing stylized) ===== */}
+      {mapTab === 'miqat' && (
       <ScrollView style={s.scroll} contentContainerStyle={s.content}>
         {/* Stylized Map */}
         <View style={s.mapCanvas}>
@@ -241,6 +376,7 @@ export default function PetaScreen() {
           ))}
         </View>
       </ScrollView>
+      )}
     </SafeAreaView>
   );
 }
