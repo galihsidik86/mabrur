@@ -384,7 +384,7 @@ export default function PetaScreen() {
 const s = StyleSheet.create({
   safe: { flex: 1, backgroundColor: colors.bg },
   scroll: { flex: 1 },
-  content: { paddingBottom: 24 },
+  content: { paddingBottom: 40 },
 
   // Map Canvas
   mapCanvas: {

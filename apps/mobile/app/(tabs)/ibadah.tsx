@@ -231,7 +231,7 @@ export default function IbadahScreen() {
 const s = StyleSheet.create({
   safe: { flex: 1, backgroundColor: colors.bg },
   scroll: { flex: 1 },
-  content: { padding: 16, paddingBottom: 24 },
+  content: { padding: 16, paddingBottom: 40 },
 
   title: {
     fontSize: 22,

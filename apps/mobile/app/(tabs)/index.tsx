@@ -374,7 +374,7 @@ const s = StyleSheet.create({
   },
 
   scroll: { flex: 1 },
-  scrollContent: { padding: 16, paddingBottom: 24 },
+  scrollContent: { padding: 16, paddingBottom: 40 },
 
   greeting: {
     fontSize: 13,

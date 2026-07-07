@@ -1,6 +1,7 @@
-import { View, TouchableOpacity, Text, StyleSheet } from 'react-native';
+import { View, TouchableOpacity, Text, StyleSheet, Platform } from 'react-native';
 import { Tabs, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { colors } from '../../src/theme';
 
 type IoniconsName = React.ComponentProps<typeof Ionicons>['name'];
@@ -20,9 +21,10 @@ const tabs: Array<{
 
 function SosFab() {
   const router = useRouter();
+  const insets = useSafeAreaInsets();
   return (
     <TouchableOpacity
-      style={s.fab}
+      style={[s.fab, { bottom: 70 + insets.bottom + 16 }]}
       onPress={() => router.push('/sos')}
       activeOpacity={0.8}
     >
@@ -33,6 +35,9 @@ function SosFab() {
 }
 
 export default function TabLayout() {
+  const insets = useSafeAreaInsets();
+  const tabBarHeight = 56 + insets.bottom;
+
   return (
     <View style={{ flex: 1 }}>
       <Tabs
@@ -43,8 +48,8 @@ export default function TabLayout() {
           tabBarStyle: {
             backgroundColor: 'rgba(255,255,255,0.94)',
             borderTopColor: colors.border,
-            height: 70,
-            paddingBottom: 8,
+            height: tabBarHeight,
+            paddingBottom: insets.bottom + 4,
             paddingTop: 6,
           },
           tabBarLabelStyle: {
@@ -79,7 +84,6 @@ const s = StyleSheet.create({
   fab: {
     position: 'absolute',
     right: 16,
-    bottom: 82,
     width: 60,
     height: 60,
     borderRadius: 999,
