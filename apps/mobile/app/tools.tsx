@@ -13,9 +13,11 @@ import { api } from '../src/services/api';
 import { getPosition, requestPermission } from '../src/services/location';
 import {
   TawafTracker, SaiTracker, detectNearestJamarat,
-  watchSacredLocation, KAABAH, SAFA, MARWAH,
-  type SaiZone,
+  watchSacredLocation, checkArafahPosition,
+  KAABAH, SAFA, MARWAH, ARAFAH_CENTER,
+  type SaiZone, type ArafahResult,
 } from '../src/services/sacred-zones';
+import { sendLocalNotification } from '../src/services/notification';
 
 type Tab = 'hub' | 'tawaf' | 'sai' | 'tasbih' | 'jumrah' | 'wukuf' | 'qiblat' | 'shalat' | 'checklist' | 'kurs' | 'frasa' | 'kesehatan';
 
@@ -366,12 +368,16 @@ const jm = StyleSheet.create({
   throwText: { fontSize: 14, fontFamily: 'PlusJakartaSans_700Bold', color: colors.textOnPrimary },
 });
 
-// ==================== WUKUF TIMER ====================
+// ==================== WUKUF TIMER + ARAFAH GEOFENCE ====================
 function WukufTab() {
   const [start, setStart] = useState('');
   const [end, setEnd] = useState('');
   const [remaining, setRemaining] = useState<number | null>(null);
   const [phase, setPhase] = useState<'setup' | 'waiting' | 'active' | 'done'>('setup');
+  const [arafah, setArafah] = useState<ArafahResult | null>(null);
+  const [gpsActive, setGpsActive] = useState(false);
+  const watchRef2 = useRef<{ remove: () => void } | null>(null);
+  const lastNotifRef = useRef(0);
 
   useEffect(() => {
     if (!start || !end) return;
@@ -386,12 +392,44 @@ function WukufTab() {
     return () => { clearInterval(timer); deactivateKeepAwake('wukuf'); };
   }, [start, end]);
 
+  const startAreaTracking = async () => {
+    const granted = await requestPermission();
+    if (!granted) return;
+    setGpsActive(true);
+    watchRef2.current = watchSacredLocation((lat, lng) => {
+      const result = checkArafahPosition(lat, lng);
+      setArafah(result);
+      // Kirim notifikasi jika di luar Arafah (cooldown 3 menit)
+      if (result.status === 'outside' || result.status === 'namirah_danger') {
+        const now = Date.now();
+        if (now - lastNotifRef.current > 3 * 60 * 1000) {
+          lastNotifRef.current = now;
+          sendLocalNotification(
+            result.status === 'outside' ? 'Di Luar Arafah!' : 'Hati-hati: Batas Namirah',
+            result.message,
+          );
+          Vibration.vibrate([0, 500, 200, 500]);
+        }
+      }
+    });
+  };
+
+  useEffect(() => { return () => { watchRef2.current?.remove(); }; }, []);
+
   const fmt = (ms: number) => {
     const h = Math.floor(ms / 3600000);
     const m = Math.floor((ms % 3600000) / 60000);
-    const s = Math.floor((ms % 60000) / 1000);
-    return `${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
+    const s2 = Math.floor((ms % 60000) / 1000);
+    return `${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}:${s2.toString().padStart(2, '0')}`;
   };
+
+  const statusColor = arafah?.status === 'inside' ? colors.green
+    : arafah?.status === 'namirah_danger' ? colors.gold
+    : arafah?.status === 'outside' ? colors.danger : colors.textMuted;
+
+  const statusIcon = arafah?.status === 'inside' ? 'checkmark-circle'
+    : arafah?.status === 'namirah_danger' ? 'warning'
+    : arafah?.status === 'outside' ? 'alert-circle' : 'location';
 
   if (phase === 'setup') {
     return (
@@ -400,13 +438,47 @@ function WukufTab() {
         <Text style={{ fontSize: 13, fontFamily: 'PlusJakartaSans_500Medium', color: colors.textMuted, textAlign: 'center', marginTop: 4, lineHeight: 20 }}>
           Masukkan waktu Dzuhur (mulai) dan Subuh (selesai) pada 9 Dzulhijjah. Tanyakan muthawwif untuk waktu pastinya.
         </Text>
+
+        {/* Area Monitor */}
+        {!gpsActive ? (
+          <TouchableOpacity style={[tc.primaryBtn, { marginTop: 20, backgroundColor: colors.green }]} onPress={startAreaTracking}>
+            <Ionicons name="navigate" size={18} color="#fff" />
+            <Text style={[tc.primaryBtnText, { marginLeft: 6 }]}>Cek Posisi di Arafah</Text>
+          </TouchableOpacity>
+        ) : arafah ? (
+          <View style={[wk.areaCard, { borderColor: statusColor }]}>
+            <View style={wk.areaHeader}>
+              <Ionicons name={statusIcon as any} size={24} color={statusColor} />
+              <Text style={[wk.areaStatus, { color: statusColor }]}>
+                {arafah.status === 'inside' ? 'DI DALAM ARAFAH' : arafah.status === 'namirah_danger' ? 'ZONA PERINGATAN' : 'DI LUAR ARAFAH'}
+              </Text>
+            </View>
+            <Text style={wk.areaMessage}>{arafah.message}</Text>
+            <View style={wk.areaStats}>
+              <Text style={wk.areaStat}>Jabal Rahmah: {(arafah.distToCenter / 1000).toFixed(1)} km</Text>
+              <Text style={wk.areaStat}>Masjid Namirah: {Math.round(arafah.distToNamirah)} m</Text>
+            </View>
+          </View>
+        ) : (
+          <View style={tc.gpsBar}><View style={tc.gpsDot} /><Text style={tc.gpsText}>Mencari GPS...</Text></View>
+        )}
+
         <Text style={[tc.inputLabel, { marginTop: 20 }]}>Mulai (setelah Dzuhur)</Text>
         <TextInput style={tc.input} value={start} onChangeText={setStart} placeholder="2026-08-09T12:30" placeholderTextColor={colors.textFaint} />
         <Text style={tc.inputLabel}>Selesai (Subuh esok)</Text>
         <TextInput style={tc.input} value={end} onChangeText={setEnd} placeholder="2026-08-10T05:00" placeholderTextColor={colors.textFaint} />
-        <TouchableOpacity style={[tc.primaryBtn, { marginTop: 16 }]} onPress={() => { if (start && end) setPhase('waiting'); }}>
+        <TouchableOpacity style={[tc.primaryBtn, { marginTop: 16 }]} onPress={() => { if (start && end) { setPhase('waiting'); if (!gpsActive) startAreaTracking(); } }}>
           <Text style={tc.primaryBtnText}>Mulai Countdown</Text>
         </TouchableOpacity>
+
+        {/* Info penting */}
+        <View style={wk.infoBox}>
+          <Text style={wk.infoTitle}>Batas Area Arafah</Text>
+          <Text style={wk.infoText}>• Wukuf HANYA sah jika berada di dalam batas Padang Arafah</Text>
+          <Text style={wk.infoText}>• Masjid Namirah: bagian barat masjid ada di LUAR Arafah — hati-hati!</Text>
+          <Text style={wk.infoText}>• Lembah Uranah (barat Arafah) BUKAN bagian Arafah</Text>
+          <Text style={wk.infoText}>• Aktifkan GPS agar app memperingatkan jika kamu keluar area</Text>
+        </View>
       </View>
     );
   }
@@ -415,6 +487,19 @@ function WukufTab() {
 
   return (
     <View style={[tc.wrap, { alignItems: 'center' }]}>
+      {/* Area status during wukuf */}
+      {arafah && phase === 'active' && (
+        <View style={[wk.areaCard, { borderColor: statusColor, marginBottom: 12 }]}>
+          <View style={wk.areaHeader}>
+            <Ionicons name={statusIcon as any} size={22} color={statusColor} />
+            <Text style={[wk.areaStatus, { color: statusColor, fontSize: 13 }]}>
+              {arafah.status === 'inside' ? 'DI DALAM ARAFAH ✓' : arafah.status === 'namirah_danger' ? 'ZONA PERINGATAN ⚠' : 'DI LUAR ARAFAH ✗'}
+            </Text>
+          </View>
+          {arafah.status !== 'inside' && <Text style={[wk.areaMessage, { fontSize: 12 }]}>{arafah.message}</Text>}
+        </View>
+      )}
+
       <View style={[wk.hero, { backgroundColor: bgColor }]}>
         <Text style={wk.heroLabel}>
           {phase === 'waiting' ? 'MENUNGGU WUKUF' : phase === 'active' ? 'WUKUF BERLANGSUNG' : 'WUKUF SELESAI'}
@@ -424,7 +509,7 @@ function WukufTab() {
           {phase === 'waiting' ? 'Menunggu waktu Dzuhur' : phase === 'active' ? 'Perbanyak doa & dzikir' : 'Alhamdulillah, wukuf sempurna'}
         </Text>
       </View>
-      <TouchableOpacity onPress={() => { setPhase('setup'); setStart(''); setEnd(''); }}>
+      <TouchableOpacity onPress={() => { setPhase('setup'); setStart(''); setEnd(''); watchRef2.current?.remove(); setGpsActive(false); setArafah(null); }}>
         <Text style={tc.resetText}>Reset</Text>
       </TouchableOpacity>
     </View>
@@ -436,6 +521,17 @@ const wk = StyleSheet.create({
   heroLabel: { fontSize: 11, fontFamily: 'PlusJakartaSans_700Bold', letterSpacing: 1.5, color: 'rgba(255,255,255,0.8)' },
   heroTime: { fontSize: 48, fontFamily: 'PlusJakartaSans_800ExtraBold', color: '#fff', marginTop: 8 },
   heroSub: { fontSize: 14, fontFamily: 'PlusJakartaSans_600SemiBold', color: 'rgba(255,255,255,0.9)', marginTop: 8 },
+
+  areaCard: { width: '100%', borderWidth: 2, borderRadius: 14, padding: 14, backgroundColor: colors.card, marginTop: 12 },
+  areaHeader: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  areaStatus: { fontSize: 14, fontFamily: 'PlusJakartaSans_800ExtraBold' },
+  areaMessage: { fontSize: 13, fontFamily: 'PlusJakartaSans_500Medium', color: colors.textSecondary, marginTop: 8, lineHeight: 19 },
+  areaStats: { flexDirection: 'row', justifyContent: 'space-between', marginTop: 10 },
+  areaStat: { fontSize: 11, fontFamily: 'PlusJakartaSans_600SemiBold', color: colors.textMuted },
+
+  infoBox: { marginTop: 20, backgroundColor: colors.surfaceWarm, borderRadius: 12, padding: 14 },
+  infoTitle: { fontSize: 14, fontFamily: 'PlusJakartaSans_700Bold', color: colors.primary, marginBottom: 8 },
+  infoText: { fontSize: 12, fontFamily: 'PlusJakartaSans_500Medium', color: colors.textSecondary, lineHeight: 20 },
 });
 
 // ==================== QIBLAT (REAL COMPASS) ====================
