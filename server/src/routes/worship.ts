@@ -194,23 +194,38 @@ router.get('/prayer-times', async (req: Request, res: Response) => {
   const day = Math.floor((now.getTime() - new Date(now.getFullYear(), 0, 0).getTime()) / 86400000);
   const declination = 23.45 * Math.sin((2 * Math.PI / 365) * (day - 81));
   const eqTime = 9.87 * Math.sin(2 * (2 * Math.PI / 365) * (day - 81)) - 7.53 * Math.cos((2 * Math.PI / 365) * (day - 81)) - 1.5 * Math.sin((2 * Math.PI / 365) * (day - 81));
-  const solarNoon = 12 - lng / 15 - eqTime / 60 + 3; // +3 for AST timezone
+  // Estimate timezone from longitude (±0.5h accuracy, sufficient for prayer times)
+  const tz = Number(req.query.tz) || Math.round(lng / 15);
+  const solarNoon = 12 - lng / 15 - eqTime / 60 + tz;
 
-  const hourAngle = (a: number) => Math.acos(
-    (Math.sin(a * Math.PI / 180) - Math.sin(lat * Math.PI / 180) * Math.sin(declination * Math.PI / 180)) /
-    (Math.cos(lat * Math.PI / 180) * Math.cos(declination * Math.PI / 180))
-  ) * 180 / Math.PI / 15;
+  const toRad = (d: number) => d * Math.PI / 180;
+  const toDeg = (r: number) => r * 180 / Math.PI;
+  const decRad = toRad(declination);
+  const latRad = toRad(lat);
+
+  const hourAngle = (altitude: number) => {
+    const a = toRad(altitude);
+    const cosH = (Math.sin(a) - Math.sin(latRad) * Math.sin(decRad)) /
+                 (Math.cos(latRad) * Math.cos(decRad));
+    if (cosH > 1) return 0;
+    if (cosH < -1) return 12;
+    return toDeg(Math.acos(cosH)) / 15;
+  };
 
   const fmt = (h: number) => {
+    if (!isFinite(h)) return '--:--';
     const hh = Math.floor(h); const mm = Math.round((h - hh) * 60);
     return `${hh.toString().padStart(2, '0')}:${mm.toString().padStart(2, '0')}`;
   };
 
   const fajrHA = hourAngle(-18);
   const sunriseHA = hourAngle(-0.833);
-  const asrFactor = 1; // Shafi'i
-  const asrAngle = Math.atan(1 / (asrFactor + Math.tan((lat - declination) * Math.PI / 180))) * 180 / Math.PI;
-  const asrHA = hourAngle(asrAngle);
+
+  // Asr (Shafi'i): shadow = object height + noon shadow
+  const noonShadowAngle = Math.abs(lat - declination);
+  const asrAlt = toDeg(Math.atan(1 / (1 + Math.tan(toRad(noonShadowAngle)))));
+  const asrHA = hourAngle(asrAlt);
+
   const maghribHA = hourAngle(-0.833);
   const ishaHA = hourAngle(-17.5);
 
