@@ -13,6 +13,8 @@
     "userInterfaceStyle": "light",
     "newArchEnabled": false,
     "splash": {
+      "image": "./assets/splash.png",
+      "resizeMode": "contain",
       "backgroundColor": "#F5F1E8"
     },
     "ios": {
@@ -26,6 +28,7 @@
     "android": {
       "package": "app.mabrur",
       "adaptiveIcon": {
+        "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#8B2E2E"
       }
     },
