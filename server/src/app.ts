@@ -12,6 +12,7 @@ import scheduleRoutes from './routes/schedules';
 import geofenceRoutes from './routes/geofence';
 import monitoringRoutes from './routes/monitoring';
 import sosRoutes from './routes/sos';
+import featuresRoutes from './routes/features';
 import { db } from './db';
 
 const app = express();
@@ -41,6 +42,7 @@ app.use('/', scheduleRoutes);
 app.use('/', geofenceRoutes);
 app.use('/', monitoringRoutes);
 app.use('/', sosRoutes);
+app.use('/', featuresRoutes);
 
 // 404
 app.use((_req, res) => {

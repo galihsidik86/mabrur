@@ -123,7 +123,13 @@ export default function BerandaScreen() {
           </View>
           <Text style={s.appTitle}>Mabrur</Text>
         </View>
-        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+          <TouchableOpacity onPress={() => router.push('/chat')} style={s.logoutBtn}>
+            <Ionicons name="chatbubbles-outline" size={20} color={colors.textMuted} />
+          </TouchableOpacity>
+          <TouchableOpacity onPress={() => router.push('/profile')} style={s.logoutBtn}>
+            <Ionicons name="person-circle-outline" size={22} color={colors.textMuted} />
+          </TouchableOpacity>
           {isMuthawwif && (
             <View style={s.modeToggle}>
               <TouchableOpacity
@@ -140,9 +146,6 @@ export default function BerandaScreen() {
               </TouchableOpacity>
             </View>
           )}
-          <TouchableOpacity onPress={logout} style={s.logoutBtn}>
-            <Ionicons name="log-out-outline" size={20} color={colors.textMuted} />
-          </TouchableOpacity>
         </View>
       </View>
 

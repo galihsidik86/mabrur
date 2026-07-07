@@ -137,6 +137,17 @@ export default function MuthawwifDashboard({ userName }: { userName: string }) {
             <Text style={s.sosLabel}>SOS AKTIF · {categoryLabels[sos.category] || sos.category}</Text>
             <Text style={s.sosName}>{sos.user_name} butuh bantuan</Text>
           </View>
+          <TouchableOpacity
+            style={s.resolveBtn}
+            onPress={async () => {
+              try {
+                await api.resolveSos(sos.id);
+                setSosAlerts((prev) => prev.filter((s) => s.id !== sos.id));
+              } catch {}
+            }}
+          >
+            <Text style={s.resolveText}>Selesai</Text>
+          </TouchableOpacity>
         </View>
       ))}
 
@@ -360,5 +371,12 @@ const s = StyleSheet.create({
   sosName: {
     fontSize: 16, fontFamily: 'PlusJakartaSans_700Bold',
     color: '#fff', marginTop: 2,
+  },
+  resolveBtn: {
+    backgroundColor: 'rgba(255,255,255,0.2)',
+    borderRadius: 8, paddingHorizontal: 12, paddingVertical: 6,
+  },
+  resolveText: {
+    fontSize: 12, fontFamily: 'PlusJakartaSans_700Bold', color: '#fff',
   },
 });

@@ -33,6 +33,8 @@ export default function SosScreen() {
   const [sosId, setSosId] = useState<string | null>(null);
   const [profile, setProfile] = useState<Profile | null>(null);
   const [kloter, setKloter] = useState('');
+  const [history, setHistory] = useState<any[]>([]);
+  const [showHistory, setShowHistory] = useState(false);
 
   useEffect(() => {
     (async () => {
@@ -48,6 +50,7 @@ export default function SosScreen() {
         const active = await api.getActiveSos();
         if (active) { setSent(true); setSosId(active.id); }
       } catch {}
+      try { setHistory(await api.getSosHistory()); } catch {}
     })();
   }, []);
 
@@ -165,6 +168,24 @@ export default function SosScreen() {
                 <Text style={s.contactText}>Petugas 115</Text>
               </TouchableOpacity>
             </View>
+
+            {/* History */}
+            {history.length > 0 && (
+              <TouchableOpacity onPress={() => setShowHistory(!showHistory)} style={{ marginTop: 16, alignItems: 'center' }}>
+                <Text style={{ fontSize: 13, fontFamily: 'PlusJakartaSans_600SemiBold', color: 'rgba(255,255,255,0.7)' }}>
+                  {showHistory ? 'Sembunyikan' : `Riwayat SOS (${history.length})`} {showHistory ? '▲' : '▼'}
+                </Text>
+              </TouchableOpacity>
+            )}
+            {showHistory && history.map((h: any) => (
+              <View key={h.id} style={{ marginTop: 8, backgroundColor: 'rgba(255,255,255,0.08)', borderRadius: 10, padding: 12, flexDirection: 'row', justifyContent: 'space-between' }}>
+                <Text style={{ fontSize: 13, fontFamily: 'PlusJakartaSans_600SemiBold', color: '#fff' }}>{h.category}</Text>
+                <Text style={{ fontSize: 12, fontFamily: 'PlusJakartaSans_500Medium', color: 'rgba(255,255,255,0.6)' }}>{new Date(h.created_at).toLocaleDateString('id')}</Text>
+                <View style={{ backgroundColor: h.status === 'resolved' ? 'rgba(74,124,58,0.3)' : 'rgba(255,255,255,0.15)', borderRadius: 6, paddingHorizontal: 8, paddingVertical: 2 }}>
+                  <Text style={{ fontSize: 10, fontFamily: 'PlusJakartaSans_700Bold', color: '#fff' }}>{h.status}</Text>
+                </View>
+              </View>
+            ))}
 
             {/* Medical ID */}
             {profile && (

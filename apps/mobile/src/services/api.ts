@@ -140,6 +140,38 @@ export const api = {
       body: JSON.stringify({ token }),
     }),
 
+  // Profile
+  updateProfile: (data: Record<string, any>) =>
+    request<any>('/profile', { method: 'PATCH', body: JSON.stringify(data) }),
+
+  // SOS History
+  getSosHistory: () => request<any[]>('/sos/history'),
+
+  // Ziarah
+  getZiarah: () => request<any[]>('/ziarah'),
+
+  // Chat
+  getMessages: (groupId: string, before?: string) =>
+    request<any[]>(`/groups/${groupId}/messages${before ? `?before=${before}` : ''}`),
+  sendMessage: (groupId: string, text: string) =>
+    request<any>(`/groups/${groupId}/messages`, { method: 'POST', body: JSON.stringify({ text }) }),
+
+  // Stats
+  getStats: () => request<any>('/stats/me'),
+
+  // Onboarding
+  markOnboarded: () => request<any>('/onboarded', { method: 'POST' }),
+
+  // SOS resolve (muthawwif)
+  resolveSos: (id: string) =>
+    request<any>(`/sos/${id}/resolve`, { method: 'PATCH' }),
+
+  // Schedules CRUD (muthawwif)
+  createSchedule: (groupId: string, data: any) =>
+    request<any>(`/groups/${groupId}/schedules`, { method: 'POST', body: JSON.stringify(data) }),
+  updateSchedule: (id: string, data: any) =>
+    request<any>(`/schedules/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
+
   getMemberStatuses: (groupId: string) =>
     request<{
       stats: { total: number; safe: number; attention: number };

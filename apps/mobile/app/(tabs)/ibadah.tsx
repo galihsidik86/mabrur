@@ -17,15 +17,30 @@ import {
   type Guide,
 } from '../../src/services/db';
 
-type TabType = 'umrah' | 'haji';
+type TabType = 'umrah' | 'haji' | 'ziarah';
+
+interface ZiarahPlace {
+  id: string; name: string; description: string; category: string;
+  location_name: string; tips: string;
+}
 
 export default function IbadahScreen() {
   const [tab, setTab] = useState<TabType>('umrah');
   const [guides, setGuides] = useState<Guide[]>([]);
+  const [ziarah, setZiarah] = useState<ZiarahPlace[]>([]);
   const [openIdx, setOpenIdx] = useState(0);
   const [loading, setLoading] = useState(true);
 
+  const loadZiarah = useCallback(async () => {
+    try {
+      const data = await api.getZiarah();
+      setZiarah(data);
+    } catch {}
+    setLoading(false);
+  }, []);
+
   const load = useCallback(async (type: TabType) => {
+    if (type === 'ziarah') { loadZiarah(); return; }
     // Offline-first: baca dari SQLite
     const local = await getGuidesByType(type);
     if (local.length > 0) {
@@ -87,9 +102,51 @@ export default function IbadahScreen() {
               Haji
             </Text>
           </TouchableOpacity>
+          <TouchableOpacity
+            style={[s.tabBtn, tab === 'ziarah' && s.tabActive]}
+            onPress={() => switchTab('ziarah')}
+            activeOpacity={0.7}
+          >
+            <Text style={[s.tabText, tab === 'ziarah' && s.tabTextActive]}>
+              Ziarah
+            </Text>
+          </TouchableOpacity>
         </View>
 
-        <Text style={s.subtitle}>{subtitle}</Text>
+        {tab === 'ziarah' ? (
+          <View style={s.list}>
+            {ziarah.map((z, idx) => (
+              <View key={z.id} style={s.card}>
+                <TouchableOpacity style={s.cardHeader} onPress={() => setOpenIdx(openIdx === idx ? -1 : idx)} activeOpacity={0.7}>
+                  <View style={[s.stepNum, { backgroundColor: '#EAF2E4' }]}>
+                    <Ionicons name="location" size={16} color={colors.green} />
+                  </View>
+                  <View style={{ flex: 1 }}>
+                    <Text style={s.cardTitle}>{z.name}</Text>
+                    <Text style={s.cardSub}>{z.location_name} · {z.category}</Text>
+                  </View>
+                  <Ionicons name={openIdx === idx ? 'chevron-up' : 'chevron-down'} size={18} color={colors.textFaint} />
+                </TouchableOpacity>
+                {openIdx === idx && (
+                  <View style={s.cardBody}>
+                    <Text style={s.stepsText}>{z.description}</Text>
+                    {z.tips && (
+                      <View style={s.prayerBox}>
+                        <Text style={s.prayerLabel}>TIPS</Text>
+                        <Text style={[s.latinText, { fontStyle: 'normal', marginTop: 4 }]}>{z.tips}</Text>
+                      </View>
+                    )}
+                  </View>
+                )}
+              </View>
+            ))}
+            {ziarah.length === 0 && !loading && (
+              <Text style={{ color: colors.textFaint, textAlign: 'center', marginTop: 40, fontFamily: 'PlusJakartaSans_500Medium' }}>Belum ada data ziarah</Text>
+            )}
+          </View>
+        ) : (
+        <>
+        <Text style={s.subtitle}>{`${guides.length} tahap · ketuk untuk membuka langkah & doa`}</Text>
 
         {loading && guides.length === 0 ? (
           <ActivityIndicator
@@ -163,6 +220,8 @@ export default function IbadahScreen() {
               );
             })}
           </View>
+        )}
+        </>
         )}
       </ScrollView>
     </SafeAreaView>
