@@ -6,6 +6,8 @@ import {
   TouchableOpacity,
   StyleSheet,
   RefreshControl,
+  Linking,
+  Alert,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -33,7 +35,10 @@ interface Stats {
 interface SosAlert {
   id: string;
   user_name: string;
+  user_phone: string;
   category: string;
+  lat: number | null;
+  lng: number | null;
   created_at: string;
 }
 
@@ -63,11 +68,23 @@ function locationText(m: MemberData): string {
 
 const avatarColors = [colors.primary, colors.green, colors.gold, colors.textSecondary, colors.danger];
 
+function openGoogleMaps(lat: number, lng: number) {
+  Linking.openURL(`https://www.google.com/maps?q=${lat},${lng}`);
+}
+
+function openWhatsApp(phone: string, name: string, category: string) {
+  // Format: 08xxx → 628xxx
+  let wa = phone.replace(/^0/, '62');
+  const msg = encodeURIComponent(`Assalamualaikum ${name}, kami menerima sinyal SOS (${category}) dari Anda. Apakah Anda baik-baik saja? Kami sedang menuju lokasi Anda.`);
+  Linking.openURL(`https://wa.me/${wa}?text=${msg}`);
+}
+
 export default function MuthawwifDashboard({ userName }: { userName: string }) {
   const router = useRouter();
   const [stats, setStats] = useState<Stats>({ total: 0, safe: 0, attention: 0 });
   const [members, setMembers] = useState<MemberData[]>([]);
   const [sosAlerts, setSosAlerts] = useState<SosAlert[]>([]);
+  const [expandedSos, setExpandedSos] = useState<string | null>(null);
   const [refreshing, setRefreshing] = useState(false);
   const [groupId, setGroupId] = useState<string | null>(null);
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -128,28 +145,86 @@ export default function MuthawwifDashboard({ userName }: { userName: string }) {
       <Text style={s.name}>{userName}</Text>
 
       {/* SOS Alerts */}
-      {sosAlerts.map((sos) => (
-        <View key={sos.id} style={s.sosCard}>
-          <View style={s.sosIconBox}>
-            <Ionicons name="warning" size={22} color="#fff" />
-          </View>
-          <View style={{ flex: 1 }}>
-            <Text style={s.sosLabel}>SOS AKTIF · {categoryLabels[sos.category] || sos.category}</Text>
-            <Text style={s.sosName}>{sos.user_name} butuh bantuan</Text>
-          </View>
-          <TouchableOpacity
-            style={s.resolveBtn}
-            onPress={async () => {
-              try {
-                await api.resolveSos(sos.id);
-                setSosAlerts((prev) => prev.filter((s) => s.id !== sos.id));
-              } catch {}
-            }}
-          >
-            <Text style={s.resolveText}>Selesai</Text>
+      {sosAlerts.map((sos) => {
+        const isExpanded = expandedSos === sos.id;
+        const timeAgo = Math.round((Date.now() - new Date(sos.created_at).getTime()) / 60000);
+        return (
+          <TouchableOpacity key={sos.id} style={s.sosCard} activeOpacity={0.85}
+            onPress={() => setExpandedSos(isExpanded ? null : sos.id)}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 11 }}>
+              <View style={s.sosIconBox}>
+                <Ionicons name="warning" size={22} color="#fff" />
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={s.sosLabel}>SOS AKTIF · {categoryLabels[sos.category] || sos.category}</Text>
+                <Text style={s.sosName}>{sos.user_name} butuh bantuan</Text>
+              </View>
+              <Ionicons name={isExpanded ? 'chevron-up' : 'chevron-down'} size={18} color="rgba(255,255,255,0.6)" />
+            </View>
+
+            {isExpanded && (
+              <View style={s.sosExpanded}>
+                {/* Info */}
+                <View style={s.sosInfoRow}>
+                  <Ionicons name="time-outline" size={14} color="rgba(255,255,255,0.7)" />
+                  <Text style={s.sosInfoText}>{timeAgo} menit yang lalu</Text>
+                </View>
+                <View style={s.sosInfoRow}>
+                  <Ionicons name="call-outline" size={14} color="rgba(255,255,255,0.7)" />
+                  <Text style={s.sosInfoText}>{sos.user_phone || '-'}</Text>
+                </View>
+                {sos.lat && sos.lng && (
+                  <View style={s.sosInfoRow}>
+                    <Ionicons name="location-outline" size={14} color="rgba(255,255,255,0.7)" />
+                    <Text style={s.sosInfoText}>{sos.lat.toFixed(5)}, {sos.lng.toFixed(5)}</Text>
+                  </View>
+                )}
+
+                {/* Action buttons */}
+                <View style={s.sosActions}>
+                  {sos.lat && sos.lng && (
+                    <TouchableOpacity style={s.sosActionBtn}
+                      onPress={() => openGoogleMaps(sos.lat!, sos.lng!)}>
+                      <Ionicons name="navigate" size={16} color="#fff" />
+                      <Text style={s.sosActionText}>Buka Maps</Text>
+                    </TouchableOpacity>
+                  )}
+                  {sos.user_phone && (
+                    <TouchableOpacity style={s.sosActionBtn}
+                      onPress={() => openWhatsApp(sos.user_phone, sos.user_name, categoryLabels[sos.category] || sos.category)}>
+                      <Ionicons name="logo-whatsapp" size={16} color="#fff" />
+                      <Text style={s.sosActionText}>WhatsApp</Text>
+                    </TouchableOpacity>
+                  )}
+                  {sos.user_phone && (
+                    <TouchableOpacity style={s.sosActionBtn}
+                      onPress={() => Linking.openURL(`tel:${sos.user_phone}`)}>
+                      <Ionicons name="call" size={16} color="#fff" />
+                      <Text style={s.sosActionText}>Telepon</Text>
+                    </TouchableOpacity>
+                  )}
+                </View>
+
+                {/* Resolve */}
+                <TouchableOpacity style={s.sosResolveBtn}
+                  onPress={() => Alert.alert(
+                    'Selesaikan SOS',
+                    `Yakin SOS dari ${sos.user_name} sudah ditangani?`,
+                    [
+                      { text: 'Batal', style: 'cancel' },
+                      { text: 'Ya, Selesai', style: 'destructive', onPress: async () => {
+                        try { await api.resolveSos(sos.id); setSosAlerts((prev) => prev.filter((s) => s.id !== sos.id)); } catch {}
+                      }},
+                    ]
+                  )}>
+                  <Ionicons name="checkmark-circle" size={16} color="#fff" />
+                  <Text style={s.sosActionText}>Tandai Selesai</Text>
+                </TouchableOpacity>
+              </View>
+            )}
           </TouchableOpacity>
-        </View>
-      ))}
+        );
+      })}
 
       {/* Stats */}
       <View style={s.statsRow}>
@@ -372,11 +447,31 @@ const s = StyleSheet.create({
     fontSize: 16, fontFamily: 'PlusJakartaSans_700Bold',
     color: '#fff', marginTop: 2,
   },
-  resolveBtn: {
-    backgroundColor: 'rgba(255,255,255,0.2)',
-    borderRadius: 8, paddingHorizontal: 12, paddingVertical: 6,
+  sosExpanded: {
+    marginTop: 12, paddingTop: 12,
+    borderTopWidth: 1, borderTopColor: 'rgba(255,255,255,0.15)',
   },
-  resolveText: {
+  sosInfoRow: {
+    flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 6,
+  },
+  sosInfoText: {
+    fontSize: 13, fontFamily: 'PlusJakartaSans_500Medium', color: 'rgba(255,255,255,0.85)',
+  },
+  sosActions: {
+    flexDirection: 'row', gap: 8, marginTop: 10,
+  },
+  sosActionBtn: {
+    flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
+    gap: 6, backgroundColor: 'rgba(255,255,255,0.18)', borderRadius: 10,
+    paddingVertical: 10,
+  },
+  sosActionText: {
     fontSize: 12, fontFamily: 'PlusJakartaSans_700Bold', color: '#fff',
+  },
+  sosResolveBtn: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6,
+    marginTop: 10, backgroundColor: 'rgba(255,255,255,0.12)',
+    borderWidth: 1, borderColor: 'rgba(255,255,255,0.3)',
+    borderRadius: 10, paddingVertical: 10,
   },
 });
