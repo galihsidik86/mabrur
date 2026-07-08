@@ -1,0 +1,29 @@
+databases:
+  - name: mabrur-db
+    plan: free
+    databaseName: mabrur
+    user: mabrur
+
+services:
+  - type: web
+    name: mabrur-api
+    plan: free
+    runtime: node
+    buildCommand: cd server && npm install && npx tsc
+    startCommand: cd server && npx tsx src/db/migrate.ts && npx tsx src/db/seed.ts && node dist/index.js
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 10000
+      - key: DATABASE_URL
+        fromDatabase:
+          name: mabrur-db
+          property: connectionString
+      - key: JWT_SECRET
+        generateValue: true
+      - key: JWT_REFRESH_SECRET
+        generateValue: true
+      - key: ENCRYPTION_KEY
+        value: bfbeeba187892333000528977128262084e3e3a44fc94a0c76ac009bbc6f7378
+    healthCheckPath: /health

@@ -8,7 +8,7 @@ loadEnv({ path: path.resolve(__dirname, '../../.env') });
 const envSchema = z.object({
   NODE_ENV: z.enum(['development', 'production', 'test']).default('development'),
   PORT: z.coerce.number().default(3000),
-  DATABASE_URL: z.string().url(),
+  DATABASE_URL: z.string().min(10),
   JWT_SECRET: z.string().min(32),
   JWT_REFRESH_SECRET: z.string().min(32),
   ENCRYPTION_KEY: z.string().length(64),
