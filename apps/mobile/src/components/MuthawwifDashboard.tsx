@@ -161,29 +161,32 @@ export default function MuthawwifDashboard({ userName }: { userName: string }) {
               </View>
             </View>
 
-            {/* Action buttons — langsung visible */}
+            {/* Action buttons — selalu visible */}
             <View style={s.sosActions}>
-              {sos.lat && sos.lng && (
-                <TouchableOpacity style={s.sosActionBtn}
-                  onPress={() => openGoogleMaps(sos.lat!, sos.lng!)}>
-                  <Ionicons name="navigate" size={16} color="#fff" />
-                  <Text style={s.sosActionText}>Maps</Text>
-                </TouchableOpacity>
-              )}
-              {sos.user_phone && (
-                <TouchableOpacity style={[s.sosActionBtn, { backgroundColor: '#25D366' }]}
-                  onPress={() => openWhatsApp(sos.user_phone, sos.user_name, categoryLabels[sos.category] || sos.category)}>
-                  <Ionicons name="logo-whatsapp" size={16} color="#fff" />
-                  <Text style={s.sosActionText}>WA</Text>
-                </TouchableOpacity>
-              )}
-              {sos.user_phone && (
-                <TouchableOpacity style={s.sosActionBtn}
-                  onPress={() => Linking.openURL(`tel:${sos.user_phone}`)}>
-                  <Ionicons name="call" size={16} color="#fff" />
-                  <Text style={s.sosActionText}>Telepon</Text>
-                </TouchableOpacity>
-              )}
+              <TouchableOpacity style={s.sosActionBtn}
+                onPress={() => {
+                  if (sos.lat != null && sos.lng != null) openGoogleMaps(sos.lat, sos.lng);
+                  else Alert.alert('', 'Lokasi GPS tidak tersedia');
+                }}>
+                <Ionicons name="navigate" size={16} color="#fff" />
+                <Text style={s.sosActionText}>Maps</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={[s.sosActionBtn, { backgroundColor: '#25D366' }]}
+                onPress={() => {
+                  if (sos.user_phone) openWhatsApp(sos.user_phone, sos.user_name, categoryLabels[sos.category] || sos.category);
+                  else Alert.alert('', 'Nomor HP tidak tersedia');
+                }}>
+                <Ionicons name="logo-whatsapp" size={16} color="#fff" />
+                <Text style={s.sosActionText}>WA</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={s.sosActionBtn}
+                onPress={() => {
+                  if (sos.user_phone) Linking.openURL(`tel:${sos.user_phone}`);
+                  else Alert.alert('', 'Nomor HP tidak tersedia');
+                }}>
+                <Ionicons name="call" size={16} color="#fff" />
+                <Text style={s.sosActionText}>Telepon</Text>
+              </TouchableOpacity>
               <TouchableOpacity style={[s.sosActionBtn, { backgroundColor: 'rgba(255,255,255,0.25)' }]}
                 onPress={() => Alert.alert(
                   'Selesaikan SOS',
@@ -429,14 +432,14 @@ const s = StyleSheet.create({
     color: 'rgba(255,255,255,0.65)', marginTop: 3,
   },
   sosActions: {
-    flexDirection: 'row', gap: 6, marginTop: 12,
+    flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginTop: 12,
   },
   sosActionBtn: {
-    flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
-    gap: 6, backgroundColor: 'rgba(255,255,255,0.18)', borderRadius: 10,
-    paddingVertical: 10,
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
+    gap: 5, backgroundColor: 'rgba(255,255,255,0.18)', borderRadius: 10,
+    paddingVertical: 10, paddingHorizontal: 12, minWidth: 70,
   },
   sosActionText: {
-    fontSize: 12, fontFamily: 'PlusJakartaSans_700Bold', color: '#fff',
+    fontSize: 11, fontFamily: 'PlusJakartaSans_700Bold', color: '#fff',
   },
 });
