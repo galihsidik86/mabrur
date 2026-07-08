@@ -144,50 +144,53 @@ export default function MuthawwifDashboard({ userName }: { userName: string }) {
       <Text style={s.modeLabel}>Mode Muthawwif</Text>
       <Text style={s.name}>{userName}</Text>
 
-      {/* SOS Alerts */}
+      {/* SOS Alerts — besar dan jelas untuk kondisi darurat */}
       {sosAlerts.map((sos) => {
         const timeAgo = Math.round((Date.now() - new Date(sos.created_at).getTime()) / 60000);
         return (
           <View key={sos.id} style={s.sosCard}>
             {/* Header */}
-            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 11 }}>
+            <View style={s.sosHeader}>
               <View style={s.sosIconBox}>
-                <Ionicons name="warning" size={22} color="#fff" />
+                <Ionicons name="warning" size={28} color="#fff" />
               </View>
-              <View style={{ flex: 1 }}>
-                <Text style={s.sosLabel}>SOS AKTIF · {categoryLabels[sos.category] || sos.category}</Text>
-                <Text style={s.sosName}>{sos.user_name} butuh bantuan</Text>
-                <Text style={s.sosTimeText}>{timeAgo} menit lalu · {sos.user_phone || ''}</Text>
-              </View>
+              <Text style={s.sosTitle}>SOS DARURAT</Text>
             </View>
 
-            {/* Action buttons — selalu visible */}
-            <View style={s.sosActions}>
-              <TouchableOpacity style={s.sosActionBtn}
+            {/* Info jamaah */}
+            <Text style={s.sosName}>{sos.user_name}</Text>
+            <Text style={s.sosCat}>{categoryLabels[sos.category] || sos.category} · {timeAgo} menit lalu</Text>
+            <Text style={s.sosPhone}>{sos.user_phone || '-'}</Text>
+
+            {/* Tombol besar — 2 kolom */}
+            <View style={s.sosRow}>
+              <TouchableOpacity style={s.sosBtnPrimary}
                 onPress={() => {
                   if (sos.lat != null && sos.lng != null) openGoogleMaps(sos.lat, sos.lng);
                   else Alert.alert('', 'Lokasi GPS tidak tersedia');
                 }}>
-                <Ionicons name="navigate" size={16} color="#fff" />
-                <Text style={s.sosActionText}>Maps</Text>
+                <Ionicons name="navigate" size={22} color={colors.dangerDark} />
+                <Text style={s.sosBtnPrimaryText}>Lihat Lokasi</Text>
               </TouchableOpacity>
-              <TouchableOpacity style={[s.sosActionBtn, { backgroundColor: '#25D366' }]}
+              <TouchableOpacity style={s.sosBtnWa}
                 onPress={() => {
                   if (sos.user_phone) openWhatsApp(sos.user_phone, sos.user_name, categoryLabels[sos.category] || sos.category);
                   else Alert.alert('', 'Nomor HP tidak tersedia');
                 }}>
-                <Ionicons name="logo-whatsapp" size={16} color="#fff" />
-                <Text style={s.sosActionText}>WA</Text>
+                <Ionicons name="logo-whatsapp" size={22} color="#fff" />
+                <Text style={s.sosBtnWhiteText}>WhatsApp</Text>
               </TouchableOpacity>
-              <TouchableOpacity style={s.sosActionBtn}
+            </View>
+            <View style={s.sosRow}>
+              <TouchableOpacity style={s.sosBtnOutline}
                 onPress={() => {
                   if (sos.user_phone) Linking.openURL(`tel:${sos.user_phone}`);
                   else Alert.alert('', 'Nomor HP tidak tersedia');
                 }}>
-                <Ionicons name="call" size={16} color="#fff" />
-                <Text style={s.sosActionText}>Telepon</Text>
+                <Ionicons name="call" size={20} color="#fff" />
+                <Text style={s.sosBtnWhiteText}>Telepon</Text>
               </TouchableOpacity>
-              <TouchableOpacity style={[s.sosActionBtn, { backgroundColor: 'rgba(255,255,255,0.25)' }]}
+              <TouchableOpacity style={s.sosBtnOutline}
                 onPress={() => Alert.alert(
                   'Selesaikan SOS',
                   `Yakin SOS dari ${sos.user_name} sudah ditangani?`,
@@ -198,8 +201,8 @@ export default function MuthawwifDashboard({ userName }: { userName: string }) {
                     }},
                   ]
                 )}>
-                <Ionicons name="checkmark-circle" size={16} color="#fff" />
-                <Text style={s.sosActionText}>Selesai</Text>
+                <Ionicons name="checkmark-circle" size={20} color="#fff" />
+                <Text style={s.sosBtnWhiteText}>Selesai</Text>
               </TouchableOpacity>
             </View>
           </View>
@@ -401,45 +404,56 @@ const s = StyleSheet.create({
   },
 
   sosCard: {
-    marginTop: 14,
-    borderRadius: 16,
-    backgroundColor: colors.danger,
-    padding: 16,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 11,
+    marginTop: 14, borderRadius: 18,
+    backgroundColor: colors.danger, padding: 20,
     shadowColor: colors.danger,
     shadowOffset: { width: 0, height: 10 },
-    shadowOpacity: 0.3,
-    shadowRadius: 24,
-    elevation: 8,
+    shadowOpacity: 0.35, shadowRadius: 24, elevation: 10,
+  },
+  sosHeader: {
+    flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 12,
   },
   sosIconBox: {
-    width: 40, height: 40, borderRadius: 11,
-    backgroundColor: 'rgba(255,255,255,0.16)',
+    width: 44, height: 44, borderRadius: 12,
+    backgroundColor: 'rgba(255,255,255,0.18)',
     alignItems: 'center', justifyContent: 'center',
   },
-  sosLabel: {
-    fontSize: 10, fontFamily: 'PlusJakartaSans_700Bold',
-    letterSpacing: 1.2, color: 'rgba(255,255,255,0.85)',
+  sosTitle: {
+    fontSize: 14, fontFamily: 'PlusJakartaSans_800ExtraBold',
+    color: '#fff', letterSpacing: 1.5,
   },
   sosName: {
-    fontSize: 16, fontFamily: 'PlusJakartaSans_700Bold',
-    color: '#fff', marginTop: 2,
+    fontSize: 20, fontFamily: 'PlusJakartaSans_800ExtraBold',
+    color: '#fff',
   },
-  sosTimeText: {
-    fontSize: 11, fontFamily: 'PlusJakartaSans_500Medium',
-    color: 'rgba(255,255,255,0.65)', marginTop: 3,
+  sosCat: {
+    fontSize: 13, fontFamily: 'PlusJakartaSans_600SemiBold',
+    color: 'rgba(255,255,255,0.8)', marginTop: 3,
   },
-  sosActions: {
-    flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginTop: 12,
+  sosPhone: {
+    fontSize: 15, fontFamily: 'PlusJakartaSans_700Bold',
+    color: 'rgba(255,255,255,0.9)', marginTop: 2,
   },
-  sosActionBtn: {
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
-    gap: 5, backgroundColor: 'rgba(255,255,255,0.18)', borderRadius: 10,
-    paddingVertical: 10, paddingHorizontal: 12, minWidth: 70,
+  sosRow: {
+    flexDirection: 'row', gap: 8, marginTop: 10,
   },
-  sosActionText: {
-    fontSize: 11, fontFamily: 'PlusJakartaSans_700Bold', color: '#fff',
+  sosBtnPrimary: {
+    flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
+    gap: 8, backgroundColor: '#fff', borderRadius: 12, paddingVertical: 14,
+  },
+  sosBtnPrimaryText: {
+    fontSize: 14, fontFamily: 'PlusJakartaSans_700Bold', color: colors.dangerDark,
+  },
+  sosBtnWa: {
+    flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
+    gap: 8, backgroundColor: '#25D366', borderRadius: 12, paddingVertical: 14,
+  },
+  sosBtnOutline: {
+    flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
+    gap: 8, borderWidth: 1.5, borderColor: 'rgba(255,255,255,0.5)',
+    borderRadius: 12, paddingVertical: 12,
+  },
+  sosBtnWhiteText: {
+    fontSize: 14, fontFamily: 'PlusJakartaSans_700Bold', color: '#fff',
   },
 });
