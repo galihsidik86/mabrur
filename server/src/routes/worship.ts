@@ -253,9 +253,59 @@ router.get('/prayer-times', async (req: Request, res: Response) => {
 
 // ==================== CURRENCY CONVERTER ====================
 
+// Cache kurs: ambil dari API resmi, simpan 1 jam
+// Sumber: open.er-api.com (data dari bank sentral / ECB)
+let currencyCache: { sar_to_idr: number; idr_to_sar: number; updated: string } | null = null;
+let currencyCacheTime = 0;
+const CURRENCY_CACHE_TTL = 60 * 60 * 1000; // 1 jam
+const FALLBACK_RATE = 4250; // fallback jika API gagal
+
+async function fetchCurrencyRate() {
+  const now = Date.now();
+  if (currencyCache && now - currencyCacheTime < CURRENCY_CACHE_TTL) {
+    return currencyCache;
+  }
+
+  try {
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 5000);
+    const res = await fetch('https://open.er-api.com/v6/latest/SAR', {
+      signal: controller.signal,
+    });
+    clearTimeout(timeout);
+
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const json = await res.json() as {
+      result: string;
+      rates: Record<string, number>;
+      time_last_update_utc: string;
+    };
+
+    if (json.result !== 'success' || !json.rates?.IDR) {
+      throw new Error('Format respons tidak sesuai');
+    }
+
+    currencyCache = {
+      sar_to_idr: Math.round(json.rates.IDR * 100) / 100,
+      idr_to_sar: Math.round((1 / json.rates.IDR) * 1e8) / 1e8,
+      updated: json.time_last_update_utc,
+    };
+    currencyCacheTime = now;
+    return currencyCache;
+  } catch {
+    // Jika API gagal, gunakan cache lama atau fallback
+    if (currencyCache) return currencyCache;
+    return {
+      sar_to_idr: FALLBACK_RATE,
+      idr_to_sar: 1 / FALLBACK_RATE,
+      updated: 'fallback',
+    };
+  }
+}
+
 router.get('/currency', async (_req: Request, res: Response) => {
-  // Static rate — in production, fetch from API
-  res.json({ data: { sar_to_idr: 4250, idr_to_sar: 1 / 4250, updated: '2026-07-07' }});
+  const rate = await fetchCurrencyRate();
+  res.json({ data: rate });
 });
 
 export default router;
