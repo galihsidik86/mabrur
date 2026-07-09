@@ -6,3 +6,6 @@ dist/
 Thumbs.db
 coverage/
 .turbo/
+*.apk
+.expo/
+.idea/
