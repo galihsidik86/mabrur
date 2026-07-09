@@ -10,12 +10,14 @@ import {
   ActivityIndicator,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { Ionicons } from '@expo/vector-icons';
 import { useAuthStore } from '../src/stores/auth';
 import { colors, radius } from '../src/theme';
 
 export default function LoginScreen() {
   const [phone, setPhone] = useState('');
   const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const login = useAuthStore((s) => s.login);
@@ -65,14 +67,29 @@ export default function LoginScreen() {
           />
 
           <Text style={[s.label, { marginTop: 16 }]}>Password</Text>
-          <TextInput
-            style={s.input}
-            placeholder="Masukkan password"
-            placeholderTextColor={colors.textFaint}
-            value={password}
-            onChangeText={setPassword}
-            secureTextEntry
-          />
+          <View style={s.passwordWrap}>
+            <TextInput
+              style={[s.input, s.passwordInput]}
+              placeholder="Masukkan password"
+              placeholderTextColor={colors.textFaint}
+              value={password}
+              onChangeText={setPassword}
+              secureTextEntry={!showPassword}
+              autoCapitalize="none"
+            />
+            <TouchableOpacity
+              style={s.eyeBtn}
+              onPress={() => setShowPassword((v) => !v)}
+              hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+              accessibilityLabel={showPassword ? 'Sembunyikan password' : 'Tampilkan password'}
+            >
+              <Ionicons
+                name={showPassword ? 'eye-off-outline' : 'eye-outline'}
+                size={22}
+                color={colors.textMuted}
+              />
+            </TouchableOpacity>
+          </View>
 
           {error ? <Text style={s.error}>{error}</Text> : null}
 
@@ -153,6 +170,18 @@ const s = StyleSheet.create({
     fontSize: 15,
     fontFamily: 'PlusJakartaSans_500Medium',
     color: colors.text,
+  },
+  passwordWrap: {
+    position: 'relative',
+    justifyContent: 'center',
+  },
+  passwordInput: {
+    paddingRight: 48,
+  },
+  eyeBtn: {
+    position: 'absolute',
+    right: 8,
+    padding: 8,
   },
   error: {
     color: colors.danger,

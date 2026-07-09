@@ -6,6 +6,7 @@ export default function Login() {
   const navigate = useNavigate();
   const [phone, setPhone] = useState('');
   const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
@@ -64,11 +65,26 @@ export default function Login() {
         />
 
         <label style={{ ...labelStyle, marginTop: 14 }}>Password</label>
-        <input
-          type="password" value={password} onChange={(e) => setPassword(e.target.value)}
-          placeholder="Masukkan password"
-          style={inputStyle} required
-        />
+        <div style={{ position: 'relative' }}>
+          <input
+            type={showPassword ? 'text' : 'password'}
+            value={password} onChange={(e) => setPassword(e.target.value)}
+            placeholder="Masukkan password"
+            style={{ ...inputStyle, paddingRight: 76 }} required
+          />
+          <button
+            type="button"
+            onClick={() => setShowPassword((v) => !v)}
+            aria-label={showPassword ? 'Sembunyikan password' : 'Tampilkan password'}
+            style={{
+              position: 'absolute', right: 6, top: '50%', transform: 'translateY(-50%)',
+              background: 'none', border: 'none', cursor: 'pointer', padding: '6px 8px',
+              fontSize: 12, fontWeight: 700, color: '#8B2E2E',
+            }}
+          >
+            {showPassword ? 'Sembunyikan' : 'Lihat'}
+          </button>
+        </div>
 
         {error && <p style={{ color: '#C44536', fontSize: 13, marginTop: 12, textAlign: 'center' }}>{error}</p>}
 
