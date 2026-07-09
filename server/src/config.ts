@@ -11,7 +11,8 @@ const envSchema = z.object({
   DATABASE_URL: z.string().min(10),
   JWT_SECRET: z.string().min(32),
   JWT_REFRESH_SECRET: z.string().min(32),
-  ENCRYPTION_KEY: z.string().length(64),
+  // Perbaikan: validasi bahwa key adalah hex valid (32 bytes = 64 hex chars)
+  ENCRYPTION_KEY: z.string().length(64).regex(/^[0-9a-f]+$/i, 'ENCRYPTION_KEY harus berupa 64 karakter hex'),
 });
 
 export const config = envSchema.parse(process.env);

@@ -43,8 +43,10 @@ router.post(
   },
 );
 
+// Perbaikan: rate limit pada refresh endpoint untuk mencegah brute-force token
 router.post(
   '/refresh',
+  loginLimiter,
   validate(refreshSchema),
   async (req: Request, res: Response, next: NextFunction) => {
     try {
@@ -83,9 +85,15 @@ router.get(
   },
 );
 
+// Perbaikan: validasi push token agar tidak menyimpan data arbitrary
+const pushTokenSchema = z.object({
+  token: z.string().min(1).max(500),
+});
+
 router.post(
   '/push-token',
   authenticate,
+  validate(pushTokenSchema),
   async (req: Request, res: Response, next: NextFunction) => {
     try {
       await savePushToken(req.auth!.sub, req.body.token);

@@ -50,15 +50,21 @@ router.delete('/sos/:id', async (req: Request, res: Response, next: NextFunction
 // PATCH /sos/:id/resolve — muthawwif/admin resolve SOS
 router.patch('/sos/:id/resolve', async (req: Request, res: Response, next: NextFunction) => {
   try {
-    if (req.auth!.role === 'jamaah') {
-      // Jamaah hanya bisa resolve kalau dia muthawwif di group SOS tersebut
+    // Perbaikan: cek otorisasi untuk SEMUA peran, bukan hanya jamaah
+    // Sebelumnya muthawwif bisa resolve SOS dari rombongan lain
+    if (req.auth!.role !== 'admin') {
       const sos = await db('sos_alerts').where('id', param(req.params.id)).first();
       if (!sos) throw new AppError(404, 'SOS tidak ditemukan', 'NOT_FOUND');
-      const member = await db('group_members')
-        .where({ group_id: sos.group_id, user_id: req.auth!.sub, is_active: true })
-        .first();
-      if (!member || member.role_in_group !== 'muthawwif') {
-        throw new AppError(403, 'Hanya muthawwif atau admin yang bisa menyelesaikan SOS', 'FORBIDDEN');
+      if (sos.group_id) {
+        const member = await db('group_members')
+          .where({ group_id: sos.group_id, user_id: req.auth!.sub, is_active: true })
+          .first();
+        if (!member || member.role_in_group !== 'muthawwif') {
+          throw new AppError(403, 'Hanya muthawwif rombongan atau admin yang bisa menyelesaikan SOS', 'FORBIDDEN');
+        }
+      } else {
+        // SOS tanpa group hanya bisa di-resolve admin
+        throw new AppError(403, 'SOS tanpa rombongan hanya bisa diselesaikan admin', 'FORBIDDEN');
       }
     }
     const sos = await sosService.resolve(param(req.params.id), req.auth!.sub);

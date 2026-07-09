@@ -3,6 +3,7 @@ import { db } from '../db';
 import { AppError } from '../middleware/error-handler';
 import { encrypt, decrypt } from './crypto.service';
 import { audit } from './audit.service';
+import { revokeAllTokens } from './auth.service';
 
 const PUBLIC_FIELDS = [
   'id', 'phone', 'name', 'role', 'blood_type',
@@ -135,6 +136,12 @@ export async function updateUser(
     .where('id', id)
     .update(update)
     .returning(PUBLIC_FIELDS);
+
+  // Perbaikan: invalidasi semua refresh token saat password diubah
+  // mencegah sesi yang sudah bocor tetap aktif setelah reset password
+  if (data.password) {
+    await revokeAllTokens(id);
+  }
 
   await audit(adminId, 'user.update', 'users', id, {
     fields: Object.keys(data),

@@ -30,23 +30,26 @@ function trackLoginFailure(phone: string) {
   }
 }
 
+// Hash dummy untuk perbandingan ketika user tidak ditemukan
+// Perbaikan: mencegah timing attack untuk enumerasi nomor HP
+const DUMMY_HASH = '$2a$12$LJ3m4ys3Lf0j9OLQQ3xBjuNZNPMcnSqOMZpjGR3keYfqaGISsBQi';
+
 export async function login(phone: string, password: string) {
   const user = await db('users').where({ phone, is_active: true }).first();
-  if (!user) {
+
+  // Perbaikan: selalu jalankan bcrypt.compare agar waktu respons konsisten
+  // mencegah penyerang mendeteksi nomor HP valid via perbedaan waktu
+  const valid = await bcrypt.compare(password, user?.password_hash || DUMMY_HASH);
+  if (!user || !valid) {
     trackLoginFailure(phone);
     throw new AppError(401, 'Nomor HP atau password salah', 'AUTH_FAILED');
   }
 
-  const valid = await bcrypt.compare(password, user.password_hash);
-  if (!valid) {
-    trackLoginFailure(phone);
-    throw new AppError(401, 'Nomor HP atau password salah', 'AUTH_FAILED');
-  }
-
+  // Perbaikan: pin algoritma HS256 secara eksplisit
   const accessToken = jwt.sign(
     { sub: user.id, role: user.role },
     config.JWT_SECRET,
-    { expiresIn: ACCESS_EXPIRY },
+    { algorithm: 'HS256', expiresIn: ACCESS_EXPIRY },
   );
 
   const refreshToken = crypto.randomBytes(40).toString('hex');
@@ -67,6 +70,12 @@ export async function login(phone: string, password: string) {
     refresh_token: refreshToken,
     user: { id: user.id, name: user.name, phone: user.phone, role: user.role },
   };
+}
+
+// Perbaikan: hapus semua refresh token saat password diubah
+// mencegah sesi lama tetap aktif setelah reset password
+export async function revokeAllTokens(userId: string) {
+  await db('refresh_tokens').where('user_id', userId).delete();
 }
 
 export async function refresh(refreshToken: string) {
@@ -93,7 +102,7 @@ export async function refresh(refreshToken: string) {
   const accessToken = jwt.sign(
     { sub: user.id, role: user.role },
     config.JWT_SECRET,
-    { expiresIn: ACCESS_EXPIRY },
+    { algorithm: 'HS256', expiresIn: ACCESS_EXPIRY },
   );
 
   const newRefreshToken = crypto.randomBytes(40).toString('hex');

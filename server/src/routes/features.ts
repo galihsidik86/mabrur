@@ -8,6 +8,7 @@ import { AppError } from '../middleware/error-handler';
 import { audit } from '../services/audit.service';
 import bcrypt from 'bcryptjs';
 import { encrypt, decrypt } from '../services/crypto.service';
+import { revokeAllTokens } from '../services/auth.service';
 
 const router = Router();
 router.use(authenticate);
@@ -37,6 +38,12 @@ router.patch('/profile', validate(profileUpdateSchema), async (req: Request, res
     if (data.emergency_contact !== undefined) update.emergency_contact = data.emergency_contact || null;
 
     await db('users').where('id', req.auth!.sub).update(update);
+
+    // Perbaikan: invalidasi semua refresh token saat user mengubah password sendiri
+    if (data.password) {
+      await revokeAllTokens(req.auth!.sub);
+    }
+
     const user = await db('users').where('id', req.auth!.sub)
       .select('id', 'phone', 'name', 'role', 'blood_type', 'emergency_contact', 'created_at').first();
     await audit(req.auth!.sub, 'profile.update', 'users', req.auth!.sub);
@@ -66,10 +73,11 @@ router.get('/ziarah', async (_req: Request, res: Response, next: NextFunction) =
   } catch (err) { next(err); }
 });
 
+// Perbaikan: validasi batas koordinat + batasi panjang string
 router.post('/ziarah', authorize('admin'), validate(z.object({
-  name: z.string().min(1), description: z.string().optional(), category: z.string(),
-  location_name: z.string().optional(), lat: z.number().optional(), lng: z.number().optional(),
-  tips: z.string().optional(), sort_order: z.number().int().optional(),
+  name: z.string().min(1).max(200), description: z.string().max(2000).optional(), category: z.string().min(1).max(50),
+  location_name: z.string().max(200).optional(), lat: z.number().min(-90).max(90).optional(), lng: z.number().min(-180).max(180).optional(),
+  tips: z.string().max(2000).optional(), sort_order: z.number().int().optional(),
 })), async (req: Request, res: Response, next: NextFunction) => {
   try {
     const [place] = await db('ziarah_places').insert(req.body).returning('*');
@@ -77,7 +85,15 @@ router.post('/ziarah', authorize('admin'), validate(z.object({
   } catch (err) { next(err); }
 });
 
-router.put('/ziarah/:id', authorize('admin'), async (req: Request, res: Response, next: NextFunction) => {
+// Perbaikan: tambahkan validasi pada PUT untuk mencegah field arbitrary masuk ke DB
+const ziarahUpdateSchema = z.object({
+  name: z.string().min(1).max(200).optional(), description: z.string().max(2000).optional(),
+  category: z.string().min(1).max(50).optional(), location_name: z.string().max(200).optional(),
+  lat: z.number().min(-90).max(90).optional(), lng: z.number().min(-180).max(180).optional(),
+  tips: z.string().max(2000).optional(), sort_order: z.number().int().optional(),
+});
+
+router.put('/ziarah/:id', authorize('admin'), validate(ziarahUpdateSchema), async (req: Request, res: Response, next: NextFunction) => {
   try {
     const [place] = await db('ziarah_places').where('id', param(req.params.id))
       .update({ ...req.body, updated_at: new Date() }).returning('*');

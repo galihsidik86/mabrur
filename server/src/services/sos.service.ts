@@ -72,14 +72,18 @@ export async function cancel(id: string, userId: string) {
 }
 
 export async function resolve(id: string, resolvedBy: string) {
-  const sos = await db('sos_alerts').where('id', id).first();
-  if (!sos) throw new AppError(404, 'SOS tidak ditemukan', 'NOT_FOUND');
-  if (sos.status !== 'active') throw new AppError(400, 'SOS sudah tidak aktif', 'INVALID_STATE');
-
+  // Perbaikan: gunakan WHERE status='active' pada UPDATE untuk mencegah race condition
+  // Sebelumnya ada celah TOCTOU antara SELECT dan UPDATE
   const [updated] = await db('sos_alerts')
-    .where('id', id)
+    .where({ id, status: 'active' })
     .update({ status: 'resolved', resolved_by: resolvedBy, resolved_at: new Date() })
     .returning('*');
+
+  if (!updated) {
+    const exists = await db('sos_alerts').where('id', id).first();
+    if (!exists) throw new AppError(404, 'SOS tidak ditemukan', 'NOT_FOUND');
+    throw new AppError(400, 'SOS sudah tidak aktif', 'INVALID_STATE');
+  }
 
   await audit(resolvedBy, 'sos.resolve', 'sos_alerts', id);
   return updated;

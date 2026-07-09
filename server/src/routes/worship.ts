@@ -11,8 +11,9 @@ function param(v: string | string[]): string { return Array.isArray(v) ? v[0] : 
 
 // ==================== COUNTER (Tawaf/Sai/Dzikir) ====================
 
+// Perbaikan: batasi panjang string type dan label
 router.post('/counter', validate(z.object({
-  type: z.string(), target: z.number().int().optional(), label: z.string().optional(),
+  type: z.string().min(1).max(50), target: z.number().int().min(1).max(10000).optional(), label: z.string().max(100).optional(),
 })), async (req: Request, res: Response, next: NextFunction) => {
   try {
     const [s] = await db('counter_sessions').insert({
@@ -55,8 +56,9 @@ router.get('/logbook', async (req: Request, res: Response, next: NextFunction) =
   } catch (err) { next(err); }
 });
 
+// Perbaikan: validasi format tanggal dan batasi panjang mood
 router.post('/logbook', validate(z.object({
-  date: z.string(), content: z.string().max(5000), mood: z.string().optional(),
+  date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Format tanggal harus YYYY-MM-DD'), content: z.string().max(5000), mood: z.string().max(20).optional(),
 })), async (req: Request, res: Response, next: NextFunction) => {
   try {
     const [entry] = await db('logbook').insert({
@@ -142,8 +144,9 @@ router.get('/saved-locations', async (req: Request, res: Response, next: NextFun
   } catch (err) { next(err); }
 });
 
+// Perbaikan: validasi batas koordinat untuk mencegah data invalid
 router.post('/saved-locations', validate(z.object({
-  name: z.string().min(1).max(100), lat: z.number(), lng: z.number(), notes: z.string().optional(),
+  name: z.string().min(1).max(100), lat: z.number().min(-90).max(90), lng: z.number().min(-180).max(180), notes: z.string().max(500).optional(),
 })), async (req: Request, res: Response, next: NextFunction) => {
   try {
     const [loc] = await db('saved_locations').insert({
@@ -185,8 +188,12 @@ router.get('/health-tips', async (_req: Request, res: Response) => {
 // ==================== PRAYER TIMES (calculated) ====================
 
 router.get('/prayer-times', async (req: Request, res: Response) => {
-  const lat = Number(req.query.lat) || 21.4225; // default Makkah
-  const lng = Number(req.query.lng) || 39.8262;
+  // Perbaikan: NaN || default tetap NaN karena NaN bukan falsy
+  // Gunakan isFinite() untuk mendeteksi NaN/Infinity
+  const rawLat = Number(req.query.lat);
+  const rawLng = Number(req.query.lng);
+  const lat = isFinite(rawLat) ? Math.max(-90, Math.min(90, rawLat)) : 21.4225;
+  const lng = isFinite(rawLng) ? Math.max(-180, Math.min(180, rawLng)) : 39.8262;
   const now = new Date();
 
   // Simplified prayer time calculation (approximate for Makkah/Madinah region)
@@ -195,7 +202,8 @@ router.get('/prayer-times', async (req: Request, res: Response) => {
   const declination = 23.45 * Math.sin((2 * Math.PI / 365) * (day - 81));
   const eqTime = 9.87 * Math.sin(2 * (2 * Math.PI / 365) * (day - 81)) - 7.53 * Math.cos((2 * Math.PI / 365) * (day - 81)) - 1.5 * Math.sin((2 * Math.PI / 365) * (day - 81));
   // Estimate timezone from longitude (±0.5h accuracy, sufficient for prayer times)
-  const tz = Number(req.query.tz) || Math.round(lng / 15);
+  const rawTz = Number(req.query.tz);
+  const tz = isFinite(rawTz) ? rawTz : Math.round(lng / 15);
   const solarNoon = 12 - lng / 15 - eqTime / 60 + tz;
 
   const toRad = (d: number) => d * Math.PI / 180;

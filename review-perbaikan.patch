@@ -1,0 +1,481 @@
+diff --git a/server/src/config.ts b/server/src/config.ts
+index e681129..d34fc1c 100644
+--- a/server/src/config.ts
++++ b/server/src/config.ts
+@@ -11,7 +11,8 @@ const envSchema = z.object({
+   DATABASE_URL: z.string().min(10),
+   JWT_SECRET: z.string().min(32),
+   JWT_REFRESH_SECRET: z.string().min(32),
+-  ENCRYPTION_KEY: z.string().length(64),
++  // Perbaikan: validasi bahwa key adalah hex valid (32 bytes = 64 hex chars)
++  ENCRYPTION_KEY: z.string().length(64).regex(/^[0-9a-f]+$/i, 'ENCRYPTION_KEY harus berupa 64 karakter hex'),
+ });
+ 
+ export const config = envSchema.parse(process.env);
+diff --git a/server/src/middleware/auth.ts b/server/src/middleware/auth.ts
+index e9ed60c..c81cccb 100644
+--- a/server/src/middleware/auth.ts
++++ b/server/src/middleware/auth.ts
+@@ -1,6 +1,7 @@
+ import { Request, Response, NextFunction } from 'express';
+ import jwt from 'jsonwebtoken';
+ import { config } from '../config';
++import { db } from '../db';
+ import type { AuthPayload } from '../types';
+ 
+ export function authenticate(
+@@ -17,9 +18,32 @@ export function authenticate(
+   }
+ 
+   try {
+-    const payload = jwt.verify(header.slice(7), config.JWT_SECRET) as AuthPayload;
++    // Perbaikan: pin algoritma HS256 untuk mencegah algorithm confusion attack
++    const payload = jwt.verify(header.slice(7), config.JWT_SECRET, {
++      algorithms: ['HS256'],
++    }) as AuthPayload;
+     req.auth = payload;
+-    next();
++
++    // Perbaikan: cek user masih aktif — token lama tetap valid secara JWT
++    // tapi user bisa saja sudah dinonaktifkan admin
++    db('users')
++      .where({ id: payload.sub, is_active: true })
++      .select('id')
++      .first()
++      .then((user) => {
++        if (!user) {
++          res.status(401).json({
++            error: { message: 'Akun telah dinonaktifkan', code: 'UNAUTHORIZED' },
++          });
++          return;
++        }
++        next();
++      })
++      .catch(() => {
++        res.status(500).json({
++          error: { message: 'Terjadi kesalahan pada server', code: 'INTERNAL_ERROR' },
++        });
++      });
+   } catch {
+     res.status(401).json({
+       error: { message: 'Token tidak valid atau sudah kedaluwarsa', code: 'UNAUTHORIZED' },
+diff --git a/server/src/routes/auth.ts b/server/src/routes/auth.ts
+index 311a719..3ca4148 100644
+--- a/server/src/routes/auth.ts
++++ b/server/src/routes/auth.ts
+@@ -43,8 +43,10 @@ router.post(
+   },
+ );
+ 
++// Perbaikan: rate limit pada refresh endpoint untuk mencegah brute-force token
+ router.post(
+   '/refresh',
++  loginLimiter,
+   validate(refreshSchema),
+   async (req: Request, res: Response, next: NextFunction) => {
+     try {
+@@ -83,9 +85,15 @@ router.get(
+   },
+ );
+ 
++// Perbaikan: validasi push token agar tidak menyimpan data arbitrary
++const pushTokenSchema = z.object({
++  token: z.string().min(1).max(500),
++});
++
+ router.post(
+   '/push-token',
+   authenticate,
++  validate(pushTokenSchema),
+   async (req: Request, res: Response, next: NextFunction) => {
+     try {
+       await savePushToken(req.auth!.sub, req.body.token);
+diff --git a/server/src/routes/enhancements.ts b/server/src/routes/enhancements.ts
+index 69912ba..f155207 100644
+--- a/server/src/routes/enhancements.ts
++++ b/server/src/routes/enhancements.ts
+@@ -4,6 +4,7 @@ import { validate } from '../middleware/validate';
+ import { authenticate } from '../middleware/auth';
+ import { authorize } from '../middleware/rbac';
+ import { db } from '../db';
++import { AppError } from '../middleware/error-handler';
+ import { audit } from '../services/audit.service';
+ import fs from 'fs';
+ import path from 'path';
+@@ -12,19 +13,38 @@ import crypto from 'crypto';
+ const router = Router();
+ router.use(authenticate);
+ 
++// Helper: sanitasi nilai CSV untuk mencegah injection
++const esc = (v: unknown) => `"${String(v ?? '').replace(/"/g, '""')}"`;
++
+ // ==================== PHOTO UPLOAD ====================
+ 
++// Perbaikan: validasi ekstensi file (whitelist), batasi ukuran, sanitasi nama
++const ALLOWED_EXTENSIONS = new Set(['jpg', 'jpeg', 'png', 'webp', 'gif']);
++const MAX_UPLOAD_SIZE = 5 * 1024 * 1024; // 5 MB
++
+ router.post('/upload/photo', async (req: Request, res: Response, next: NextFunction) => {
+   try {
+     const { base64, filename } = req.body;
+-    if (!base64) return res.status(400).json({ error: { message: 'base64 wajib diisi', code: 'VALIDATION_ERROR' } });
++    if (!base64 || typeof base64 !== 'string') {
++      return res.status(400).json({ error: { message: 'base64 wajib diisi', code: 'VALIDATION_ERROR' } });
++    }
++
++    const ext = ((filename || 'photo.jpg').split('.').pop() || 'jpg').toLowerCase();
++    // Perbaikan: hanya izinkan ekstensi gambar, mencegah upload file berbahaya
++    if (!ALLOWED_EXTENSIONS.has(ext)) {
++      return res.status(400).json({ error: { message: 'Format file tidak didukung (jpg/png/webp/gif)', code: 'VALIDATION_ERROR' } });
++    }
++
++    const buffer = Buffer.from(base64, 'base64');
++    // Perbaikan: batasi ukuran file, mencegah DoS via upload besar
++    if (buffer.length > MAX_UPLOAD_SIZE) {
++      return res.status(400).json({ error: { message: 'Ukuran file maksimal 5 MB', code: 'VALIDATION_ERROR' } });
++    }
+ 
+-    const ext = (filename || 'photo.jpg').split('.').pop() || 'jpg';
+     const name = `${crypto.randomUUID()}.${ext}`;
+     const uploadsDir = path.resolve(__dirname, '../../uploads');
+     if (!fs.existsSync(uploadsDir)) fs.mkdirSync(uploadsDir, { recursive: true });
+ 
+-    const buffer = Buffer.from(base64, 'base64');
+     fs.writeFileSync(path.join(uploadsDir, name), buffer);
+ 
+     const url = `/uploads/${name}`;
+@@ -34,10 +54,16 @@ router.post('/upload/photo', async (req: Request, res: Response, next: NextFunct
+ 
+ // ==================== SOS PHOTO ====================
+ 
+-router.patch('/sos/:id/photo', async (req: Request, res: Response, next: NextFunction) => {
++// Perbaikan: validasi body + cek rows affected untuk mencegah silent IDOR failure
++const sosPhotoSchema = z.object({
++  photo_url: z.string().min(1).max(500),
++});
++
++router.patch('/sos/:id/photo', validate(sosPhotoSchema), async (req: Request, res: Response, next: NextFunction) => {
+   try {
+     const id = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
+-    await db('sos_alerts').where({ id, user_id: req.auth!.sub }).update({ photo_url: req.body.photo_url });
++    const rows = await db('sos_alerts').where({ id, user_id: req.auth!.sub }).update({ photo_url: req.body.photo_url });
++    if (rows === 0) throw new AppError(404, 'SOS tidak ditemukan atau bukan milikmu', 'NOT_FOUND');
+     res.json({ data: { ok: true } });
+   } catch (err) { next(err); }
+ });
+@@ -77,8 +103,10 @@ router.get('/export/users', authorize('admin'), async (_req: Request, res: Respo
+     const users = await db('users').where('is_active', true)
+       .select('name', 'phone', 'role', 'blood_type', 'emergency_contact', 'created_at');
+     const header = 'Nama,HP,Role,Gol Darah,Kontak Darurat,Terdaftar\n';
++    // Perbaikan: sanitasi CSV — escape tanda kutip ganda untuk mencegah CSV injection
++    const esc = (v: string) => `"${String(v || '').replace(/"/g, '""')}"`;
+     const rows = users.map((u: any) =>
+-      `"${u.name}","${u.phone}","${u.role}","${u.blood_type || ''}","${u.emergency_contact || ''}","${u.created_at}"`
++      `${esc(u.name)},${esc(u.phone)},${esc(u.role)},${esc(u.blood_type)},${esc(u.emergency_contact)},${esc(u.created_at)}`
+     ).join('\n');
+     res.setHeader('Content-Type', 'text/csv; charset=utf-8');
+     res.setHeader('Content-Disposition', 'attachment; filename=pengguna-mabrur.csv');
+@@ -93,7 +121,7 @@ router.get('/export/sos', authorize('admin'), async (_req: Request, res: Respons
+         'sos_alerts.lat', 'sos_alerts.lng', 'sos_alerts.created_at', 'sos_alerts.resolved_at');
+     const header = 'Nama,Kategori,Status,Lat,Lng,Dibuat,Diselesaikan\n';
+     const rows = alerts.map((a: any) =>
+-      `"${a.name}","${a.category}","${a.status}","${a.lat || ''}","${a.lng || ''}","${a.created_at}","${a.resolved_at || ''}"`
++      `${esc(a.name)},${esc(a.category)},${esc(a.status)},${esc(a.lat)},${esc(a.lng)},${esc(a.created_at)},${esc(a.resolved_at)}`
+     ).join('\n');
+     res.setHeader('Content-Type', 'text/csv; charset=utf-8');
+     res.setHeader('Content-Disposition', 'attachment; filename=sos-mabrur.csv');
+@@ -103,9 +131,12 @@ router.get('/export/sos', authorize('admin'), async (_req: Request, res: Respons
+ 
+ // ==================== THEME PREFERENCE ====================
+ 
+-router.patch('/theme', async (req: Request, res: Response, next: NextFunction) => {
++// Perbaikan: validasi nilai theme agar hanya menerima nilai yang valid
++const themeSchema = z.object({ theme: z.enum(['light', 'dark']).default('light') });
++
++router.patch('/theme', validate(themeSchema), async (req: Request, res: Response, next: NextFunction) => {
+   try {
+-    await db('users').where('id', req.auth!.sub).update({ theme: req.body.theme || 'light' });
++    await db('users').where('id', req.auth!.sub).update({ theme: req.body.theme });
+     res.json({ data: { ok: true } });
+   } catch (err) { next(err); }
+ });
+diff --git a/server/src/routes/features.ts b/server/src/routes/features.ts
+index d32fde0..110822a 100644
+--- a/server/src/routes/features.ts
++++ b/server/src/routes/features.ts
+@@ -8,6 +8,7 @@ import { AppError } from '../middleware/error-handler';
+ import { audit } from '../services/audit.service';
+ import bcrypt from 'bcryptjs';
+ import { encrypt, decrypt } from '../services/crypto.service';
++import { revokeAllTokens } from '../services/auth.service';
+ 
+ const router = Router();
+ router.use(authenticate);
+@@ -37,6 +38,12 @@ router.patch('/profile', validate(profileUpdateSchema), async (req: Request, res
+     if (data.emergency_contact !== undefined) update.emergency_contact = data.emergency_contact || null;
+ 
+     await db('users').where('id', req.auth!.sub).update(update);
++
++    // Perbaikan: invalidasi semua refresh token saat user mengubah password sendiri
++    if (data.password) {
++      await revokeAllTokens(req.auth!.sub);
++    }
++
+     const user = await db('users').where('id', req.auth!.sub)
+       .select('id', 'phone', 'name', 'role', 'blood_type', 'emergency_contact', 'created_at').first();
+     await audit(req.auth!.sub, 'profile.update', 'users', req.auth!.sub);
+@@ -66,10 +73,11 @@ router.get('/ziarah', async (_req: Request, res: Response, next: NextFunction) =
+   } catch (err) { next(err); }
+ });
+ 
++// Perbaikan: validasi batas koordinat + batasi panjang string
+ router.post('/ziarah', authorize('admin'), validate(z.object({
+-  name: z.string().min(1), description: z.string().optional(), category: z.string(),
+-  location_name: z.string().optional(), lat: z.number().optional(), lng: z.number().optional(),
+-  tips: z.string().optional(), sort_order: z.number().int().optional(),
++  name: z.string().min(1).max(200), description: z.string().max(2000).optional(), category: z.string().min(1).max(50),
++  location_name: z.string().max(200).optional(), lat: z.number().min(-90).max(90).optional(), lng: z.number().min(-180).max(180).optional(),
++  tips: z.string().max(2000).optional(), sort_order: z.number().int().optional(),
+ })), async (req: Request, res: Response, next: NextFunction) => {
+   try {
+     const [place] = await db('ziarah_places').insert(req.body).returning('*');
+@@ -77,7 +85,15 @@ router.post('/ziarah', authorize('admin'), validate(z.object({
+   } catch (err) { next(err); }
+ });
+ 
+-router.put('/ziarah/:id', authorize('admin'), async (req: Request, res: Response, next: NextFunction) => {
++// Perbaikan: tambahkan validasi pada PUT untuk mencegah field arbitrary masuk ke DB
++const ziarahUpdateSchema = z.object({
++  name: z.string().min(1).max(200).optional(), description: z.string().max(2000).optional(),
++  category: z.string().min(1).max(50).optional(), location_name: z.string().max(200).optional(),
++  lat: z.number().min(-90).max(90).optional(), lng: z.number().min(-180).max(180).optional(),
++  tips: z.string().max(2000).optional(), sort_order: z.number().int().optional(),
++});
++
++router.put('/ziarah/:id', authorize('admin'), validate(ziarahUpdateSchema), async (req: Request, res: Response, next: NextFunction) => {
+   try {
+     const [place] = await db('ziarah_places').where('id', param(req.params.id))
+       .update({ ...req.body, updated_at: new Date() }).returning('*');
+diff --git a/server/src/routes/geofence.ts b/server/src/routes/geofence.ts
+index e007392..ce65d40 100644
+--- a/server/src/routes/geofence.ts
++++ b/server/src/routes/geofence.ts
+@@ -64,7 +64,8 @@ router.post(
+ const locationSchema = z.object({
+   lat: z.number().min(-90).max(90),
+   lng: z.number().min(-180).max(180),
+-  accuracy: z.number().optional(),
++  // Perbaikan: batasi accuracy ke nilai positif yang masuk akal
++  accuracy: z.number().min(0).max(100000).optional(),
+ });
+ 
+ router.post(
+diff --git a/server/src/routes/sos.ts b/server/src/routes/sos.ts
+index 7925c89..beb6e37 100644
+--- a/server/src/routes/sos.ts
++++ b/server/src/routes/sos.ts
+@@ -50,15 +50,21 @@ router.delete('/sos/:id', async (req: Request, res: Response, next: NextFunction
+ // PATCH /sos/:id/resolve — muthawwif/admin resolve SOS
+ router.patch('/sos/:id/resolve', async (req: Request, res: Response, next: NextFunction) => {
+   try {
+-    if (req.auth!.role === 'jamaah') {
+-      // Jamaah hanya bisa resolve kalau dia muthawwif di group SOS tersebut
++    // Perbaikan: cek otorisasi untuk SEMUA peran, bukan hanya jamaah
++    // Sebelumnya muthawwif bisa resolve SOS dari rombongan lain
++    if (req.auth!.role !== 'admin') {
+       const sos = await db('sos_alerts').where('id', param(req.params.id)).first();
+       if (!sos) throw new AppError(404, 'SOS tidak ditemukan', 'NOT_FOUND');
+-      const member = await db('group_members')
+-        .where({ group_id: sos.group_id, user_id: req.auth!.sub, is_active: true })
+-        .first();
+-      if (!member || member.role_in_group !== 'muthawwif') {
+-        throw new AppError(403, 'Hanya muthawwif atau admin yang bisa menyelesaikan SOS', 'FORBIDDEN');
++      if (sos.group_id) {
++        const member = await db('group_members')
++          .where({ group_id: sos.group_id, user_id: req.auth!.sub, is_active: true })
++          .first();
++        if (!member || member.role_in_group !== 'muthawwif') {
++          throw new AppError(403, 'Hanya muthawwif rombongan atau admin yang bisa menyelesaikan SOS', 'FORBIDDEN');
++        }
++      } else {
++        // SOS tanpa group hanya bisa di-resolve admin
++        throw new AppError(403, 'SOS tanpa rombongan hanya bisa diselesaikan admin', 'FORBIDDEN');
+       }
+     }
+     const sos = await sosService.resolve(param(req.params.id), req.auth!.sub);
+diff --git a/server/src/routes/worship.ts b/server/src/routes/worship.ts
+index 09aaefa..24fa20b 100644
+--- a/server/src/routes/worship.ts
++++ b/server/src/routes/worship.ts
+@@ -11,8 +11,9 @@ function param(v: string | string[]): string { return Array.isArray(v) ? v[0] :
+ 
+ // ==================== COUNTER (Tawaf/Sai/Dzikir) ====================
+ 
++// Perbaikan: batasi panjang string type dan label
+ router.post('/counter', validate(z.object({
+-  type: z.string(), target: z.number().int().optional(), label: z.string().optional(),
++  type: z.string().min(1).max(50), target: z.number().int().min(1).max(10000).optional(), label: z.string().max(100).optional(),
+ })), async (req: Request, res: Response, next: NextFunction) => {
+   try {
+     const [s] = await db('counter_sessions').insert({
+@@ -55,8 +56,9 @@ router.get('/logbook', async (req: Request, res: Response, next: NextFunction) =
+   } catch (err) { next(err); }
+ });
+ 
++// Perbaikan: validasi format tanggal dan batasi panjang mood
+ router.post('/logbook', validate(z.object({
+-  date: z.string(), content: z.string().max(5000), mood: z.string().optional(),
++  date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Format tanggal harus YYYY-MM-DD'), content: z.string().max(5000), mood: z.string().max(20).optional(),
+ })), async (req: Request, res: Response, next: NextFunction) => {
+   try {
+     const [entry] = await db('logbook').insert({
+@@ -142,8 +144,9 @@ router.get('/saved-locations', async (req: Request, res: Response, next: NextFun
+   } catch (err) { next(err); }
+ });
+ 
++// Perbaikan: validasi batas koordinat untuk mencegah data invalid
+ router.post('/saved-locations', validate(z.object({
+-  name: z.string().min(1).max(100), lat: z.number(), lng: z.number(), notes: z.string().optional(),
++  name: z.string().min(1).max(100), lat: z.number().min(-90).max(90), lng: z.number().min(-180).max(180), notes: z.string().max(500).optional(),
+ })), async (req: Request, res: Response, next: NextFunction) => {
+   try {
+     const [loc] = await db('saved_locations').insert({
+@@ -185,8 +188,12 @@ router.get('/health-tips', async (_req: Request, res: Response) => {
+ // ==================== PRAYER TIMES (calculated) ====================
+ 
+ router.get('/prayer-times', async (req: Request, res: Response) => {
+-  const lat = Number(req.query.lat) || 21.4225; // default Makkah
+-  const lng = Number(req.query.lng) || 39.8262;
++  // Perbaikan: NaN || default tetap NaN karena NaN bukan falsy
++  // Gunakan isFinite() untuk mendeteksi NaN/Infinity
++  const rawLat = Number(req.query.lat);
++  const rawLng = Number(req.query.lng);
++  const lat = isFinite(rawLat) ? Math.max(-90, Math.min(90, rawLat)) : 21.4225;
++  const lng = isFinite(rawLng) ? Math.max(-180, Math.min(180, rawLng)) : 39.8262;
+   const now = new Date();
+ 
+   // Simplified prayer time calculation (approximate for Makkah/Madinah region)
+@@ -195,7 +202,8 @@ router.get('/prayer-times', async (req: Request, res: Response) => {
+   const declination = 23.45 * Math.sin((2 * Math.PI / 365) * (day - 81));
+   const eqTime = 9.87 * Math.sin(2 * (2 * Math.PI / 365) * (day - 81)) - 7.53 * Math.cos((2 * Math.PI / 365) * (day - 81)) - 1.5 * Math.sin((2 * Math.PI / 365) * (day - 81));
+   // Estimate timezone from longitude (±0.5h accuracy, sufficient for prayer times)
+-  const tz = Number(req.query.tz) || Math.round(lng / 15);
++  const rawTz = Number(req.query.tz);
++  const tz = isFinite(rawTz) ? rawTz : Math.round(lng / 15);
+   const solarNoon = 12 - lng / 15 - eqTime / 60 + tz;
+ 
+   const toRad = (d: number) => d * Math.PI / 180;
+diff --git a/server/src/services/auth.service.ts b/server/src/services/auth.service.ts
+index f3e2794..51a2d5e 100644
+--- a/server/src/services/auth.service.ts
++++ b/server/src/services/auth.service.ts
+@@ -30,23 +30,26 @@ function trackLoginFailure(phone: string) {
+   }
+ }
+ 
++// Hash dummy untuk perbandingan ketika user tidak ditemukan
++// Perbaikan: mencegah timing attack untuk enumerasi nomor HP
++const DUMMY_HASH = '$2a$12$LJ3m4ys3Lf0j9OLQQ3xBjuNZNPMcnSqOMZpjGR3keYfqaGISsBQi';
++
+ export async function login(phone: string, password: string) {
+   const user = await db('users').where({ phone, is_active: true }).first();
+-  if (!user) {
+-    trackLoginFailure(phone);
+-    throw new AppError(401, 'Nomor HP atau password salah', 'AUTH_FAILED');
+-  }
+ 
+-  const valid = await bcrypt.compare(password, user.password_hash);
+-  if (!valid) {
++  // Perbaikan: selalu jalankan bcrypt.compare agar waktu respons konsisten
++  // mencegah penyerang mendeteksi nomor HP valid via perbedaan waktu
++  const valid = await bcrypt.compare(password, user?.password_hash || DUMMY_HASH);
++  if (!user || !valid) {
+     trackLoginFailure(phone);
+     throw new AppError(401, 'Nomor HP atau password salah', 'AUTH_FAILED');
+   }
+ 
++  // Perbaikan: pin algoritma HS256 secara eksplisit
+   const accessToken = jwt.sign(
+     { sub: user.id, role: user.role },
+     config.JWT_SECRET,
+-    { expiresIn: ACCESS_EXPIRY },
++    { algorithm: 'HS256', expiresIn: ACCESS_EXPIRY },
+   );
+ 
+   const refreshToken = crypto.randomBytes(40).toString('hex');
+@@ -69,6 +72,12 @@ export async function login(phone: string, password: string) {
+   };
+ }
+ 
++// Perbaikan: hapus semua refresh token saat password diubah
++// mencegah sesi lama tetap aktif setelah reset password
++export async function revokeAllTokens(userId: string) {
++  await db('refresh_tokens').where('user_id', userId).delete();
++}
++
+ export async function refresh(refreshToken: string) {
+   const tokenHash = hashToken(refreshToken);
+ 
+@@ -93,7 +102,7 @@ export async function refresh(refreshToken: string) {
+   const accessToken = jwt.sign(
+     { sub: user.id, role: user.role },
+     config.JWT_SECRET,
+-    { expiresIn: ACCESS_EXPIRY },
++    { algorithm: 'HS256', expiresIn: ACCESS_EXPIRY },
+   );
+ 
+   const newRefreshToken = crypto.randomBytes(40).toString('hex');
+diff --git a/server/src/services/sos.service.ts b/server/src/services/sos.service.ts
+index ff303de..4aa87cd 100644
+--- a/server/src/services/sos.service.ts
++++ b/server/src/services/sos.service.ts
+@@ -72,15 +72,19 @@ export async function cancel(id: string, userId: string) {
+ }
+ 
+ export async function resolve(id: string, resolvedBy: string) {
+-  const sos = await db('sos_alerts').where('id', id).first();
+-  if (!sos) throw new AppError(404, 'SOS tidak ditemukan', 'NOT_FOUND');
+-  if (sos.status !== 'active') throw new AppError(400, 'SOS sudah tidak aktif', 'INVALID_STATE');
+-
++  // Perbaikan: gunakan WHERE status='active' pada UPDATE untuk mencegah race condition
++  // Sebelumnya ada celah TOCTOU antara SELECT dan UPDATE
+   const [updated] = await db('sos_alerts')
+-    .where('id', id)
++    .where({ id, status: 'active' })
+     .update({ status: 'resolved', resolved_by: resolvedBy, resolved_at: new Date() })
+     .returning('*');
+ 
++  if (!updated) {
++    const exists = await db('sos_alerts').where('id', id).first();
++    if (!exists) throw new AppError(404, 'SOS tidak ditemukan', 'NOT_FOUND');
++    throw new AppError(400, 'SOS sudah tidak aktif', 'INVALID_STATE');
++  }
++
+   await audit(resolvedBy, 'sos.resolve', 'sos_alerts', id);
+   return updated;
+ }
+diff --git a/server/src/services/user.service.ts b/server/src/services/user.service.ts
+index 255b297..f784bd5 100644
+--- a/server/src/services/user.service.ts
++++ b/server/src/services/user.service.ts
+@@ -3,6 +3,7 @@ import { db } from '../db';
+ import { AppError } from '../middleware/error-handler';
+ import { encrypt, decrypt } from './crypto.service';
+ import { audit } from './audit.service';
++import { revokeAllTokens } from './auth.service';
+ 
+ const PUBLIC_FIELDS = [
+   'id', 'phone', 'name', 'role', 'blood_type',
+@@ -136,6 +137,12 @@ export async function updateUser(
+     .update(update)
+     .returning(PUBLIC_FIELDS);
+ 
++  // Perbaikan: invalidasi semua refresh token saat password diubah
++  // mencegah sesi yang sudah bocor tetap aktif setelah reset password
++  if (data.password) {
++    await revokeAllTokens(id);
++  }
++
+   await audit(adminId, 'user.update', 'users', id, {
+     fields: Object.keys(data),
+   });
