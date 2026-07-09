@@ -1,0 +1,1252 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Proposal Sistem Mabrur - Panduan Haji & Umrah Digital</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap');
+
+  :root {
+    --primary: #8B2E2E;
+    --primary-dark: #6E2424;
+    --primary-light: #F3D9CD;
+    --green: #4A7C3A;
+    --green-light: #DCEBD3;
+    --gold: #D4A437;
+    --gold-light: #FAEFC9;
+    --danger: #C44536;
+    --bg: #F5F1E8;
+    --bg-dark: #1F1B16;
+    --text: #1F1B16;
+    --text-secondary: #5C3A1E;
+    --text-muted: #8C6B4A;
+    --border: #ECE5D8;
+    --card: #FFFFFF;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  html { scroll-behavior: smooth; }
+
+  body {
+    font-family: 'Plus Jakarta Sans', -apple-system, sans-serif;
+    color: var(--text);
+    background: var(--bg);
+    line-height: 1.7;
+  }
+
+  /* ============ SLIDE SYSTEM ============ */
+  .slide {
+    min-height: 100vh;
+    padding: 60px 80px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .slide-number {
+    position: absolute;
+    top: 30px;
+    right: 40px;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text-muted);
+    letter-spacing: 2px;
+  }
+
+  /* ============ COVER ============ */
+  .cover {
+    background: linear-gradient(135deg, var(--bg-dark) 0%, var(--primary-dark) 50%, var(--primary) 100%);
+    color: #fff;
+    text-align: center;
+    padding: 0 80px;
+  }
+
+  .cover .logo {
+    width: 100px;
+    height: 100px;
+    background: var(--primary);
+    border-radius: 24px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 42px;
+    font-weight: 800;
+    color: var(--gold);
+    margin: 0 auto 32px;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+    border: 2px solid rgba(212,164,55,0.3);
+  }
+
+  .cover h1 {
+    font-size: 64px;
+    font-weight: 800;
+    letter-spacing: -2px;
+    margin-bottom: 16px;
+    line-height: 1.1;
+  }
+
+  .cover .subtitle {
+    font-size: 22px;
+    font-weight: 400;
+    color: var(--primary-light);
+    margin-bottom: 48px;
+    max-width: 600px;
+    margin-left: auto;
+    margin-right: auto;
+  }
+
+  .cover .meta {
+    font-size: 14px;
+    color: rgba(255,255,255,0.5);
+    margin-top: 60px;
+  }
+
+  .cover .badge-row {
+    display: flex;
+    gap: 12px;
+    justify-content: center;
+    flex-wrap: wrap;
+  }
+
+  .cover .badge {
+    background: rgba(255,255,255,0.1);
+    border: 1px solid rgba(255,255,255,0.15);
+    padding: 8px 20px;
+    border-radius: 100px;
+    font-size: 14px;
+    font-weight: 500;
+    backdrop-filter: blur(10px);
+  }
+
+  /* ============ HEADINGS ============ */
+  .section-label {
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--primary);
+    text-transform: uppercase;
+    letter-spacing: 3px;
+    margin-bottom: 12px;
+  }
+
+  h2 {
+    font-size: 44px;
+    font-weight: 800;
+    letter-spacing: -1.5px;
+    color: var(--text);
+    margin-bottom: 20px;
+    line-height: 1.15;
+  }
+
+  h3 {
+    font-size: 24px;
+    font-weight: 700;
+    color: var(--text);
+    margin-bottom: 12px;
+  }
+
+  .lead {
+    font-size: 18px;
+    color: var(--text-secondary);
+    max-width: 700px;
+    line-height: 1.8;
+  }
+
+  /* ============ CARDS ============ */
+  .card-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 24px;
+    margin-top: 40px;
+  }
+
+  .card {
+    background: var(--card);
+    border-radius: 16px;
+    padding: 32px;
+    border: 1px solid var(--border);
+    transition: transform 0.2s, box-shadow 0.2s;
+  }
+
+  .card:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 12px 40px rgba(139,46,46,0.08);
+  }
+
+  .card-icon {
+    width: 52px;
+    height: 52px;
+    border-radius: 14px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 24px;
+    margin-bottom: 20px;
+  }
+
+  .card h4 {
+    font-size: 18px;
+    font-weight: 700;
+    margin-bottom: 8px;
+  }
+
+  .card p {
+    font-size: 14px;
+    color: var(--text-muted);
+    line-height: 1.7;
+  }
+
+  /* ============ SCREENSHOT GALLERY ============ */
+  .screenshot-row {
+    display: flex;
+    gap: 24px;
+    margin-top: 40px;
+    overflow-x: auto;
+    padding-bottom: 20px;
+  }
+
+  .screenshot-item {
+    flex-shrink: 0;
+    text-align: center;
+  }
+
+  .screenshot-item img {
+    border-radius: 20px;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.15);
+    border: 1px solid var(--border);
+  }
+
+  .screenshot-item .caption {
+    margin-top: 12px;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text-muted);
+  }
+
+  .screenshot-admin {
+    width: 100%;
+    max-width: 900px;
+    border-radius: 12px;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.12);
+    border: 1px solid var(--border);
+    margin-top: 30px;
+  }
+
+  /* ============ ARCHITECTURE ============ */
+  .arch-diagram {
+    background: var(--bg-dark);
+    border-radius: 20px;
+    padding: 48px;
+    margin-top: 40px;
+    color: #fff;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .arch-diagram::before {
+    content: '';
+    position: absolute;
+    top: 0; right: 0;
+    width: 300px; height: 300px;
+    background: radial-gradient(circle, rgba(139,46,46,0.2), transparent);
+    border-radius: 50%;
+  }
+
+  .arch-layers {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+    position: relative;
+    z-index: 1;
+  }
+
+  .arch-layer {
+    display: flex;
+    align-items: center;
+    gap: 20px;
+  }
+
+  .arch-layer-label {
+    width: 120px;
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 2px;
+    color: var(--gold);
+    text-align: right;
+    flex-shrink: 0;
+  }
+
+  .arch-boxes {
+    display: flex;
+    gap: 12px;
+    flex-wrap: wrap;
+    flex: 1;
+  }
+
+  .arch-box {
+    padding: 14px 22px;
+    border-radius: 10px;
+    font-size: 13px;
+    font-weight: 600;
+    border: 1px solid rgba(255,255,255,0.1);
+  }
+
+  .arch-box.mobile { background: rgba(74,124,58,0.25); color: #8FD47A; }
+  .arch-box.admin { background: rgba(212,164,55,0.2); color: #E8C85A; }
+  .arch-box.server { background: rgba(139,46,46,0.3); color: #E8A0A0; }
+  .arch-box.db { background: rgba(100,149,237,0.2); color: #8BB8F0; }
+  .arch-box.infra { background: rgba(255,255,255,0.08); color: rgba(255,255,255,0.7); }
+
+  .arch-arrow {
+    text-align: center;
+    color: rgba(255,255,255,0.3);
+    font-size: 20px;
+    padding-left: 140px;
+  }
+
+  /* ============ TABLE ============ */
+  .spec-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 32px;
+    background: var(--card);
+    border-radius: 16px;
+    overflow: hidden;
+    border: 1px solid var(--border);
+  }
+
+  .spec-table thead {
+    background: var(--primary);
+    color: #fff;
+  }
+
+  .spec-table th {
+    padding: 16px 24px;
+    text-align: left;
+    font-size: 13px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+  }
+
+  .spec-table td {
+    padding: 14px 24px;
+    font-size: 14px;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .spec-table tr:last-child td { border-bottom: none; }
+
+  .spec-table tr:hover td { background: rgba(139,46,46,0.03); }
+
+  .spec-table .device-name {
+    font-weight: 700;
+    color: var(--primary);
+  }
+
+  /* ============ FEATURES LIST ============ */
+  .feature-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+    margin-top: 32px;
+  }
+
+  .feature-item {
+    display: flex;
+    gap: 14px;
+    align-items: flex-start;
+    padding: 18px 22px;
+    background: var(--card);
+    border-radius: 12px;
+    border: 1px solid var(--border);
+  }
+
+  .feature-check {
+    width: 28px;
+    height: 28px;
+    background: var(--green-light);
+    color: var(--green);
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 14px;
+    font-weight: 800;
+    flex-shrink: 0;
+  }
+
+  .feature-item strong {
+    display: block;
+    font-size: 14px;
+    margin-bottom: 2px;
+  }
+
+  .feature-item span {
+    font-size: 13px;
+    color: var(--text-muted);
+  }
+
+  /* ============ STATS ROW ============ */
+  .stats-row {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 24px;
+    margin-top: 40px;
+  }
+
+  .stat-card {
+    background: var(--card);
+    border-radius: 16px;
+    padding: 32px;
+    text-align: center;
+    border: 1px solid var(--border);
+  }
+
+  .stat-number {
+    font-size: 48px;
+    font-weight: 800;
+    color: var(--primary);
+    line-height: 1;
+    margin-bottom: 8px;
+  }
+
+  .stat-label {
+    font-size: 14px;
+    color: var(--text-muted);
+    font-weight: 600;
+  }
+
+  /* ============ SECURITY ============ */
+  .security-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 20px;
+    margin-top: 32px;
+  }
+
+  .security-item {
+    background: var(--card);
+    border-radius: 14px;
+    padding: 24px;
+    border: 1px solid var(--border);
+    border-left: 4px solid var(--green);
+  }
+
+  .security-item h4 {
+    font-size: 15px;
+    font-weight: 700;
+    margin-bottom: 6px;
+  }
+
+  .security-item p {
+    font-size: 13px;
+    color: var(--text-muted);
+  }
+
+  /* ============ DIVIDER ============ */
+  .divider {
+    width: 60px;
+    height: 4px;
+    background: var(--primary);
+    border-radius: 2px;
+    margin: 24px 0;
+  }
+
+  /* ============ FLOW DIAGRAM ============ */
+  .flow-row {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    margin-top: 32px;
+    flex-wrap: wrap;
+    justify-content: center;
+  }
+
+  .flow-step {
+    background: var(--card);
+    border: 2px solid var(--border);
+    border-radius: 14px;
+    padding: 20px 28px;
+    text-align: center;
+    min-width: 140px;
+  }
+
+  .flow-step.active {
+    border-color: var(--primary);
+    background: var(--primary-light);
+  }
+
+  .flow-step .step-num {
+    font-size: 11px;
+    font-weight: 700;
+    color: var(--primary);
+    text-transform: uppercase;
+    letter-spacing: 2px;
+  }
+
+  .flow-step .step-title {
+    font-size: 14px;
+    font-weight: 700;
+    margin-top: 4px;
+  }
+
+  .flow-arrow {
+    font-size: 24px;
+    color: var(--primary);
+    font-weight: 700;
+  }
+
+  /* ============ CLOSING ============ */
+  .closing {
+    background: linear-gradient(135deg, var(--primary-dark) 0%, var(--primary) 100%);
+    color: #fff;
+    text-align: center;
+  }
+
+  .closing h2 {
+    color: #fff;
+    font-size: 52px;
+  }
+
+  .closing .lead {
+    color: var(--primary-light);
+    margin: 0 auto;
+  }
+
+  .closing .contact-grid {
+    display: flex;
+    gap: 32px;
+    justify-content: center;
+    margin-top: 48px;
+  }
+
+  .closing .contact-item {
+    background: rgba(255,255,255,0.1);
+    border: 1px solid rgba(255,255,255,0.15);
+    border-radius: 14px;
+    padding: 24px 36px;
+    backdrop-filter: blur(10px);
+  }
+
+  .closing .contact-item .label {
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 2px;
+    color: rgba(255,255,255,0.5);
+    margin-bottom: 6px;
+  }
+
+  .closing .contact-item .value {
+    font-size: 16px;
+    font-weight: 700;
+  }
+
+  /* ============ ROLE COMPARISON ============ */
+  .role-cards {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 24px;
+    margin-top: 40px;
+  }
+
+  .role-card {
+    background: var(--card);
+    border-radius: 16px;
+    padding: 32px;
+    border: 1px solid var(--border);
+    border-top: 4px solid var(--primary);
+  }
+
+  .role-card.muthawwif { border-top-color: var(--gold); }
+  .role-card.admin-role { border-top-color: var(--green); }
+
+  .role-card h4 {
+    font-size: 20px;
+    font-weight: 800;
+    margin-bottom: 4px;
+  }
+
+  .role-card .role-desc {
+    font-size: 13px;
+    color: var(--text-muted);
+    margin-bottom: 16px;
+  }
+
+  .role-card ul {
+    list-style: none;
+    padding: 0;
+  }
+
+  .role-card li {
+    padding: 6px 0;
+    font-size: 14px;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .role-card li::before {
+    content: "\2713  ";
+    color: var(--green);
+    font-weight: 800;
+  }
+
+  .role-card li:last-child { border-bottom: none; }
+
+  /* ============ PRINT ============ */
+  @media print {
+    .slide { page-break-after: always; min-height: auto; padding: 40px; }
+    .card:hover { transform: none; box-shadow: none; }
+  }
+
+  @media (max-width: 768px) {
+    .slide { padding: 40px 24px; }
+    h2 { font-size: 32px; }
+    .cover h1 { font-size: 40px; }
+    .card-grid, .feature-grid, .security-grid, .role-cards { grid-template-columns: 1fr; }
+    .stats-row { grid-template-columns: repeat(2, 1fr); }
+    .arch-layer { flex-direction: column; text-align: center; }
+    .arch-layer-label { width: auto; text-align: center; }
+  }
+</style>
+</head>
+<body>
+
+<!-- ==================== SLIDE 1: COVER ==================== -->
+<div class="slide cover">
+  <div>
+    <div class="logo">M</div>
+    <h1>Mabrur</h1>
+    <p class="subtitle">Sistem Panduan Haji & Umrah Digital untuk Jamaah dan Muthawwif</p>
+    <div class="badge-row">
+      <span class="badge">Mobile App</span>
+      <span class="badge">Admin Panel</span>
+      <span class="badge">Real-time Monitoring</span>
+      <span class="badge">SOS Darurat</span>
+      <span class="badge">Geofence Miqat</span>
+    </div>
+    <p class="meta">Proposal Pembangunan Sistem &mdash; 2026</p>
+  </div>
+</div>
+
+<!-- ==================== SLIDE 2: LATAR BELAKANG ==================== -->
+<div class="slide">
+  <span class="slide-number">02</span>
+  <div class="section-label">Latar Belakang</div>
+  <h2>Mengapa Mabrur Dibutuhkan?</h2>
+  <p class="lead">
+    Setiap tahun jutaan jamaah Indonesia menunaikan ibadah haji dan umrah. Tantangan utama yang dihadapi meliputi kurangnya panduan ibadah yang terstruktur, kesulitan navigasi di area miqat, koordinasi rombongan yang rumit, dan lambatnya penanganan situasi darurat.
+  </p>
+
+  <div class="stats-row">
+    <div class="stat-card">
+      <div class="stat-number">5M+</div>
+      <div class="stat-label">Jamaah Indonesia per Tahun</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-number">70%</div>
+      <div class="stat-label">Butuh Panduan Digital</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-number">3x</div>
+      <div class="stat-label">Lebih Cepat Respon Darurat</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-number">24/7</div>
+      <div class="stat-label">Monitoring Real-time</div>
+    </div>
+  </div>
+</div>
+
+<!-- ==================== SLIDE 3: FITUR UTAMA ==================== -->
+<div class="slide">
+  <span class="slide-number">03</span>
+  <div class="section-label">Fitur Utama</div>
+  <h2>Solusi Lengkap dalam<br>Satu Aplikasi</h2>
+
+  <div class="card-grid">
+    <div class="card">
+      <div class="card-icon" style="background: var(--primary-light); color: var(--primary);">&#9775;</div>
+      <h4>Tuntunan Ibadah</h4>
+      <p>Panduan langkah demi langkah untuk umrah (5 tahap) dan haji (6 tahap) lengkap dengan teks Arab, transliterasi Latin, dan terjemahan Indonesia.</p>
+    </div>
+    <div class="card">
+      <div class="card-icon" style="background: var(--green-light); color: var(--green);">&#9673;</div>
+      <h4>Geofence Miqat</h4>
+      <p>Deteksi otomatis kedekatan dengan batas miqat menggunakan GPS. Peringatan ihram ketika jamaah mendekati zona miqat dalam radius 3 km.</p>
+    </div>
+    <div class="card">
+      <div class="card-icon" style="background: #FDE8E8; color: var(--danger);">&#9888;</div>
+      <h4>SOS Darurat</h4>
+      <p>Sistem darurat satu tombol untuk situasi medis, tersesat, atau kehilangan barang. Lokasi otomatis dikirim ke muthawwif rombongan.</p>
+    </div>
+    <div class="card">
+      <div class="card-icon" style="background: var(--gold-light); color: var(--gold);">&#9783;</div>
+      <h4>Doa & Bacaan</h4>
+      <p>Koleksi doa haji & umrah dengan teks Arab, Latin, dan terjemahan. Siap digunakan kapan saja selama ibadah.</p>
+    </div>
+    <div class="card">
+      <div class="card-icon" style="background: #E8E0F0; color: #6B4FA0;">&#9201;</div>
+      <h4>Jadwal Rombongan</h4>
+      <p>Timeline perjalanan per rombongan dengan status waktu (akan datang, berlangsung, selesai) dan notifikasi pengingat.</p>
+    </div>
+    <div class="card">
+      <div class="card-icon" style="background: #DDE8F0; color: #2E6B9E;">&#9737;</div>
+      <h4>Monitoring Real-time</h4>
+      <p>Dashboard muthawwif untuk memantau lokasi, status ihram, dan kondisi seluruh anggota rombongan secara real-time.</p>
+    </div>
+  </div>
+</div>
+
+<!-- ==================== SLIDE 4: PERAN PENGGUNA ==================== -->
+<div class="slide">
+  <span class="slide-number">04</span>
+  <div class="section-label">Peran Pengguna</div>
+  <h2>Tiga Peran, Satu Ekosistem</h2>
+  <p class="lead">Setiap peran memiliki akses dan fitur yang disesuaikan dengan kebutuhannya.</p>
+
+  <div class="role-cards">
+    <div class="role-card">
+      <h4>Jamaah</h4>
+      <div class="role-desc">Pengguna utama aplikasi mobile</div>
+      <ul>
+        <li>Panduan ibadah langkah demi langkah</li>
+        <li>Doa & bacaan dengan audio Arab</li>
+        <li>Peta miqat + peringatan geofence</li>
+        <li>Status ihram otomatis</li>
+        <li>Lihat jadwal rombongan</li>
+        <li>Kirim SOS darurat + lokasi</li>
+        <li>Kartu identitas & medis digital</li>
+      </ul>
+    </div>
+    <div class="role-card muthawwif">
+      <h4>Muthawwif</h4>
+      <div class="role-desc">Petugas pembimbing rombongan</div>
+      <ul>
+        <li>Dashboard monitoring anggota</li>
+        <li>Lokasi real-time seluruh jamaah</li>
+        <li>Terima & respon alert SOS</li>
+        <li>Akses cepat: Maps, WA, Telepon</li>
+        <li>Status ihram semua anggota</li>
+        <li>Kelola jadwal rombongan</li>
+        <li>Notifikasi push darurat</li>
+      </ul>
+    </div>
+    <div class="role-card admin-role">
+      <h4>Admin</h4>
+      <div class="role-desc">Pengelola sistem via web panel</div>
+      <ul>
+        <li>CRUD pengguna + assign role</li>
+        <li>Kelola rombongan & anggota</li>
+        <li>Edit konten ibadah & doa</li>
+        <li>Dashboard statistik sistem</li>
+        <li>Kelola jadwal semua rombongan</li>
+        <li>Audit trail semua aktivitas</li>
+        <li>Manajemen zona miqat</li>
+      </ul>
+    </div>
+  </div>
+</div>
+
+<!-- ==================== SLIDE 5: SCREENSHOT MOBILE ==================== -->
+<div class="slide">
+  <span class="slide-number">05</span>
+  <div class="section-label">Tampilan Aplikasi Mobile</div>
+  <h2>Desain UI yang Intuitif<br>dan Elegan</h2>
+  <p class="lead">Interface yang dirancang khusus dengan nuansa Islami, mudah digunakan oleh semua kalangan usia.</p>
+
+  <div class="screenshot-row">
+    <div class="screenshot-item">
+      <img src="screenshots/mobile-beranda.png" height="500" alt="Beranda Jamaah">
+      <div class="caption">Beranda Jamaah</div>
+    </div>
+    <div class="screenshot-item">
+      <img src="screenshots/mobile-muthawwif.png" height="500" alt="Dashboard Muthawwif">
+      <div class="caption">Dashboard Muthawwif</div>
+    </div>
+    <div class="screenshot-item">
+      <img src="screenshots/mobile-peta.png" height="500" alt="Peta Miqat">
+      <div class="caption">Peta Miqat & Geofence</div>
+    </div>
+    <div class="screenshot-item">
+      <img src="screenshots/mobile-ibadah.png" height="500" alt="Tuntunan Ibadah">
+      <div class="caption">Tuntunan Ibadah</div>
+    </div>
+    <div class="screenshot-item">
+      <img src="screenshots/mobile-doa.png" height="500" alt="Doa & Bacaan">
+      <div class="caption">Doa & Bacaan</div>
+    </div>
+    <div class="screenshot-item">
+      <img src="screenshots/mobile-jadwal.png" height="500" alt="Jadwal">
+      <div class="caption">Jadwal Rombongan</div>
+    </div>
+    <div class="screenshot-item">
+      <img src="screenshots/mobile-sos.png" height="500" alt="SOS Darurat">
+      <div class="caption">SOS Darurat</div>
+    </div>
+  </div>
+</div>
+
+<!-- ==================== SLIDE 6: SCREENSHOT ADMIN ==================== -->
+<div class="slide">
+  <span class="slide-number">06</span>
+  <div class="section-label">Panel Admin (Web)</div>
+  <h2>Manajemen Sistem<br>yang Efisien</h2>
+  <p class="lead">Panel admin berbasis web untuk mengelola pengguna, rombongan, dan konten ibadah.</p>
+
+  <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 24px; margin-top: 32px;">
+    <div>
+      <img src="screenshots/admin-login.png" class="screenshot-admin" style="max-width: 100%;" alt="Admin Login">
+      <div style="text-align:center; margin-top:8px; font-size:13px; font-weight:600; color:var(--text-muted);">Halaman Login Admin</div>
+    </div>
+    <div>
+      <img src="screenshots/admin-dashboard.png" class="screenshot-admin" style="max-width: 100%;" alt="Admin Dashboard">
+      <div style="text-align:center; margin-top:8px; font-size:13px; font-weight:600; color:var(--text-muted);">Dashboard Statistik</div>
+    </div>
+    <div>
+      <img src="screenshots/admin-users.png" class="screenshot-admin" style="max-width: 100%;" alt="Admin Users">
+      <div style="text-align:center; margin-top:8px; font-size:13px; font-weight:600; color:var(--text-muted);">Manajemen Pengguna</div>
+    </div>
+    <div>
+      <img src="screenshots/admin-groups.png" class="screenshot-admin" style="max-width: 100%;" alt="Admin Groups">
+      <div style="text-align:center; margin-top:8px; font-size:13px; font-weight:600; color:var(--text-muted);">Manajemen Rombongan</div>
+    </div>
+  </div>
+</div>
+
+<!-- ==================== SLIDE 7: ARSITEKTUR ==================== -->
+<div class="slide">
+  <span class="slide-number">07</span>
+  <div class="section-label">Arsitektur Sistem</div>
+  <h2>Arsitektur Modern &<br>Scalable</h2>
+
+  <div class="arch-diagram">
+    <div class="arch-layers">
+      <div class="arch-layer">
+        <div class="arch-layer-label">Client</div>
+        <div class="arch-boxes">
+          <div class="arch-box mobile">Mobile App (Expo + React Native)</div>
+          <div class="arch-box admin">Admin Panel (React + Vite)</div>
+        </div>
+      </div>
+
+      <div class="arch-arrow">&darr; &nbsp; HTTPS / REST API &nbsp; &darr;</div>
+
+      <div class="arch-layer">
+        <div class="arch-layer-label">Server</div>
+        <div class="arch-boxes">
+          <div class="arch-box server">Express + TypeScript API</div>
+          <div class="arch-box server">JWT Auth + RBAC</div>
+          <div class="arch-box server">Zod Validation</div>
+        </div>
+      </div>
+
+      <div class="arch-arrow">&darr; &nbsp; Knex ORM &nbsp; &darr;</div>
+
+      <div class="arch-layer">
+        <div class="arch-layer-label">Database</div>
+        <div class="arch-boxes">
+          <div class="arch-box db">PostgreSQL 16</div>
+          <div class="arch-box db">12 Tabel + Migrasi</div>
+          <div class="arch-box db">Audit Trail</div>
+        </div>
+      </div>
+
+      <div class="arch-arrow">&darr; &nbsp; Offline Sync &nbsp; &darr;</div>
+
+      <div class="arch-layer">
+        <div class="arch-layer-label">Offline</div>
+        <div class="arch-boxes">
+          <div class="arch-box mobile">SQLite (9 tabel lokal)</div>
+          <div class="arch-box mobile">SecureStore (token)</div>
+        </div>
+      </div>
+
+      <div class="arch-layer" style="margin-top: 12px;">
+        <div class="arch-layer-label">Infra</div>
+        <div class="arch-boxes">
+          <div class="arch-box infra">Ubuntu VPS</div>
+          <div class="arch-box infra">Docker</div>
+          <div class="arch-box infra">Caddy (HTTPS)</div>
+          <div class="arch-box infra">PM2 (Process)</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ==================== SLIDE 8: ALUR DATA ==================== -->
+<div class="slide">
+  <span class="slide-number">08</span>
+  <div class="section-label">Alur Sistem</div>
+  <h2>Bagaimana Sistem Bekerja</h2>
+
+  <h3 style="margin-top: 40px;">Alur SOS Darurat</h3>
+  <div class="flow-row">
+    <div class="flow-step active">
+      <div class="step-num">Step 1</div>
+      <div class="step-title">Jamaah tekan SOS</div>
+    </div>
+    <div class="flow-arrow">&rarr;</div>
+    <div class="flow-step">
+      <div class="step-num">Step 2</div>
+      <div class="step-title">Lokasi dikirim</div>
+    </div>
+    <div class="flow-arrow">&rarr;</div>
+    <div class="flow-step">
+      <div class="step-num">Step 3</div>
+      <div class="step-title">Push notifikasi</div>
+    </div>
+    <div class="flow-arrow">&rarr;</div>
+    <div class="flow-step">
+      <div class="step-num">Step 4</div>
+      <div class="step-title">Muthawwif respon</div>
+    </div>
+    <div class="flow-arrow">&rarr;</div>
+    <div class="flow-step" style="border-color: var(--green);">
+      <div class="step-num">Step 5</div>
+      <div class="step-title">SOS resolved</div>
+    </div>
+  </div>
+
+  <h3 style="margin-top: 48px;">Alur Geofence Miqat</h3>
+  <div class="flow-row">
+    <div class="flow-step active">
+      <div class="step-num">Step 1</div>
+      <div class="step-title">Background GPS</div>
+    </div>
+    <div class="flow-arrow">&rarr;</div>
+    <div class="flow-step">
+      <div class="step-num">Step 2</div>
+      <div class="step-title">Hitung jarak miqat</div>
+    </div>
+    <div class="flow-arrow">&rarr;</div>
+    <div class="flow-step">
+      <div class="step-num">Step 3</div>
+      <div class="step-title">Peringatan &lt; 3 km</div>
+    </div>
+    <div class="flow-arrow">&rarr;</div>
+    <div class="flow-step">
+      <div class="step-num">Step 4</div>
+      <div class="step-title">Toggle ihram</div>
+    </div>
+    <div class="flow-arrow">&rarr;</div>
+    <div class="flow-step" style="border-color: var(--green);">
+      <div class="step-num">Step 5</div>
+      <div class="step-title">Status tersimpan</div>
+    </div>
+  </div>
+
+  <h3 style="margin-top: 48px;">Alur Offline-First</h3>
+  <div class="flow-row">
+    <div class="flow-step active">
+      <div class="step-num">Step 1</div>
+      <div class="step-title">Buka aplikasi</div>
+    </div>
+    <div class="flow-arrow">&rarr;</div>
+    <div class="flow-step">
+      <div class="step-num">Step 2</div>
+      <div class="step-title">Load dari SQLite</div>
+    </div>
+    <div class="flow-arrow">&rarr;</div>
+    <div class="flow-step">
+      <div class="step-num">Step 3</div>
+      <div class="step-title">Tampilkan data</div>
+    </div>
+    <div class="flow-arrow">&rarr;</div>
+    <div class="flow-step">
+      <div class="step-num">Step 4</div>
+      <div class="step-title">Sync dari server</div>
+    </div>
+    <div class="flow-arrow">&rarr;</div>
+    <div class="flow-step" style="border-color: var(--green);">
+      <div class="step-num">Step 5</div>
+      <div class="step-title">Update lokal</div>
+    </div>
+  </div>
+</div>
+
+<!-- ==================== SLIDE 9: KEUNGGULAN ==================== -->
+<div class="slide">
+  <span class="slide-number">09</span>
+  <div class="section-label">Keunggulan</div>
+  <h2>Mengapa Memilih Mabrur?</h2>
+
+  <div class="feature-grid">
+    <div class="feature-item">
+      <div class="feature-check">&check;</div>
+      <div>
+        <strong>Offline-First</strong>
+        <span>Data tersedia tanpa internet. Panduan ibadah, doa, dan jadwal tersimpan lokal di device.</span>
+      </div>
+    </div>
+    <div class="feature-item">
+      <div class="feature-check">&check;</div>
+      <div>
+        <strong>Keamanan Berlapis</strong>
+        <span>Enkripsi AES-256-GCM untuk data sensitif. JWT dengan token rotation. Password bcrypt 12 rounds.</span>
+      </div>
+    </div>
+    <div class="feature-item">
+      <div class="feature-check">&check;</div>
+      <div>
+        <strong>Geofence Cerdas</strong>
+        <span>Deteksi otomatis 5 zona miqat + Masjidil Haram. Peringatan ihram berbasis lokasi real-time.</span>
+      </div>
+    </div>
+    <div class="feature-item">
+      <div class="feature-check">&check;</div>
+      <div>
+        <strong>SOS Satu Tombol</strong>
+        <span>Darurat medis, tersesat, atau kehilangan. Lokasi otomatis dikirim. Aksi cepat: Maps, WhatsApp, Telepon.</span>
+      </div>
+    </div>
+    <div class="feature-item">
+      <div class="feature-check">&check;</div>
+      <div>
+        <strong>Multi-Platform</strong>
+        <span>Satu codebase untuk Android & iOS. Admin panel berbasis web. Tidak perlu install khusus untuk admin.</span>
+      </div>
+    </div>
+    <div class="feature-item">
+      <div class="feature-check">&check;</div>
+      <div>
+        <strong>Audit Trail Lengkap</strong>
+        <span>Setiap perubahan data tercatat: siapa, kapan, apa yang berubah. Transparan dan akuntabel.</span>
+      </div>
+    </div>
+    <div class="feature-item">
+      <div class="feature-check">&check;</div>
+      <div>
+        <strong>Real-time Monitoring</strong>
+        <span>Muthawwif dapat memantau posisi dan status seluruh jamaah secara live dari dashboard mobile.</span>
+      </div>
+    </div>
+    <div class="feature-item">
+      <div class="feature-check">&check;</div>
+      <div>
+        <strong>Scalable & Maintainable</strong>
+        <span>Arsitektur modular dengan TypeScript. Database migration otomatis. Mudah di-scale horizontal.</span>
+      </div>
+    </div>
+    <div class="feature-item">
+      <div class="feature-check">&check;</div>
+      <div>
+        <strong>Push Notification</strong>
+        <span>Notifikasi real-time untuk SOS, pengingat jadwal, dan peringatan geofence. Bahkan di background.</span>
+      </div>
+    </div>
+    <div class="feature-item">
+      <div class="feature-check">&check;</div>
+      <div>
+        <strong>Bahasa Indonesia Native</strong>
+        <span>Seluruh antarmuka dalam Bahasa Indonesia. Siap untuk i18n (Arab, Inggris) di masa depan.</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ==================== SLIDE 10: KEAMANAN ==================== -->
+<div class="slide">
+  <span class="slide-number">10</span>
+  <div class="section-label">Keamanan</div>
+  <h2>Keamanan Data<br>Tingkat Enterprise</h2>
+  <p class="lead">Data jamaah dilindungi dengan standar keamanan terbaik di setiap lapisan sistem.</p>
+
+  <div class="security-grid">
+    <div class="security-item">
+      <h4>Enkripsi Data Sensitif</h4>
+      <p>Nomor paspor dan catatan medis dienkripsi dengan AES-256-GCM di level aplikasi. Bahkan admin database tidak bisa membaca data mentah.</p>
+    </div>
+    <div class="security-item">
+      <h4>Autentikasi JWT</h4>
+      <p>Access token 15 menit + refresh token 30 hari dengan rotasi otomatis. Token disimpan terenkripsi di SecureStore device.</p>
+    </div>
+    <div class="security-item">
+      <h4>Role-Based Access</h4>
+      <p>Tiga level akses (jamaah, muthawwif, admin) dicek di setiap endpoint server. Tidak bisa di-bypass dari client.</p>
+    </div>
+    <div class="security-item">
+      <h4>Rate Limiting</h4>
+      <p>Maksimal 10 percobaan login per 15 menit. Melindungi dari serangan brute-force password.</p>
+    </div>
+    <div class="security-item">
+      <h4>Security Headers</h4>
+      <p>Helmet middleware: HSTS, X-Frame-Options, CSP, XSS Protection. HTTPS wajib di production.</p>
+    </div>
+    <div class="security-item">
+      <h4>Password Hashing</h4>
+      <p>bcrypt dengan 12 rounds salt. Password tidak pernah disimpan dalam bentuk teks biasa.</p>
+    </div>
+  </div>
+</div>
+
+<!-- ==================== SLIDE 11: SPESIFIKASI ==================== -->
+<div class="slide">
+  <span class="slide-number">11</span>
+  <div class="section-label">Spesifikasi</div>
+  <h2>Kebutuhan Perangkat<br>Minimal</h2>
+
+  <table class="spec-table">
+    <thead>
+      <tr>
+        <th>Perangkat</th>
+        <th>Komponen</th>
+        <th>Spesifikasi Minimal</th>
+        <th>Rekomendasi</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td rowspan="5" class="device-name">Server<br><span style="font-weight:400;font-size:12px;color:var(--text-muted)">VPS / Cloud</span></td>
+        <td>CPU</td>
+        <td>1 vCPU</td>
+        <td>2 vCPU</td>
+      </tr>
+      <tr>
+        <td>RAM</td>
+        <td>2 GB</td>
+        <td>4 GB</td>
+      </tr>
+      <tr>
+        <td>Storage</td>
+        <td>20 GB SSD</td>
+        <td>40 GB SSD</td>
+      </tr>
+      <tr>
+        <td>OS</td>
+        <td>Ubuntu 22.04 LTS</td>
+        <td>Ubuntu 24.04 LTS</td>
+      </tr>
+      <tr>
+        <td>Software</td>
+        <td colspan="2">Node.js 20+, PostgreSQL 16+, Docker, Caddy/Nginx</td>
+      </tr>
+
+      <tr>
+        <td rowspan="4" class="device-name">Komputer Admin<br><span style="font-weight:400;font-size:12px;color:var(--text-muted)">Desktop / Laptop</span></td>
+        <td>Prosesor</td>
+        <td>Intel i3 / Ryzen 3</td>
+        <td>Intel i5 / Ryzen 5</td>
+      </tr>
+      <tr>
+        <td>RAM</td>
+        <td>4 GB</td>
+        <td>8 GB</td>
+      </tr>
+      <tr>
+        <td>Browser</td>
+        <td colspan="2">Chrome 90+, Firefox 90+, Edge 90+, Safari 15+</td>
+      </tr>
+      <tr>
+        <td>Internet</td>
+        <td>1 Mbps</td>
+        <td>5 Mbps</td>
+      </tr>
+
+      <tr>
+        <td rowspan="4" class="device-name">HP Muthawwif<br><span style="font-weight:400;font-size:12px;color:var(--text-muted)">Android / iOS</span></td>
+        <td>OS</td>
+        <td>Android 10+ / iOS 15+</td>
+        <td>Android 13+ / iOS 17+</td>
+      </tr>
+      <tr>
+        <td>RAM</td>
+        <td>3 GB</td>
+        <td>6 GB</td>
+      </tr>
+      <tr>
+        <td>Storage</td>
+        <td>200 MB free</td>
+        <td>500 MB free</td>
+      </tr>
+      <tr>
+        <td>Fitur</td>
+        <td colspan="2">GPS, koneksi internet (4G/WiFi), notifikasi push</td>
+      </tr>
+
+      <tr>
+        <td rowspan="4" class="device-name">HP Jamaah<br><span style="font-weight:400;font-size:12px;color:var(--text-muted)">Android / iOS</span></td>
+        <td>OS</td>
+        <td>Android 10+ / iOS 15+</td>
+        <td>Android 12+ / iOS 16+</td>
+      </tr>
+      <tr>
+        <td>RAM</td>
+        <td>2 GB</td>
+        <td>4 GB</td>
+      </tr>
+      <tr>
+        <td>Storage</td>
+        <td>150 MB free</td>
+        <td>300 MB free</td>
+      </tr>
+      <tr>
+        <td>Fitur</td>
+        <td colspan="2">GPS, koneksi internet (4G/WiFi)</td>
+      </tr>
+    </tbody>
+  </table>
+</div>
+
+<!-- ==================== SLIDE 12: TEKNOLOGI ==================== -->
+<div class="slide">
+  <span class="slide-number">12</span>
+  <div class="section-label">Teknologi</div>
+  <h2>Stack Teknologi</h2>
+  <p class="lead">Dibangun dengan teknologi modern, open-source, dan battle-tested.</p>
+
+  <div class="card-grid" style="grid-template-columns: repeat(4, 1fr);">
+    <div class="card" style="text-align:center;">
+      <h4 style="color: var(--green);">Mobile</h4>
+      <div class="divider" style="margin: 12px auto;"></div>
+      <p>React Native<br>Expo SDK 57<br>SQLite<br>Zustand</p>
+    </div>
+    <div class="card" style="text-align:center;">
+      <h4 style="color: var(--primary);">Server</h4>
+      <div class="divider" style="margin: 12px auto;"></div>
+      <p>Express.js<br>TypeScript<br>Zod<br>Knex ORM</p>
+    </div>
+    <div class="card" style="text-align:center;">
+      <h4 style="color: var(--gold);">Admin</h4>
+      <div class="divider" style="margin: 12px auto;"></div>
+      <p>React 19<br>Vite 6<br>React Router 7<br>TypeScript</p>
+    </div>
+    <div class="card" style="text-align:center;">
+      <h4 style="color: #2E6B9E;">Infra</h4>
+      <div class="divider" style="margin: 12px auto;"></div>
+      <p>PostgreSQL 16<br>Docker<br>Caddy (SSL)<br>PM2</p>
+    </div>
+  </div>
+</div>
+
+<!-- ==================== SLIDE 13: PENUTUP ==================== -->
+<div class="slide closing">
+  <div>
+    <div class="section-label" style="color: var(--gold);">Terima Kasih</div>
+    <h2>Siap Mewujudkan<br>Ibadah yang Mabrur</h2>
+    <p class="lead">
+      Mabrur hadir sebagai solusi digital terpadu untuk meningkatkan keamanan, kenyamanan, dan kualitas ibadah haji & umrah bagi seluruh jamaah Indonesia.
+    </p>
+    <div class="contact-grid">
+      <div class="contact-item">
+        <div class="label">Demo</div>
+        <div class="value">mabrur.sosmartpro.com</div>
+      </div>
+      <div class="contact-item">
+        <div class="label">Platform</div>
+        <div class="value">Android & iOS</div>
+      </div>
+      <div class="contact-item">
+        <div class="label">Status</div>
+        <div class="value">Production Ready</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+</body>
+</html>
