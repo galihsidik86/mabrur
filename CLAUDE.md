@@ -26,12 +26,14 @@ This repo underpins the journal manuscript **"Pengujian Akurasi Algoritma Geospa
 
 | Algorithm | Technique | Location |
 |---|---|---|
-| Haversine distance | great-circle, R = 6 371 000 m | `apps/mobile/src/services/location.ts:3` — duplicated (same formula) in `server/src/services/geofence.service.ts:14` and as `distanceMeters` in `apps/mobile/src/services/sacred-zones.ts:108` |
+| Haversine distance | great-circle, R = 6 371 000 m | `apps/mobile/src/services/location.ts:3` — duplicated (same formula) in `server/src/services/geofence.service.ts:14` and as `distanceMeters` in `apps/mobile/src/services/sacred-zones-core.ts` |
 | Miqat geofence | point-in-circle | mobile nearest+warning: `location.ts:41` (`findNearest`); the 1 000 m `within_boundary` check lives **server-side**: `geofence.service.ts:25` (`nearestMiqat`) |
-| Arafah boundary | ray-casting point-in-polygon (5 vertices) | `sacred-zones.ts:32` (`isPointInPolygon`), status logic `checkArafahPosition` `sacred-zones.ts:64` |
-| Tawaf counter | angular crossing (0° = Hajar Aswad line), 120 s debounce | `sacred-zones.ts:122` (`TawafTracker`) |
-| Sa'i counter | Safa/Marwah zone-alternation state machine, must start at Safa | `sacred-zones.ts:171` (`SaiTracker`) |
-| Jamarat identification | nearest-in-radius (30 m), 3 classes | `sacred-zones.ts:219` (`detectNearestJamarat`) |
+| Arafah boundary | ray-casting point-in-polygon (5 vertices) | `sacred-zones-core.ts` (`isPointInPolygon`, `checkArafahPosition`) |
+| Tawaf counter | angular crossing (0° = Hajar Aswad line), 120 s debounce | `sacred-zones-core.ts` (`TawafTracker`; time injectable, default `Date.now()`) |
+| Sa'i counter | Safa/Marwah zone-alternation state machine, must start at Safa | `sacred-zones-core.ts` (`SaiTracker`) |
+| Jamarat identification | nearest-in-radius (30 m), 3 classes | `sacred-zones-core.ts` (`detectNearestJamarat`) |
+
+All pure algorithms + sacred coordinates live in `sacred-zones-core.ts` (no Expo imports — importable by test harnesses); `sacred-zones.ts` re-exports it and keeps only the Expo location watcher.
 
 Miqat zone data (5 miqat + Tanah Haram; radius 1 000 m, warning 3 000 m) is seeded in `server/src/db/seeds/004_miqat_zones.ts` and mirrored as constants in the simulation harness.
 
@@ -40,24 +42,28 @@ Miqat zone data (5 miqat + Tanah Haram; radius 1 000 m, warning 3 000 m) is seed
 `docs/accuracy-test/run.ts` — self-contained; **algorithms are copied from the mobile sources, not imported** (one documented deviation: trackers take an explicit `now` param instead of `Date.now()` for determinism). Key knobs, all near the top of the file: `SEED = 42` (mulberry32 PRNG), `SIGMAS = [0, 1, 3, 5, 10, 15]` m (Gaussian per-axis E/N noise), meter→degree conversion `M_PER_DEG_LAT = 111320` and `mPerDegLng(lat) = 111320·cos(lat)`. Vincenty (WGS-84) is implemented in the same file as the distance reference.
 
 ```bash
-npx tsx docs/accuracy-test/run.ts        # regenerate results/summary.md + 5 CSVs (deterministic)
+npm run simulate                         # run.ts + verify-manuscript.ts: regenerate results & verify 138 cells vs manuscript (exit 1 on mismatch)
 node docs/accuracy-test/charts.js        # regenerate 6 figure PNGs @2x (playwright) + captions.md
+npm run replay                           # field validation: replay field_logs/*.gpx through PRODUCTION algorithms (--demo for synthetic fixtures)
+npm run test:replay                      # unit tests for gps-replay parser + coordinate transform
 python docs/accuracy-test/build-docx.py  # rebuild generated Word draft (python-docx)
 ```
 
+Field-validation pipeline lives in `docs/accuracy-test/gps-replay/` — it imports the algorithms from `apps/mobile/src/services/sacred-zones-core.ts` (the pure-algorithm module split out of `sacred-zones.ts`; the latter re-exports it, app surface unchanged). Real GPS traces go in `field_logs/` (GPX/CSV). Methodological assumptions: `gps-replay/README.md`.
+
 Any change to `run.ts` parameters or the algorithms invalidates: `results/*.csv`, `results/summary.md`, `results/figures/*.png`, every table/figure in the manuscript, and the numbers quoted in its abstract/conclusion — regenerate all of them together.
 
-### Geometric constants (derived from coordinates in `sacred-zones.ts`)
+### Geometric constants (derived from coordinates in `sacred-zones-core.ts`)
 
-| Quantity | Value | Defined by |
+| Quantity | Value | Defined by (all in `sacred-zones-core.ts`) |
 |---|---|---|
-| Safa–Marwah separation | 419.0 m | `SAFA`/`MARWAH` coords, `sacred-zones.ts:8-9` |
-| Jamarat pillar spacing Ula–Wustha / Wustha–Aqabah / Ula–Aqabah | 76.0 / 68.2 / 144.0 m | `JAMARAT` coords, `sacred-zones.ts:100-104` |
-| Jamarat detection radius | 30 m | `sacred-zones.ts:227` |
-| Sa'i zone radius (Safa/Marwah) | 25 m | `ZONE_RADIUS`, `sacred-zones.ts:175` |
-| Tawaf tracking band | 10–80 m from Ka'bah | `sacred-zones.ts:139` |
-| Tawaf debounce | 120 s | `MIN_INTERVAL`, `sacred-zones.ts:126` |
-| Namirah warning radius | 200 m | `sacred-zones.ts:28` |
+| Safa–Marwah separation | 419.0 m | `SAFA`/`MARWAH` coords |
+| Jamarat pillar spacing Ula–Wustha / Wustha–Aqabah / Ula–Aqabah | 76.0 / 68.2 / 144.0 m | `JAMARAT` coords |
+| Jamarat detection radius | 30 m | `detectNearestJamarat` |
+| Sa'i zone radius (Safa/Marwah) | 25 m | `SaiTracker.ZONE_RADIUS` |
+| Tawaf tracking band | 10–80 m from Ka'bah | `TawafTracker.update` |
+| Tawaf debounce | 120 s | `TawafTracker.MIN_INTERVAL` |
+| Namirah warning radius | 200 m | `NAMIRAH_WARNING_RADIUS` |
 
 The derived distances (419 m, 76/68.2/144 m) are quoted verbatim in the paper — if any coordinate changes, these numbers and the paper change too.
 

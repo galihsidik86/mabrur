@@ -51,6 +51,10 @@ npx tsx docs/accuracy-test/verify-manuscript.ts
 
 # 3) Grafik → results/figures/*.png (6 gambar @2x) + captions.md
 node docs/accuracy-test/charts.js
+
+# 4) Validasi lapangan (replay GPS riil dari field_logs/*.gpx) → FIELD_VALIDATION.md
+npm run replay          # lihat gps-replay/README.md; --demo untuk fixture sintetis
+npm run test:replay     # unit test parser + transformasi koordinat
 ```
 
 Simulasi memakai PRNG mulberry32 dengan benih tetap (`SEED = 42`) dan tidak
