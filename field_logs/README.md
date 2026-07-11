@@ -3,6 +3,11 @@
 Taruh berkas **GPX** (atau CSV berkolom time/lat/lon/accuracy) hasil perekaman
 berjalan kaki di direktori ini, lalu jalankan `npm run replay`.
 
+**Cara merekam (utama):** aplikasi Mabrur → Alat Ibadah → **Perekam GPS (riset)**.
+Merekam 1 titik/detik via expo-location `BestForNavigation` — stack lokasi yang
+sama dengan deteksi ritual produksi — lalu ekspor GPX via share sheet.
+Alternatif: aplikasi perekam pihak ketiga (GPS Logger, interval 1 dtk, ekspor GPX).
+
 Skenario minimal (interval 1 detik, aktifkan pencatatan *accuracy*):
 
 1. **Lapangan terbuka** — jalan lurus ±300 m tanpa halangan langit.

@@ -697,6 +697,7 @@ function ChecklistTab() {
 
 // ==================== HUB (MAIN MENU) ====================
 function HubMenu({ onSelect }: { onSelect: (t: Tab) => void }) {
+  const router = useRouter();
   const items: Array<{ id: Tab; icon: React.ComponentProps<typeof Ionicons>['name']; label: string; arabic: string; color: string }> = [
     { id: 'tawaf', icon: 'refresh-circle', label: 'Tawaf', arabic: 'طَوَاف', color: colors.primary },
     { id: 'sai', icon: 'swap-horizontal', label: "Sa'i", arabic: 'سَعْي', color: colors.green },
@@ -721,6 +722,14 @@ function HubMenu({ onSelect }: { onSelect: (t: Tab) => void }) {
           <Text style={hub.arabic}>{item.arabic}</Text>
         </TouchableOpacity>
       ))}
+      {/* alat riset: perekam trace GPS untuk validasi lapangan naskah */}
+      <TouchableOpacity style={hub.card} onPress={() => router.push('/gps-recorder')} activeOpacity={0.7}>
+        <View style={[hub.iconBox, { backgroundColor: colors.textMuted }]}>
+          <Ionicons name="analytics" size={24} color="#fff" />
+        </View>
+        <Text style={hub.label}>Perekam GPS</Text>
+        <Text style={hub.arabic}>riset</Text>
+      </TouchableOpacity>
     </View>
   );
 }

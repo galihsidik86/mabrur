@@ -8,9 +8,15 @@ isotropik i.i.d. yang dipakai simulasi.
 
 ## Merekam trace (untuk data riil)
 
-1. Pasang aplikasi perekam GPS di Android (mis. **GPS Logger**), atur interval 1 detik,
-   format ekspor **GPX** (aktifkan penulisan *accuracy* bila tersedia).
-2. Rekam minimal 3 skenario berjalan kaki:
+1. **Jalur utama — perekam internal Mabrur**: buka aplikasi → Alat Ibadah →
+   **Perekam GPS (riset)** (`apps/mobile/app/gps-recorder.tsx`). Perekam memakai
+   expo-location `Accuracy.BestForNavigation` — **stack lokasi yang sama dengan
+   deteksi ritual produksi** — pada 1 titik/detik tanpa penyaringan jarak, menyimpan
+   akurasi per titik, dan mengekspor GPX via share sheet. Ini menghilangkan
+   pertanyaan reviewer soal perbedaan stack perekaman vs produksi.
+   (Alternatif: aplikasi pihak ketiga mis. GPS Logger, interval 1 detik, ekspor GPX
+   dengan *accuracy*.)
+2. Rekam minimal 3 skenario berjalan kaki (pilihan skenario tersedia di layar perekam):
    - **A. Lapangan terbuka** — jalan lurus ±300 m di area tanpa halangan langit.
    - **B. Padat bangunan / koridor sempit** — proxy *urban canyon*.
    - **C. Bolak-balik lurus ±400 m × 7 kali** — proxy sa'i (mulai dan patokan ujung yang sama).
