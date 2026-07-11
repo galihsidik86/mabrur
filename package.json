@@ -12,6 +12,8 @@
     "db:seed": "npm run db:seed -w server",
     "test": "npm run test -w server",
     "db:cleanup": "npm run db:cleanup -w server",
-    "simulate": "tsx docs/accuracy-test/run.ts && tsx docs/accuracy-test/verify-manuscript.ts"
+    "simulate": "tsx docs/accuracy-test/run.ts && tsx docs/accuracy-test/verify-manuscript.ts",
+    "replay": "tsx docs/accuracy-test/gps-replay/index.ts",
+    "test:replay": "vitest run --config docs/accuracy-test/gps-replay/vitest.config.ts"
   }
 }
