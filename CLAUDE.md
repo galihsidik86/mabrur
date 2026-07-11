@@ -18,6 +18,56 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - **Fonts**: Plus Jakarta Sans (UI), Amiri (Arabic)
 - Mobile tokens defined in `apps/mobile/src/theme.ts` — always import `colors` and `radius` from there.
 
+## Journal Research Artifacts (`docs/accuracy-test/`)
+
+This repo underpins the journal manuscript **"Pengujian Akurasi Algoritma Geospasial untuk Deteksi Ritual Haji Berbasis GPS terhadap Galat Posisi"** (active manuscript: `docs/PENGUJIAN_AKURASI_ALGORITMA_GEOSPASIAL_REVISI.docx`). The manuscript claims full reproducibility — reviewers may inspect this repo. **Do not change algorithm logic in `apps/mobile/src/services/` or `server/src/services/geofence.service.ts` without checking whether the paper's numbers must be regenerated.**
+
+### The 6 core algorithms (production code)
+
+| Algorithm | Technique | Location |
+|---|---|---|
+| Haversine distance | great-circle, R = 6 371 000 m | `apps/mobile/src/services/location.ts:3` — duplicated (same formula) in `server/src/services/geofence.service.ts:14` and as `distanceMeters` in `apps/mobile/src/services/sacred-zones.ts:108` |
+| Miqat geofence | point-in-circle | mobile nearest+warning: `location.ts:41` (`findNearest`); the 1 000 m `within_boundary` check lives **server-side**: `geofence.service.ts:25` (`nearestMiqat`) |
+| Arafah boundary | ray-casting point-in-polygon (5 vertices) | `sacred-zones.ts:32` (`isPointInPolygon`), status logic `checkArafahPosition` `sacred-zones.ts:64` |
+| Tawaf counter | angular crossing (0° = Hajar Aswad line), 120 s debounce | `sacred-zones.ts:122` (`TawafTracker`) |
+| Sa'i counter | Safa/Marwah zone-alternation state machine, must start at Safa | `sacred-zones.ts:171` (`SaiTracker`) |
+| Jamarat identification | nearest-in-radius (30 m), 3 classes | `sacred-zones.ts:219` (`detectNearestJamarat`) |
+
+Miqat zone data (5 miqat + Tanah Haram; radius 1 000 m, warning 3 000 m) is seeded in `server/src/db/seeds/004_miqat_zones.ts` and mirrored as constants in the simulation harness.
+
+### Monte Carlo accuracy harness
+
+`docs/accuracy-test/run.ts` — self-contained; **algorithms are copied from the mobile sources, not imported** (one documented deviation: trackers take an explicit `now` param instead of `Date.now()` for determinism). Key knobs, all near the top of the file: `SEED = 42` (mulberry32 PRNG), `SIGMAS = [0, 1, 3, 5, 10, 15]` m (Gaussian per-axis E/N noise), meter→degree conversion `M_PER_DEG_LAT = 111320` and `mPerDegLng(lat) = 111320·cos(lat)`. Vincenty (WGS-84) is implemented in the same file as the distance reference.
+
+```bash
+npx tsx docs/accuracy-test/run.ts        # regenerate results/summary.md + 5 CSVs (deterministic)
+node docs/accuracy-test/charts.js        # regenerate 6 figure PNGs @2x (playwright) + captions.md
+python docs/accuracy-test/build-docx.py  # rebuild generated Word draft (python-docx)
+```
+
+Any change to `run.ts` parameters or the algorithms invalidates: `results/*.csv`, `results/summary.md`, `results/figures/*.png`, every table/figure in the manuscript, and the numbers quoted in its abstract/conclusion — regenerate all of them together.
+
+### Geometric constants (derived from coordinates in `sacred-zones.ts`)
+
+| Quantity | Value | Defined by |
+|---|---|---|
+| Safa–Marwah separation | 419.0 m | `SAFA`/`MARWAH` coords, `sacred-zones.ts:8-9` |
+| Jamarat pillar spacing Ula–Wustha / Wustha–Aqabah / Ula–Aqabah | 76.0 / 68.2 / 144.0 m | `JAMARAT` coords, `sacred-zones.ts:100-104` |
+| Jamarat detection radius | 30 m | `sacred-zones.ts:227` |
+| Sa'i zone radius (Safa/Marwah) | 25 m | `ZONE_RADIUS`, `sacred-zones.ts:175` |
+| Tawaf tracking band | 10–80 m from Ka'bah | `sacred-zones.ts:139` |
+| Tawaf debounce | 120 s | `MIN_INTERVAL`, `sacred-zones.ts:126` |
+| Namirah warning radius | 200 m | `sacred-zones.ts:28` |
+
+The derived distances (419 m, 76/68.2/144 m) are quoted verbatim in the paper — if any coordinate changes, these numbers and the paper change too.
+
+### Conventions in the research artifacts
+
+- Reproducibility: no `Date.now()`/`Math.random()` in the harness — seeded mulberry32 only; rerunning yields byte-identical CSVs.
+- Numbers in generated outputs use Indonesian decimal comma ("72,67"); CSVs use dot decimals.
+- Figures: validated color palette + per-series marker shapes (grayscale/CVD-safe); PNGs are @2x, captions live in `results/figures/captions.md`, no titles baked into images (journal captions).
+- `docs/laporan-logika-perhitungan.md` is the formula/constant reference document; keep it in sync with code.
+
 ## Development Commands
 
 ```bash
@@ -34,8 +84,8 @@ npm run server:build      # TypeScript compile to dist/
 # Tests
 npm run test              # vitest run — all tests once
 npm run test:watch -w server  # vitest watch mode
-# Run single test file:
-npx vitest run tests/crypto.test.ts --config server/vitest.config.ts
+# Run single test file (from server/):
+cd server && npx vitest run tests/crypto.test.ts
 
 # Admin Panel (from apps/admin/)
 cd apps/admin && npm install  # First time only
@@ -86,6 +136,11 @@ mabrur/
 │       ├── App.tsx           Sidebar layout + React Router routes + RequireAuth guard
 │       ├── api.ts            API client (localStorage tokens, auto-refresh on 401)
 │       └── pages/            Login, Dashboard, Users, Groups, Content
+├── docs/                ← Research & documentation artifacts
+│   ├── accuracy-test/        Monte Carlo harness (run.ts), charts.js, results/ (CSV + figures), paper drafts
+│   ├── laporan-logika-perhitungan.md   Formula/constant reference for all geospatial logic
+│   ├── ERD.md                Database entity-relationship diagram
+│   └── PENGUJIAN_AKURASI_ALGORITMA_GEOSPASIAL_REVISI.docx   Active journal manuscript
 ├── .env                  Environment variables (not committed)
 ├── render.yaml           Render.com deployment config
 └── docker-compose.yml    PostgreSQL + Server containers

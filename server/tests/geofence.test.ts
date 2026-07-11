@@ -18,7 +18,7 @@ describe('haversine distance', () => {
     expect(haversine(21.4225, 39.8262, 21.4225, 39.8262)).toBe(0);
   });
 
-  it('calculates Kaabah to Bir Ali (~450km)', () => {
+  it('calculates Kaabah to Bir Ali (~332km)', () => {
     const d = haversine(21.4225, 39.8262, 24.4097, 39.5433);
     expect(d).toBeGreaterThan(320000);
     expect(d).toBeLessThan(340000);
