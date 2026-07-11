@@ -28,6 +28,32 @@ mkdirSync(OUT_DIR, { recursive: true });
 const SEED = 42;
 const SIGMAS = [0, 1, 3, 5, 10, 15]; // meter, std dev per sumbu (East/North)
 
+// Akumulator hasil terstruktur -> results/monte_carlo_results.json
+// (pengisian murni aditif; tidak menambah/menggeser panggilan rng() apa pun)
+const J: {
+  meta: Record<string, unknown>;
+  geometry: Record<string, number>;
+  haversine: Record<string, { mae: number; rmse: number; meanPct: number; maxPct: number }>;
+  miqat: Array<Record<string, number>>;
+  arafah: Array<Record<string, number>>;
+  tawaf: Array<Record<string, number>>;
+  sai: Array<Record<string, number>>;
+  jamarat: Array<Record<string, number>>;
+  jamarat_confusion_sigma15: Record<string, Record<string, number>>;
+} = {
+  meta: {
+    seed: SEED,
+    prng: 'mulberry32',
+    sigmas_m: SIGMAS,
+    samples: {
+      haversine_per_skenario: 5000, miqat_per_sigma: 8000, arafah_per_sigma: 12000,
+      tawaf_trials_per_sigma: 300, sai_trials_per_sigma: 300, jamarat_per_kelas_per_sigma: 4000,
+    },
+  },
+  geometry: {}, haversine: {}, miqat: [], arafah: [], tawaf: [], sai: [],
+  jamarat: [], jamarat_confusion_sigma15: {},
+};
+
 // ============================ RNG & NOISE ====================================
 
 function mulberry32(a: number) {
@@ -240,6 +266,12 @@ const dSafaMarwah = haversine(SAFA.lat, SAFA.lng, MARWAH.lat, MARWAH.lng);
 const dUW = haversine(JAMARAT.ula.lat, JAMARAT.ula.lng, JAMARAT.wustha.lat, JAMARAT.wustha.lng);
 const dWA = haversine(JAMARAT.wustha.lat, JAMARAT.wustha.lng, JAMARAT.aqabah.lat, JAMARAT.aqabah.lng);
 const dUA = haversine(JAMARAT.ula.lat, JAMARAT.ula.lng, JAMARAT.aqabah.lat, JAMARAT.aqabah.lng);
+J.geometry = {
+  safa_marwah_m: +dSafaMarwah.toFixed(1),
+  jamarat_ula_wustha_m: +dUW.toFixed(1),
+  jamarat_wustha_aqabah_m: +dWA.toFixed(1),
+  jamarat_ula_aqabah_m: +dUA.toFixed(1),
+};
 w('| Besaran | Nilai |');
 w('|---|---|');
 w(`| Jarak Safa–Marwah | ${dSafaMarwah.toFixed(1)} m |`);
@@ -273,17 +305,23 @@ function haversineTest(label: string, gen: () => [number, number, number, number
 w('| Skenario jarak | MAE (m) | RMSE (m) | Error rata2 (%) | Error maks (%) |');
 w('|---|---|---|---|---|');
 // (a) skala tawaf/sai: <500 m di sekitar Masjidil Haram
-haversineTest('Lokal Masjidil Haram (0–0,5 km)', () => {
+const havLokal = haversineTest('Lokal Masjidil Haram (0–0,5 km)', () => {
   const la1 = 21.42 + (rng() - 0.5) * 0.01, lo1 = 39.826 + (rng() - 0.5) * 0.01;
   const la2 = la1 + (rng() - 0.5) * 0.008, lo2 = lo1 + (rng() - 0.5) * 0.008;
   return [la1, lo1, la2, lo2];
 }, 5000);
-// (b) skala miqat: sampai ~450 km
-haversineTest('Skala Miqat (10–450 km)', () => {
+// (b) skala miqat
+const havMiqat = haversineTest('Skala Miqat (10–450 km)', () => {
   const la1 = 21 + rng() * 4, lo1 = 39 + rng() * 2;
   const la2 = 21 + rng() * 4, lo2 = 39 + rng() * 2;
   return [la1, lo1, la2, lo2];
 }, 5000);
+J.haversine = {
+  lokal: { mae: +havLokal.mae.toFixed(3), rmse: +havLokal.rmse.toFixed(3),
+           meanPct: +havLokal.meanPct.toFixed(4), maxPct: +havLokal.maxPct.toFixed(4) },
+  miqat: { mae: +havMiqat.mae.toFixed(3), rmse: +havMiqat.rmse.toFixed(3),
+           meanPct: +havMiqat.meanPct.toFixed(4), maxPct: +havMiqat.maxPct.toFixed(4) },
+};
 w('');
 w('*Catatan: Haversine mengasumsikan bumi bola (R=6.371 km); Vincenty memodelkan elipsoid WGS-84.*');
 w('');
@@ -317,6 +355,7 @@ for (const sigma of SIGMAS) {
   const mt = binMetrics(b);
   w(`| ${sigma} | ${pct(mt.acc)} | ${pct(mt.prec)} | ${pct(mt.rec)} | ${pct(mt.f1)} |`);
   miqatCsv.push(`${sigma},${pct(mt.acc)},${pct(mt.prec)},${pct(mt.rec)},${pct(mt.f1)}`);
+  J.miqat.push({ sigma, akurasi: +pct(mt.acc), presisi: +pct(mt.prec), recall: +pct(mt.rec), f1: +pct(mt.f1) });
 }
 writeFileSync(join(OUT_DIR, 'miqat_accuracy.csv'), miqatCsv.join('\n'));
 w('');
@@ -347,6 +386,7 @@ for (const sigma of SIGMAS) {
   const mt = binMetrics(b);
   w(`| ${sigma} | ${pct(mt.acc)} | ${pct(mt.prec)} | ${pct(mt.rec)} | ${pct(mt.f1)} |`);
   arafahCsv.push(`${sigma},${pct(mt.acc)},${pct(mt.prec)},${pct(mt.rec)},${pct(mt.f1)}`);
+  J.arafah.push({ sigma, akurasi: +pct(mt.acc), presisi: +pct(mt.prec), recall: +pct(mt.rec), f1: +pct(mt.f1) });
 }
 writeFileSync(join(OUT_DIR, 'arafah_accuracy.csv'), arafahCsv.join('\n'));
 w('');
@@ -396,6 +436,7 @@ for (const sigma of SIGMAS) {
   const mean = sum / TRIALS, mae = sumErr / TRIALS, rmse = Math.sqrt(sumSq / TRIALS);
   w(`| ${sigma} | ${mean.toFixed(2)} | ${pct(exact / TRIALS)} | ${mae.toFixed(3)} | ${rmse.toFixed(3)} |`);
   tawafCsv.push(`${sigma},${mean.toFixed(2)},${pct(exact / TRIALS)},${mae.toFixed(3)},${rmse.toFixed(3)}`);
+  J.tawaf.push({ sigma, mean: +mean.toFixed(2), exact7: +pct(exact / TRIALS), mae: +mae.toFixed(3), rmse: +rmse.toFixed(3) });
 }
 writeFileSync(join(OUT_DIR, 'tawaf_accuracy.csv'), tawafCsv.join('\n'));
 w('');
@@ -441,6 +482,7 @@ for (const sigma of SIGMAS) {
   const mean = sum / TRIALS, mae = sumErr / TRIALS, rmse = Math.sqrt(sumSq / TRIALS);
   w(`| ${sigma} | ${mean.toFixed(2)} | ${pct(exact / TRIALS)} | ${mae.toFixed(3)} | ${rmse.toFixed(3)} |`);
   saiCsv.push(`${sigma},${mean.toFixed(2)},${pct(exact / TRIALS)},${mae.toFixed(3)},${rmse.toFixed(3)}`);
+  J.sai.push({ sigma, mean: +mean.toFixed(2), exact7: +pct(exact / TRIALS), mae: +mae.toFixed(3), rmse: +rmse.toFixed(3) });
 }
 writeFileSync(join(OUT_DIR, 'sai_accuracy.csv'), saiCsv.join('\n'));
 w('');
@@ -480,11 +522,13 @@ for (const sigma of SIGMAS) {
   confAtSigma[sigma] = conf;
   w(`| ${sigma} | ${pct(correct / total)} | ${pct(wrong / total)} | ${pct(none / total)} |`);
   jamCsv.push(`${sigma},${pct(correct / total)},${pct(wrong / total)},${pct(none / total)}`);
+  J.jamarat.push({ sigma, benar: +pct(correct / total), salahPilar: +pct(wrong / total), takTerdeteksi: +pct(none / total) });
 }
 writeFileSync(join(OUT_DIR, 'jamarat_accuracy.csv'), jamCsv.join('\n'));
 w('');
 // confusion matrix pada sigma = 15 m (kolom "tak terdeteksi" terisi; sigma kecil = diagonal sempurna)
 const CM_SIGMA = 15;
+J.jamarat_confusion_sigma15 = confAtSigma[CM_SIGMA];
 w(`### Confusion matrix Jamarat pada sigma = ${CM_SIGMA} m`);
 w('');
 w('| Sebenarnya \\ Prediksi | Ula | Wustha | Aqabah | Tak terdeteksi |');
@@ -509,4 +553,5 @@ w('');
 w(`*Dibangun dari analisis kode Mabrur. Seed=${SEED}. CSV per algoritma tersimpan di \`docs/accuracy-test/results/\`.*`);
 
 writeFileSync(join(OUT_DIR, 'summary.md'), lines.join('\n'));
-console.log('\n[OK] Ringkasan -> docs/accuracy-test/results/summary.md + 5 file CSV.');
+writeFileSync(join(OUT_DIR, 'monte_carlo_results.json'), JSON.stringify(J, null, 2) + '\n');
+console.log('\n[OK] Ringkasan -> docs/accuracy-test/results/summary.md + 5 file CSV + monte_carlo_results.json.');
