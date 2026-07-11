@@ -10,13 +10,46 @@ di direktori ini dan dapat direproduksi secara identik.
 - Node.js ≥ 18 dan `npm install` di root repositori (menyediakan `tsx` dan `playwright`)
 - Python 3 dengan `pip install python-docx` — *opsional*, hanya untuk membangun draf Word
 
-## Menjalankan
+## Reproduksi Hasil Naskah (satu perintah)
 
 ```bash
-# 1) Simulasi Monte Carlo → results/summary.md + 5 CSV (deterministik)
+npm run simulate
+```
+
+Perintah ini (durasi ± 2 detik pada mesin kelas laptop):
+1. Menjalankan seluruh simulasi Monte Carlo (`run.ts`) — seed **mulberry32(42)** —
+   dan menulis `results/summary.md`, 5 CSV, serta `results/monte_carlo_results.json`.
+2. Membandingkan **138 sel** hasil terhadap angka naskah (Tabel 2–9) via
+   `verify-manuscript.ts` — menulis `results/TABLES.md` (tabel format naskah) dan
+   `results/MANUSCRIPT_DIFF.md` (laporan COCOK/BEDA per sel; toleransi 0,01;
+   confusion matrix harus sama persis). Exit code 1 bila ada sel BEDA.
+
+Karena PRNG ber-seed dan tidak ada sumber non-determinisme, output identik
+bit-per-bit antar eksekusi maupun antar mesin. SHA-256 keluaran (konten LF):
+
+| Berkas | SHA-256 |
+|---|---|
+| `miqat_accuracy.csv` | `534d435e104ba94affde5217136163e42b613e8337111fe2dbed2cc0696e2efe` |
+| `arafah_accuracy.csv` | `9c637cccbec03650c06c9244dd321d58148ab336d8bb610657e8b3f83d875bf7` |
+| `tawaf_accuracy.csv` | `a6e76aa8967442259776d1c96773239b2699d99ba09597d5c077a0afde9388df` |
+| `sai_accuracy.csv` | `4ee003be0ea15b0c1f3e2eab755ed452a483d4eb3906db02ed37630f06f8aa3d` |
+| `jamarat_accuracy.csv` | `aa248ed956b1fff9fa6d63567861db3033a214909b96e3ddf0da777fd038762b` |
+| `monte_carlo_results.json` | `dce3ecda36e7e1cfe6e86b17e135dffe8e396ecc0b28536a587e0ff95ea538ca` |
+
+> Catatan EOL: git dapat mengonversi berkas ke CRLF saat checkout di Windows
+> (`core.autocrlf`). Hash di atas dihitung atas konten LF sebagaimana ditulis
+> skrip; normalisasi `\r\n → \n` sebelum menghitung hash bila perlu.
+
+## Menjalankan per langkah
+
+```bash
+# 1) Simulasi Monte Carlo → results/summary.md + 5 CSV + monte_carlo_results.json
 npx tsx docs/accuracy-test/run.ts
 
-# 2) Grafik → results/figures/*.png (6 gambar @2x) + captions.md
+# 2) Verifikasi terhadap angka naskah → TABLES.md + MANUSCRIPT_DIFF.md
+npx tsx docs/accuracy-test/verify-manuscript.ts
+
+# 3) Grafik → results/figures/*.png (6 gambar @2x) + captions.md
 node docs/accuracy-test/charts.js
 ```
 
