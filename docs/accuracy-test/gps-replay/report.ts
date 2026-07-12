@@ -53,6 +53,17 @@ export function buildFieldReport(traces: TraceReportInput[], demo: boolean, resu
     L.push(`Titik: ${p.points.length} | dibuang: ${p.dropped.invalid} tak valid, ${p.dropped.duplicate} duplikat | ` +
       `loncatan waktu >10 dtk: ${p.gaps.length} | akurasi pelaporan perangkat: ${accInfo}`);
     L.push('');
+    if (p.accuracyAvailable) {
+      const accs = p.points.map((pt) => pt.acc).filter((a): a is number => a !== null).sort((a, b) => a - b);
+      const meanAcc = accs.reduce((a, b) => a + b, 0) / accs.length;
+      const medAcc = accs[Math.floor(accs.length / 2)];
+      L.push(`Akurasi horizontal yang dilaporkan perangkat: rata-rata **${id(meanAcc, 1)} m**, ` +
+        `median ${id(medAcc, 1)} m, rentang ${id(accs[0], 1)}–${id(accs[accs.length - 1], 1)} m. ` +
+        `Bandingkan dengan σ empiris di bawah: selisih besar mengindikasikan keluaran GPS sudah ` +
+        `dihaluskan penyedia lokasi (fused/Kalman) sehingga jitter antar-titik jauh lebih kecil ` +
+        `daripada ketidakpastian posisi absolut.`);
+      L.push('');
+    }
     // --- karakterisasi ---
     const c = t.chr;
     L.push('### Karakterisasi derau empiris');
