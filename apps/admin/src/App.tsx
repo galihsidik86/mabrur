@@ -5,6 +5,7 @@ import Dashboard from './pages/Dashboard';
 import Users from './pages/Users';
 import Groups from './pages/Groups';
 import Content from './pages/Content';
+import GpsValidation from './pages/GpsValidation';
 
 const C = {
   primary: '#8B2E2E',
@@ -30,6 +31,7 @@ const nav = [
   { to: '/users', label: 'Pengguna', icon: '◉' },
   { to: '/groups', label: 'Rombongan', icon: '◎' },
   { to: '/content', label: 'Konten', icon: '◇' },
+  { to: '/gps-validation', label: 'Validasi GPS', icon: '◆' },
 ];
 
 function Layout({ children }: { children: React.ReactNode }) {
@@ -100,6 +102,7 @@ export default function App() {
                 <Route path="/users" element={<Users />} />
                 <Route path="/groups" element={<Groups />} />
                 <Route path="/content" element={<Content />} />
+                <Route path="/gps-validation" element={<GpsValidation />} />
               </Routes>
             </Layout>
           </RequireAuth>

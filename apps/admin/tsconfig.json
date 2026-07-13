@@ -9,7 +9,9 @@
     "esModuleInterop": true,
     "skipLibCheck": true,
     "forceConsistentCasingInFileNames": true,
-    "outDir": "dist"
+    "outDir": "dist",
+    "noEmit": true,
+    "resolveJsonModule": true
   },
   "include": ["src"]
 }
