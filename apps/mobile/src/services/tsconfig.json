@@ -1,0 +1,10 @@
+{
+  "//": "tsconfig lokal TANPA extends. Dibaca oleh Vite/esbuild (tsconfck) saat panel admin & harness pengujian mengimpor sacred-zones-core.ts, agar TIDAK menengok apps/mobile/tsconfig.json (extends 'expo/tsconfig.base' yang tak terpasang di server). Tidak memengaruhi tsc mobile (pakai tsconfig root) maupun Metro/Babel.",
+  "compilerOptions": {
+    "target": "ESNext",
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    "skipLibCheck": true,
+    "strict": true
+  }
+}
