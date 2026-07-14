@@ -10,7 +10,7 @@ import { colors, radius } from '../src/theme';
 import { requestPermission } from '../src/services/location';
 import {
   startRecording, stopRecording, isRecording, listSessions,
-  deleteSession, exportSession, TraceSession, LivePoint,
+  deleteSession, exportSession, uploadSession, TraceSession, LivePoint,
 } from '../src/services/trace-recorder';
 
 const SCENARIOS = [
@@ -75,6 +75,18 @@ export default function GpsRecorderScreen() {
   const onExport = async (s: TraceSession) => {
     try { await exportSession(s.id); }
     catch (e) { Alert.alert('Gagal ekspor', e instanceof Error ? e.message : 'Kesalahan tidak dikenal'); }
+  };
+
+  const [uploading, setUploading] = useState<number | null>(null);
+  const onUpload = async (s: TraceSession) => {
+    setUploading(s.id);
+    try {
+      await uploadSession(s.id);
+      Alert.alert('Terunggah', 'Sesi terkirim ke server — bisa dianalisis dari panel admin (menu Validasi GPS).');
+      refresh();
+    } catch (e) {
+      Alert.alert('Gagal unggah', e instanceof Error ? e.message : 'Kesalahan tidak dikenal');
+    } finally { setUploading(null); }
   };
 
   return (
@@ -164,8 +176,16 @@ export default function GpsRecorderScreen() {
               <Text style={st.sessionMeta}>
                 {new Date(s.started_at).toLocaleString('id-ID')} · {s.point_count} titik
                 {s.ended_at ? ` · ${fmtDur(s.ended_at - s.started_at)}` : ' · (terputus)'}
+                {s.uploaded_at ? ' · terunggah' : ''}
               </Text>
             </View>
+            <TouchableOpacity onPress={() => onUpload(s)} style={st.iconBtn} disabled={uploading === s.id}>
+              <Ionicons
+                name={s.uploaded_at ? 'cloud-done' : 'cloud-upload-outline'}
+                size={20}
+                color={uploading === s.id ? colors.textFaint : s.uploaded_at ? colors.green : colors.primary}
+              />
+            </TouchableOpacity>
             <TouchableOpacity onPress={() => onExport(s)} style={st.iconBtn}>
               <Ionicons name="share-outline" size={20} color={colors.primary} />
             </TouchableOpacity>

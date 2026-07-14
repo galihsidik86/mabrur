@@ -16,6 +16,7 @@ import sosRoutes from './routes/sos';
 import featuresRoutes from './routes/features';
 import enhancementsRoutes from './routes/enhancements';
 import worshipRoutes from './routes/worship';
+import gpsTracesRoutes from './routes/gps-traces';
 import path from 'path';
 import { db } from './db';
 
@@ -49,6 +50,7 @@ app.use('/', sosRoutes);
 app.use('/', featuresRoutes);
 app.use('/', enhancementsRoutes);
 app.use('/', worshipRoutes);
+app.use('/', gpsTracesRoutes);
 app.use('/uploads', express.static(path.resolve(__dirname, '../uploads')));
 
 // 404

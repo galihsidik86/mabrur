@@ -218,4 +218,14 @@ export const api = {
         status: 'safe' | 'attention';
       }>;
     }>(`/groups/${groupId}/members/status`),
+
+  // Perekam GPS (riset): unggah sesi trace ke server untuk dianalisis dari admin
+  uploadGpsTrace: (payload: {
+    label: string; started_at: number; ended_at: number | null; device?: string;
+    points: Array<{ t: number; lat: number; lon: number; acc: number | null }>;
+  }) =>
+    request<{ id: string; created_at: string }>('/gps-traces', {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    }),
 };

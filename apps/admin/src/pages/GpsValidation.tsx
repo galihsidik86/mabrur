@@ -4,7 +4,8 @@
  * PRODUKSI (apps/mobile/src/services/sacred-zones-core) via impor langsung —
  * tidak ada duplikasi logika, tidak ada endpoint server.
  */
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
+import { api } from '../api';
 import { parseTraceFile, splitSegments, ParseReport } from '../../../../docs/accuracy-test/gps-replay/parser';
 import {
   toLocalENU, smoothPath, extractResiduals, EnuPoint, Residual,
@@ -40,9 +41,9 @@ interface TraceAnalysis {
 interface TraceError { file: string; error: string; }
 type Item = TraceAnalysis | TraceError;
 
-function analyze(file: string, content: string): Item {
+function analyze(file: string, content: string, parseAs?: string): Item {
   try {
-    const parse = parseTraceFile(file, content);
+    const parse = parseTraceFile(parseAs ?? file, content);
     const segments = splitSegments(parse.points);
     const seg = segments.reduce((a, b) => (b.length > a.length ? b : a));
     const segInfo = segments.length > 1
@@ -324,10 +325,55 @@ function TraceCard({ a }: { a: TraceAnalysis }) {
   );
 }
 
+// ==================== sesi dari perangkat (server) ====================
+
+interface ServerTrace {
+  id: string; label: string; started_at: number; ended_at: number | null;
+  point_count: number; device: string | null; created_at: string; user_name: string | null;
+}
+interface ServerPoint { t: number; lat: number; lon: number; acc: number | null; }
+
+/** Susun GPX dari titik server → lewat parser yang sama dengan berkas unggahan
+ *  (satu jalur kode untuk validasi/dedup/segmen). */
+function pointsToGpx(label: string, points: ServerPoint[]): string {
+  const pts = points.map((p) => {
+    const acc = p.acc != null ? `<extensions><accuracy>${p.acc}</accuracy></extensions>` : '';
+    return `<trkpt lat="${p.lat}" lon="${p.lon}"><time>${new Date(p.t).toISOString()}</time>${acc}</trkpt>`;
+  });
+  return `<gpx version="1.1"><trk><name>${label}</name><trkseg>${pts.join('')}</trkseg></trk></gpx>`;
+}
+
 export default function GpsValidation() {
   const [items, setItems] = useState<Item[]>([]);
   const [busy, setBusy] = useState(false);
   const [drag, setDrag] = useState(false);
+  const [traces, setTraces] = useState<ServerTrace[] | null>(null);
+  const [traceErr, setTraceErr] = useState<string | null>(null);
+  const [loadingId, setLoadingId] = useState<string | null>(null);
+
+  const loadTraces = useCallback(() => {
+    api<ServerTrace[]>('/gps-traces')
+      .then(setTraces)
+      .catch((e) => setTraceErr(e instanceof Error ? e.message : 'Server tidak terjangkau'));
+  }, []);
+  useEffect(loadTraces, [loadTraces]);
+
+  const analyzeServerTrace = async (t: ServerTrace) => {
+    setLoadingId(t.id);
+    try {
+      const detail = await api<ServerTrace & { points: ServerPoint[] }>(`/gps-traces/${t.id}`);
+      const name = `${t.label} — ${t.user_name ?? 'tanpa nama'} (${new Date(Number(t.started_at)).toLocaleString('id-ID')})`;
+      setItems((prev) => [analyze(name, pointsToGpx(t.label, detail.points), 'server.gpx'), ...prev]);
+    } catch (e) {
+      setItems((prev) => [{ file: t.label, error: e instanceof Error ? e.message : 'Gagal memuat' }, ...prev]);
+    } finally { setLoadingId(null); }
+  };
+
+  const deleteServerTrace = async (t: ServerTrace) => {
+    if (!window.confirm(`Hapus sesi "${t.label}" dari server?`)) return;
+    await api(`/gps-traces/${t.id}`, { method: 'DELETE' });
+    loadTraces();
+  };
 
   const handleFiles = useCallback(async (files: FileList | File[]) => {
     setBusy(true);
@@ -369,6 +415,54 @@ export default function GpsValidation() {
         </div>
         <div style={{ fontSize: 12, color: C.muted, marginTop: 4 }}>Bisa beberapa berkas sekaligus · data tidak dikirim ke server</div>
       </label>
+
+      {/* sesi yang diunggah petugas dari aplikasi */}
+      <div style={{ ...card, marginBottom: 24 }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+          <h3 style={{ ...h3, margin: 0 }}>Rekaman dari perangkat</h3>
+          <button onClick={loadTraces} style={{
+            background: 'transparent', border: `1px solid ${C.border}`, borderRadius: 8,
+            padding: '5px 12px', fontSize: 12, fontWeight: 600, color: C.muted, cursor: 'pointer',
+          }}>Muat ulang</button>
+        </div>
+        {traceErr && <div style={{ fontSize: 12.5, color: C.muted, marginTop: 10 }}>
+          Tidak bisa memuat daftar dari server ({traceErr}) — unggah berkas manual tetap bisa dipakai.
+        </div>}
+        {traces && traces.length === 0 && (
+          <div style={{ fontSize: 12.5, color: C.muted, marginTop: 10 }}>
+            Belum ada rekaman terunggah. Di aplikasi: Alat Ibadah → Perekam GPS → ikon awan pada sesi.
+          </div>
+        )}
+        {traces && traces.length > 0 && (
+          <table style={{ width: '100%', borderCollapse: 'collapse', marginTop: 8 }}>
+            <thead><tr>
+              <th style={th}>Label</th><th style={th}>Petugas</th><th style={th}>Waktu</th>
+              <th style={th}>Titik</th><th style={th}>Perangkat</th><th style={th}></th>
+            </tr></thead>
+            <tbody>{traces.map((t) => (
+              <tr key={t.id}>
+                <td style={{ ...td, fontWeight: 600 }}>{t.label}</td>
+                <td style={td}>{t.user_name ?? '—'}</td>
+                <td style={td}>{new Date(Number(t.started_at)).toLocaleString('id-ID')}</td>
+                <td style={td}>{t.point_count}</td>
+                <td style={td}>{t.device ?? '—'}</td>
+                <td style={{ ...td, whiteSpace: 'nowrap', textAlign: 'right' }}>
+                  <button onClick={() => analyzeServerTrace(t)} disabled={loadingId === t.id} style={{
+                    background: C.primary, color: '#fff', border: 'none', borderRadius: 8,
+                    padding: '6px 14px', fontSize: 12, fontWeight: 700, cursor: 'pointer',
+                    opacity: loadingId === t.id ? 0.6 : 1,
+                  }}>{loadingId === t.id ? 'Memuat…' : 'Analisis'}</button>
+                  <button onClick={() => deleteServerTrace(t)} style={{
+                    background: 'transparent', color: C.danger, border: `1px solid ${C.border}`,
+                    borderRadius: 8, padding: '6px 10px', fontSize: 12, fontWeight: 600,
+                    cursor: 'pointer', marginLeft: 6,
+                  }}>Hapus</button>
+                </td>
+              </tr>
+            ))}</tbody>
+          </table>
+        )}
+      </div>
 
       {items.map((it, i) => it.error !== undefined ? (
         <div key={i} style={{ ...card, marginBottom: 20, borderColor: C.danger }}>

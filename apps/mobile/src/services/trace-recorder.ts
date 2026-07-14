@@ -14,6 +14,8 @@ import * as Location from 'expo-location';
 import * as SQLite from 'expo-sqlite';
 import { File, Paths } from 'expo-file-system';
 import * as Sharing from 'expo-sharing';
+import * as Device from 'expo-device';
+import { api } from './api';
 
 export interface TraceSession {
   id: number;
@@ -21,6 +23,7 @@ export interface TraceSession {
   started_at: number;   // epoch ms
   ended_at: number | null;
   point_count: number;
+  uploaded_at: number | null;
 }
 
 export interface LivePoint {
@@ -48,6 +51,8 @@ async function getDb(): Promise<SQLite.SQLiteDatabase> {
     );
     CREATE INDEX IF NOT EXISTS idx_points_session ON points(session_id);
   `);
+  // kolom baru untuk DB yang sudah ada di perangkat (abaikan bila sudah ada)
+  try { await db.execAsync('ALTER TABLE sessions ADD COLUMN uploaded_at INTEGER'); } catch { /* sudah ada */ }
   return db;
 }
 
@@ -110,7 +115,7 @@ export async function stopRecording(): Promise<void> {
 export async function listSessions(): Promise<TraceSession[]> {
   const d = await getDb();
   return d.getAllAsync<TraceSession>(`
-    SELECT s.id, s.label, s.started_at, s.ended_at,
+    SELECT s.id, s.label, s.started_at, s.ended_at, s.uploaded_at,
            (SELECT COUNT(*) FROM points p WHERE p.session_id = s.id) AS point_count
     FROM sessions s ORDER BY s.started_at DESC
   `);
@@ -152,6 +157,27 @@ ${trkpts.join('\n')}
 `;
   const date = new Date(session.started_at).toISOString().slice(0, 10);
   return { filename: `mabrur-${slug(session.label)}-${date}.gpx`, gpx };
+}
+
+/** Unggah sesi ke server (tabel gps_trace_sessions) agar bisa dianalisis dari admin. */
+export async function uploadSession(sessionId: number): Promise<void> {
+  const d = await getDb();
+  const session = await d.getFirstAsync<TraceSession>(
+    'SELECT * FROM sessions WHERE id = ?', sessionId,
+  );
+  if (!session) throw new Error('Sesi tidak ditemukan');
+  const points = await d.getAllAsync<{ t: number; lat: number; lon: number; acc: number | null }>(
+    'SELECT t, lat, lon, acc FROM points WHERE session_id = ? ORDER BY t', sessionId,
+  );
+  if (points.length < 10) throw new Error('Sesi terlalu pendek untuk diunggah (< 10 titik)');
+  await api.uploadGpsTrace({
+    label: session.label,
+    started_at: session.started_at,
+    ended_at: session.ended_at,
+    device: [Device.manufacturer, Device.modelName].filter(Boolean).join(' ') || undefined,
+    points,
+  });
+  await d.runAsync('UPDATE sessions SET uploaded_at = ? WHERE id = ?', Date.now(), sessionId);
 }
 
 export async function exportSession(sessionId: number): Promise<void> {
