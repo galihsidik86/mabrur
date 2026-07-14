@@ -13,7 +13,8 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "set-admin-pass": "tsx src/scripts/set-admin-password.ts",
-    "seed-test-accounts": "tsx src/scripts/seed-test-accounts.ts"
+    "seed-test-accounts": "tsx src/scripts/seed-test-accounts.ts",
+    "reset-passwords": "tsx src/scripts/reset-passwords.ts"
   },
   "dependencies": {
     "bcryptjs": "^2.4.3",
