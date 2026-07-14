@@ -12,7 +12,8 @@
     "db:cleanup": "tsx src/jobs/cleanup.ts",
     "test": "vitest run",
     "test:watch": "vitest",
-    "set-admin-pass": "tsx src/scripts/set-admin-password.ts"
+    "set-admin-pass": "tsx src/scripts/set-admin-password.ts",
+    "seed-test-accounts": "tsx src/scripts/seed-test-accounts.ts"
   },
   "dependencies": {
     "bcryptjs": "^2.4.3",
