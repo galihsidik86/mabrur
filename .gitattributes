@@ -1,0 +1,3 @@
+# Skrip shell harus selalu LF, walau dikembangkan di Windows (CRLF bikin gagal
+# di server Linux: "\r: command not found").
+*.sh text eol=lf
