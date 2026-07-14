@@ -38,6 +38,17 @@ app.get('/health', async (_req, res) => {
   }
 });
 
+// Panel admin (SPA) disajikan di /admin — file statis hasil build apps/admin.
+// DILETAKKAN SEBELUM route API: router yang di-mount di '/' menjalankan
+// authenticate untuk semua path, jadi /admin harus lolos duluan (tanpa auth).
+// __dirname (dist) -> ../../apps/admin/dist. Fallback SPA: rute klien -> index.html.
+const adminDist = path.resolve(__dirname, '../../apps/admin/dist');
+app.use('/admin', express.static(adminDist));
+app.use('/admin', (req, res, next) => {
+  if (req.method !== 'GET') return next();
+  res.sendFile(path.join(adminDist, 'index.html'));
+});
+
 // API routes
 app.use('/auth', authRoutes);
 app.use('/users', userRoutes);

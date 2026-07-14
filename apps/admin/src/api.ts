@@ -1,4 +1,7 @@
-const BASE = 'http://localhost:3000';
+// Produksi: admin disajikan dari domain yang sama dengan API → same-origin ('').
+// Dev: admin di :5173, API di :3000.
+const BASE = import.meta.env.DEV ? 'http://localhost:3000' : '';
+const LOGIN_URL = `${import.meta.env.BASE_URL}login`; // '/admin/login' di produksi
 
 function getToken(): string | null {
   return localStorage.getItem('access_token');
@@ -43,7 +46,7 @@ export async function api<T = any>(
       res = await fetch(`${BASE}${path}`, { ...opts, headers });
     } else {
       localStorage.clear();
-      window.location.href = '/login';
+      window.location.href = LOGIN_URL;
       throw new Error('Sesi berakhir');
     }
   }
@@ -73,7 +76,7 @@ export async function login(phone: string, password: string) {
 
 export function logout() {
   localStorage.clear();
-  window.location.href = '/login';
+  window.location.href = LOGIN_URL;
 }
 
 export function getUser() {
