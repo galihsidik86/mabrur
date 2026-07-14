@@ -25,5 +25,7 @@ services:
       - key: JWT_REFRESH_SECRET
         generateValue: true
       - key: ENCRYPTION_KEY
-        value: bfbeeba187892333000528977128262084e3e3a44fc94a0c76ac009bbc6f7378
+        # Jangan commit kunci asli. Set manual di dashboard (64 hex / 32 byte).
+        # Bukan kunci produksi — deploy produksi via SSH memakai .env server sendiri.
+        sync: false
     healthCheckPath: /health
