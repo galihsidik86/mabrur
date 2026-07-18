@@ -13,6 +13,9 @@ const envSchema = z.object({
   JWT_REFRESH_SECRET: z.string().min(32),
   // Perbaikan: validasi bahwa key adalah hex valid (32 bytes = 64 hex chars)
   ENCRYPTION_KEY: z.string().length(64).regex(/^[0-9a-f]+$/i, 'ENCRYPTION_KEY harus berupa 64 karakter hex'),
+  // Token service-to-service utk integrasi Safar (opsional — endpoint /integrations
+  // menolak 503 bila tidak dikonfigurasi). Min 32 karakter.
+  SAFAR_SYNC_TOKEN: z.string().min(32).optional(),
 });
 
 export const config = envSchema.parse(process.env);

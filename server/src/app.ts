@@ -17,6 +17,7 @@ import featuresRoutes from './routes/features';
 import enhancementsRoutes from './routes/enhancements';
 import worshipRoutes from './routes/worship';
 import gpsTracesRoutes from './routes/gps-traces';
+import integrationsRoutes from './routes/integrations';
 import path from 'path';
 import { db } from './db';
 
@@ -50,6 +51,9 @@ app.use('/admin', (req, res, next) => {
 });
 
 // API routes
+// Integrasi Safar (service-token, bukan JWT user) — di-mount sebelum router '/'
+// yang memasang authenticate utk semua path.
+app.use('/integrations', integrationsRoutes);
 app.use('/auth', authRoutes);
 app.use('/users', userRoutes);
 app.use('/groups', groupRoutes);
