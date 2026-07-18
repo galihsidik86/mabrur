@@ -207,3 +207,4 @@ Required in `.env` (see `.env.example`):
 | `ENCRYPTION_KEY` | Exactly 64 hex chars (32 bytes) |
 | `PORT` | Default 3000 |
 | `NODE_ENV` | development / production |
+| `SAFAR_SYNC_TOKEN` | Optional, min 32 chars — enables `/integrations/safar/*` (machine-to-machine sync from the Safar back-office repo; `X-Service-Token` header, timing-safe compare). See `routes/integrations.ts` + `services/integration.service.ts`. |

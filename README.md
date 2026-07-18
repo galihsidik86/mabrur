@@ -146,6 +146,15 @@ node dist/index.js           # Start server
 npm run db:cleanup -w server  # Hapus token expired + audit log lama
 ```
 
+## Integrasi Safar (back-office travel)
+
+Mabrur menerima sinkronisasi rombongan dari **[Safar](https://github.com/galihsidik86/simabrur)** (sistem back-office: pendaftaran → pembayaran → operasional → akuntansi). Auth mesin-ke-mesin via header `X-Service-Token` (env `SAFAR_SYNC_TOKEN`, min 32 char — kosong = integrasi nonaktif, endpoint menjawab 503).
+
+- `POST /integrations/safar/sync` — upsert idempoten group + users + members + schedules (kunci `external_ref` = UUID entitas Safar). Password awal hanya untuk akun baru; akun lama tidak di-reset. Agenda hasil sinkron ber-tag `external_source='safar'` (agenda buatan muthawwif tidak disentuh).
+- `GET /integrations/safar/groups/:externalRef/status` — monitoring anggota + SOS aktif untuk dashboard Safar.
+
+Perubahan skema: `users.external_ref`, `groups.external_ref` (unique, nullable), `schedules.external_source`. Tidak menyentuh algoritme geospasial/artefak riset.
+
 ## Keamanan
 
 - Password: bcrypt (12 rounds)
