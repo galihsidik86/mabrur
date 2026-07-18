@@ -23,7 +23,7 @@ import { api } from '../src/services/api';
 import Constants from 'expo-constants';
 
 export default function RootLayout() {
-  const { isAuthenticated, isLoading, loadSession } = useAuthStore();
+  const { isAuthenticated, isLoading, loadSession, user } = useAuthStore();
   const segments = useSegments();
   const router = useRouter();
   const [dbReady, setDbReady] = useState(false);
@@ -83,13 +83,19 @@ export default function RootLayout() {
     if (isLoading || !fontsLoaded || !dbReady) return;
 
     const inLogin = segments[0] === 'login';
+    const inChangePw = segments[0] === 'change-password';
+    // Akun dgn password awal dari travel/admin wajib menggantinya dulu —
+    // layar change-password tidak bisa dilewati selama flag aktif.
+    const mustChange = !!user?.must_change_password;
 
     if (!isAuthenticated && !inLogin) {
       router.replace('/login');
-    } else if (isAuthenticated && inLogin) {
+    } else if (isAuthenticated && mustChange && !inChangePw) {
+      router.replace('/change-password');
+    } else if (isAuthenticated && !mustChange && (inLogin || inChangePw)) {
       router.replace('/(tabs)');
     }
-  }, [isAuthenticated, isLoading, fontsLoaded, dbReady, segments]);
+  }, [isAuthenticated, isLoading, fontsLoaded, dbReady, segments, user]);
 
   if (isLoading || !fontsLoaded || !dbReady) {
     return (
@@ -111,6 +117,7 @@ export default function RootLayout() {
       <StatusBar style="dark" />
       <Stack screenOptions={{ headerShown: false }}>
         <Stack.Screen name="login" />
+        <Stack.Screen name="change-password" options={{ presentation: 'fullScreenModal', gestureEnabled: false }} />
         <Stack.Screen name="(tabs)" />
         <Stack.Screen name="sos" options={{ presentation: 'fullScreenModal' }} />
         <Stack.Screen name="profile" />

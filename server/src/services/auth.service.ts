@@ -68,7 +68,7 @@ export async function login(phone: string, password: string) {
   return {
     access_token: accessToken,
     refresh_token: refreshToken,
-    user: { id: user.id, name: user.name, phone: user.phone, role: user.role },
+    user: { id: user.id, name: user.name, phone: user.phone, role: user.role, must_change_password: !!user.must_change_password },
   };
 }
 
@@ -122,7 +122,7 @@ export async function refresh(refreshToken: string) {
   return {
     access_token: accessToken,
     refresh_token: newRefreshToken,
-    user: { id: user.id, name: user.name, phone: user.phone, role: user.role },
+    user: { id: user.id, name: user.name, phone: user.phone, role: user.role, must_change_password: !!user.must_change_password },
   };
 }
 

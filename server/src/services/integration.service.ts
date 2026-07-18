@@ -145,12 +145,20 @@ async function upsertMember(
     const byPhone = await trx('users').where('phone', m.phone).first();
     if (byPhone) {
       if (byPhone.external_ref && byPhone.external_ref !== m.externalRef) {
-        return {
-          externalRef: m.externalRef,
-          phone: m.phone,
-          status: 'conflict',
-          message: 'Nomor HP sudah dipakai akun lain yang tertaut ke data Safar berbeda',
-        };
+        // Kasus sah: muthawwif/TL yang sama bertugas di beberapa rombongan —
+        // di Safar tiap penugasan punya UUID sendiri, di Mabrur ia satu akun
+        // (phone = identitas). Adopsi ke ref terbaru agar tetap jadi anggota
+        // rombongan ini. Utk jamaah, phone bentrok tetap conflict (indikasi
+        // dua orang berbeda memakai nomor yang sama — perlu koreksi data).
+        const isSharedStaff = m.role === 'muthawwif' && byPhone.role === 'muthawwif';
+        if (!isSharedStaff) {
+          return {
+            externalRef: m.externalRef,
+            phone: m.phone,
+            status: 'conflict',
+            message: 'Nomor HP sudah dipakai akun lain yang tertaut ke data Safar berbeda',
+          };
+        }
       }
       [user] = await trx('users')
         .where('id', byPhone.id)
@@ -180,6 +188,8 @@ async function upsertMember(
         role: m.role,
         passport_no: m.passportNo ? encrypt(m.passportNo) : null,
         emergency_contact: m.emergencyContact ?? null,
+        // Password awal diketahui travel — wajib diganti saat login pertama
+        must_change_password: true,
       })
       .returning('*');
   } else {

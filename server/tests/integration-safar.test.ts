@@ -39,8 +39,7 @@ async function cleanup() {
     await db('refresh_tokens').whereIn('user_id', ids).del();
     await db('users').whereIn('id', ids).del();
   }
-  const group = await db('groups').where('kloter_code', KLOTER).first();
-  if (group) await db('groups').where('id', group.id).del(); // schedules CASCADE
+  await db('groups').whereIn('kloter_code', [KLOTER, 'TST-SAFAR-2']).del(); // schedules/members CASCADE
 }
 
 beforeAll(async () => {
@@ -154,5 +153,86 @@ describe('sinkronisasi Safar → Mabrur', () => {
     expect(s.group.kloterCode).toBe(KLOTER);
     expect(Array.isArray(s.sos)).toBe(true);
     expect(s).toHaveProperty('members');
+  });
+
+  it('muthawwif yang sama di dua rombongan (phone sama, ref beda) → diadopsi, jadi anggota keduanya', async (ctx) => {
+    if (!dbUp) return ctx.skip();
+    await sync(payload()); // pulihkan keanggotaan group-1 (test sebelumnya mencabut anggota)
+    const GROUP2_REF = randomUUID();
+    const FADHIL_REF_GRUP2 = randomUUID(); // baris group_staff berbeda utk orang yang sama
+    const result = await sync({
+      group: { externalRef: GROUP2_REF, name: 'Plus Turki — Grup A (uji)', kloterCode: 'TST-SAFAR-2', year: 2026 },
+      members: [
+        { externalRef: FADHIL_REF_GRUP2, phone: '08990001002', name: 'Ust. Fadhil (uji)', role: 'muthawwif', initialPassword: '234567' },
+      ],
+    });
+    const fadhil = result.members[0];
+    expect(fadhil.status).toBe('updated'); // diadopsi, BUKAN conflict
+    expect(fadhil.mabrurUserId).toBeTruthy();
+
+    // Satu akun, anggota aktif di kedua rombongan
+    const users = await db('users').where('phone', '08990001002');
+    expect(users).toHaveLength(1);
+    const memberships = await db('group_members as gm')
+      .join('groups as g', 'g.id', 'gm.group_id')
+      .whereIn('g.kloter_code', [KLOTER, 'TST-SAFAR-2'])
+      .where('gm.user_id', users[0].id)
+      .where('gm.is_active', true);
+    expect(memberships).toHaveLength(2);
+
+    // Jamaah dgn phone bentrok tetap conflict (dua orang berbeda)
+    const bad = await sync({
+      group: { externalRef: GROUP2_REF, name: 'Plus Turki — Grup A (uji)', kloterCode: 'TST-SAFAR-2', year: 2026 },
+      members: [
+        { externalRef: FADHIL_REF_GRUP2, phone: '08990001002', name: 'Ust. Fadhil (uji)', role: 'muthawwif' },
+        { externalRef: randomUUID(), phone: '08990001001', name: 'Orang Lain (uji)', role: 'jamaah', initialPassword: '345678' },
+      ],
+    });
+    expect(bad.members.find((m) => m.phone === '08990001001')!.status).toBe('conflict');
+
+    // bersih-bersih group uji kedua
+    const g2 = await db('groups').where('kloter_code', 'TST-SAFAR-2').first();
+    if (g2) await db('groups').where('id', g2.id).del();
+  });
+
+  it('akun hasil sinkron wajib ganti password; ganti sendiri via /profile menghapus flag', async (ctx) => {
+    if (!dbUp) return ctx.skip();
+    const siti = await db('users').where('external_ref', SITI_REF).first();
+    expect(siti.must_change_password).toBe(true); // di-set saat dibuat via sinkron
+
+    // Jalankan app di port acak (pola repo: uji HTTP via fetch, tanpa supertest)
+    const app = (await import('../src/app')).default;
+    const http = await import('http');
+    const server = http.createServer(app);
+    await new Promise<void>((r) => server.listen(0, () => r()));
+    const base = `http://127.0.0.1:${(server.address() as { port: number }).port}`;
+    const post = (path: string, body: unknown, tok?: string) =>
+      fetch(`${base}${path}`, {
+        method: path === '/profile' ? 'PATCH' : 'POST',
+        headers: { 'Content-Type': 'application/json', ...(tok ? { Authorization: `Bearer ${tok}` } : {}) },
+        body: JSON.stringify(body),
+      });
+
+    try {
+      // Login membawa flag
+      const login = await (await post('/auth/login', { phone: siti.phone, password: '123456' })).json();
+      expect(login.data.user.must_change_password).toBe(true);
+
+      // Ganti password sendiri → flag hilang
+      const change = await post('/profile', { password: 'passwordbaru9' }, login.data.access_token);
+      expect(change.status).toBe(200);
+      const after = await db('users').where('id', siti.id).first();
+      expect(after.must_change_password).toBe(false);
+
+      // Login dgn password baru → flag false di respons
+      const relogin = await (await post('/auth/login', { phone: siti.phone, password: 'passwordbaru9' })).json();
+      expect(relogin.data.user.must_change_password).toBe(false);
+    } finally {
+      await new Promise((r) => server.close(r));
+    }
+
+    // Kembalikan password uji agar test lain (idempoten) tidak terpengaruh
+    const bcrypt = (await import('bcryptjs')).default;
+    await db('users').where('id', siti.id).update({ password_hash: await bcrypt.hash('123456', 12) });
   });
 });

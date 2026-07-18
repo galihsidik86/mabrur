@@ -7,7 +7,7 @@ import { revokeAllTokens } from './auth.service';
 
 const PUBLIC_FIELDS = [
   'id', 'phone', 'name', 'role', 'blood_type',
-  'emergency_contact', 'is_active', 'created_at',
+  'emergency_contact', 'is_active', 'created_at', 'must_change_password',
 ];
 
 export async function createUser(
@@ -120,7 +120,11 @@ export async function updateUser(
     update.phone = data.phone;
   }
   if (data.role) update.role = data.role;
-  if (data.password) update.password_hash = await bcrypt.hash(data.password, 12);
+  if (data.password) {
+    update.password_hash = await bcrypt.hash(data.password, 12);
+    // Password di-reset admin -> pemilik akun wajib menggantinya saat login berikutnya
+    update.must_change_password = true;
+  }
   if (data.passport_no !== undefined) {
     update.passport_no = data.passport_no ? encrypt(data.passport_no) : null;
   }

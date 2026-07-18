@@ -12,6 +12,7 @@ interface User {
   name: string;
   phone: string;
   role: 'admin' | 'muthawwif' | 'jamaah';
+  must_change_password?: boolean;
 }
 
 interface AuthState {
@@ -23,6 +24,7 @@ interface AuthState {
   login: (phone: string, password: string) => Promise<void>;
   logout: () => Promise<void>;
   loadSession: () => Promise<void>;
+  clearMustChangePassword: () => Promise<void>;
 }
 
 export const useAuthStore = create<AuthState>((set, get) => ({
@@ -39,12 +41,24 @@ export const useAuthStore = create<AuthState>((set, get) => ({
 
     const user = data.user as User;
     await saveProfile(user);
+    // Flag wajib-ganti-password disimpan terpisah (skema tabel profile tidak berubah)
+    await SecureStore.setItemAsync(
+      'must_change_pw',
+      user.must_change_password ? '1' : '0',
+    );
 
     set({
       user,
       accessToken: data.access_token,
       isAuthenticated: true,
     });
+  },
+
+  // Dipanggil setelah user sukses mengganti password wajib
+  clearMustChangePassword: async () => {
+    await SecureStore.setItemAsync('must_change_pw', '0');
+    const { user } = get();
+    if (user) set({ user: { ...user, must_change_password: false } });
   },
 
   logout: async () => {
@@ -57,6 +71,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
 
     await SecureStore.deleteItemAsync('access_token');
     await SecureStore.deleteItemAsync('refresh_token');
+    await SecureStore.deleteItemAsync('must_change_pw');
     await clearDB();
 
     set({ user: null, accessToken: null, isAuthenticated: false });
@@ -73,8 +88,10 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       // Load user from local DB (offline-first)
       const profile = await getProfile();
       if (profile) {
+        const mustChange =
+          (await SecureStore.getItemAsync('must_change_pw')) === '1';
         set({
-          user: profile as User,
+          user: { ...(profile as User), must_change_password: mustChange },
           accessToken,
           isAuthenticated: true,
           isLoading: false,

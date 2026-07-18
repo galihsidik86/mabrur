@@ -31,7 +31,11 @@ router.patch('/profile', validate(profileUpdateSchema), async (req: Request, res
     const data = req.body;
     const update: Record<string, unknown> = { updated_at: new Date() };
     if (data.name) update.name = data.name;
-    if (data.password) update.password_hash = await bcrypt.hash(data.password, 12);
+    if (data.password) {
+      update.password_hash = await bcrypt.hash(data.password, 12);
+      // User mengganti password sendiri — kewajiban ganti password terpenuhi
+      update.must_change_password = false;
+    }
     if (data.blood_type !== undefined) update.blood_type = data.blood_type || null;
     if (data.passport_no !== undefined) update.passport_no = data.passport_no ? encrypt(data.passport_no) : null;
     if (data.medical_notes !== undefined) update.medical_notes = data.medical_notes ? encrypt(data.medical_notes) : null;
