@@ -122,12 +122,34 @@ function distanceMeters(lat1: number, lng1: number, lat2: number, lng2: number):
 // Detect when user crosses the Hajar Aswad line (counterclockwise)
 // by tracking angular position relative to Ka'bah center.
 
+export interface TawafConfig {
+  minRadius?: number;      // default 10 m — di bawah ini = di dalam/di atas Ka'bah/noise
+  maxRadius?: number;      // default 80 m — dipakai HANYA pada mode non-adaptif
+  adaptive?: boolean;      // default false — true = band menyesuaikan radius edar (multi-lantai)
+  hardMaxRadius?: number;  // default 300 m — batas absolut mode adaptif (luar mataf)
+}
+
 export class TawafTracker {
   private prevAngle: number | null = null;
   private rounds = 0;
   private lastCrossTime = 0;
   private readonly MIN_INTERVAL = 120_000; // minimum 2 min between rounds (prevent double count)
   onChange: ((rounds: number) => void) | null = null;
+
+  // --- mode adaptif: jendela jarak terakhir untuk mendeteksi "sedang mengedar" ---
+  private readonly cfg: Required<TawafConfig>;
+  private dists: number[] = [];
+  private readonly WIN = 15; // ~45 dtk pada sampling 3 dtk
+  private lastRadius = 0;    // radius edar terestimasi (median), untuk UI
+
+  constructor(cfg: TawafConfig = {}) {
+    this.cfg = {
+      minRadius: cfg.minRadius ?? 10,
+      maxRadius: cfg.maxRadius ?? 80,
+      adaptive: cfg.adaptive ?? false,
+      hardMaxRadius: cfg.hardMaxRadius ?? 300,
+    };
+  }
 
   private getAngle(lat: number, lng: number): number {
     // Angle from Ka'bah center, 0° = east (Hajar Aswad direction)
@@ -136,12 +158,40 @@ export class TawafTracker {
     return Math.atan2(dLat, dLng) * (180 / Math.PI); // -180 to 180
   }
 
+  /**
+   * Apakah titik ini dianggap "sedang tawaf"?
+   * - Non-adaptif (default, dipakai pengujian/jurnal): band tetap 10–80 m.
+   * - Adaptif: radius mengikuti median jarak terakhir (lantai berapa pun),
+   *   dengan syarat radius STABIL (varians kecil = mengedar, bukan berjalan lurus).
+   */
+  private inTawafZone(dist: number): boolean {
+    if (!this.cfg.adaptive) {
+      return dist >= this.cfg.minRadius && dist <= this.cfg.maxRadius;
+    }
+    if (dist < this.cfg.minRadius || dist > this.cfg.hardMaxRadius) return false;
+
+    this.dists.push(dist);
+    if (this.dists.length > this.WIN) this.dists.shift();
+
+    // Warm-up: sebelum jendela penuh, terima agar pelacakan sudut mulai berjalan.
+    if (this.dists.length < this.WIN) { this.lastRadius = dist; return true; }
+
+    const sorted = [...this.dists].sort((a, b) => a - b);
+    const median = sorted[Math.floor(sorted.length / 2)];
+    const mean = this.dists.reduce((a, b) => a + b, 0) / this.dists.length;
+    const std = Math.sqrt(this.dists.reduce((a, b) => a + (b - mean) ** 2, 0) / this.dists.length);
+    this.lastRadius = median;
+
+    const stable = std < Math.max(10, 0.4 * median); // radius ~konstan → mengedar
+    const inBand = dist >= median * 0.5 && dist <= median * 1.7;
+    return stable && inBand;
+  }
+
   // `now` dapat diinjeksi (mis. timestamp trace GPS pada replay/pengujian);
   // default Date.now() — perilaku aplikasi tidak berubah.
   update(lat: number, lng: number, now: number = Date.now()): void {
     const dist = distanceMeters(lat, lng, KAABAH.lat, KAABAH.lng);
-    // Only track if within tawaf area (10-80m from Ka'bah)
-    if (dist < 10 || dist > 80) return;
+    if (!this.inTawafZone(dist)) return;
 
     const angle = this.getAngle(lat, lng);
 
@@ -164,7 +214,8 @@ export class TawafTracker {
   }
 
   getRounds(): number { return this.rounds; }
-  reset(): void { this.rounds = 0; this.prevAngle = null; this.lastCrossTime = 0; }
+  getRadius(): number { return Math.round(this.lastRadius); } // radius edar terestimasi (m), untuk UI
+  reset(): void { this.rounds = 0; this.prevAngle = null; this.lastCrossTime = 0; this.dists = []; this.lastRadius = 0; }
 }
 
 // ==================== SAI AUTO COUNTER ====================

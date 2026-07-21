@@ -18,6 +18,7 @@ import {
   type SaiZone, type ArafahResult,
 } from '../src/services/sacred-zones';
 import { sendLocalNotification } from '../src/services/notification';
+import { isBarometerAvailable, watchFloor } from '../src/services/floor';
 
 type Tab = 'hub' | 'tawaf' | 'sai' | 'tasbih' | 'jumrah' | 'wukuf' | 'qiblat' | 'shalat' | 'checklist' | 'kurs' | 'frasa' | 'kesehatan';
 
@@ -70,8 +71,10 @@ function TawafSaiTab({ type }: { type: 'tawaf' | 'sai' }) {
   const [autoMode, setAutoMode] = useState(false);
   const [gpsStatus, setGpsStatus] = useState<string>('');
   const [saiZone, setSaiZone] = useState<SaiZone>('between');
+  const [floorLabel, setFloorLabel] = useState<string>('');
   const trackerRef = useRef<TawafTracker | SaiTracker | null>(null);
   const watchRef = useRef<{ remove: () => void } | null>(null);
+  const floorWatchRef = useRef<{ remove: () => void } | null>(null);
 
   const label = type === 'tawaf' ? 'Putaran Tawaf' : "Perjalanan Sa'i";
   const direction = type === 'sai'
@@ -80,7 +83,7 @@ function TawafSaiTab({ type }: { type: 'tawaf' | 'sai' }) {
 
   useEffect(() => {
     activateKeepAwakeAsync('counter');
-    return () => { deactivateKeepAwake('counter'); watchRef.current?.remove(); };
+    return () => { deactivateKeepAwake('counter'); watchRef.current?.remove(); floorWatchRef.current?.remove(); };
   }, []);
 
   const startAuto = async () => {
@@ -91,19 +94,26 @@ function TawafSaiTab({ type }: { type: 'tawaf' | 'sai' }) {
     setGpsStatus('Mencari GPS...');
 
     if (type === 'tawaf') {
-      const tracker = new TawafTracker();
+      // Mode adaptif: band radius menyesuaikan lantai (dasar/1/atap), tak lagi
+      // terkunci 10–80 m. Barometer memberi info lantai bila tersedia.
+      const tracker = new TawafTracker({ adaptive: true });
       tracker.onChange = (rounds) => {
         setCount(rounds);
         Vibration.vibrate([0, 200, 100, 200]);
       };
       trackerRef.current = tracker;
 
+      if (await isBarometerAvailable()) {
+        floorWatchRef.current = watchFloor((est) => setFloorLabel(est.label));
+      }
+
       watchRef.current = watchSacredLocation((lat, lng) => {
         tracker.update(lat, lng);
         const dist = Math.round(
           Math.sqrt((lat - KAABAH.lat) ** 2 + (lng - KAABAH.lng) ** 2) * 111000
         );
-        setGpsStatus(`GPS aktif · ${dist}m dari Ka'bah`);
+        const r = tracker.getRadius();
+        setGpsStatus(`GPS aktif · ${dist}m dari Ka'bah${r ? ` · edar ~${r}m` : ''}`);
       });
     } else {
       const tracker = new SaiTracker();
@@ -130,8 +140,11 @@ function TawafSaiTab({ type }: { type: 'tawaf' | 'sai' }) {
   const stopAuto = () => {
     watchRef.current?.remove();
     watchRef.current = null;
+    floorWatchRef.current?.remove();
+    floorWatchRef.current = null;
     setAutoMode(false);
     setGpsStatus('');
+    setFloorLabel('');
   };
 
   return (
@@ -159,6 +172,14 @@ function TawafSaiTab({ type }: { type: 'tawaf' | 'sai' }) {
         </View>
       ) : null}
 
+      {autoMode && type === 'tawaf' && floorLabel ? (
+        <View style={[tc.zoneIndicator, { backgroundColor: colors.surfaceWarm }]}>
+          <Text style={{ fontSize: 14, fontFamily: 'PlusJakartaSans_700Bold', color: colors.textSecondary }}>
+            🏛️ {floorLabel}
+          </Text>
+        </View>
+      ) : null}
+
       {autoMode && type === 'sai' && saiZone !== 'between' ? (
         <View style={[tc.zoneIndicator, { backgroundColor: saiZone === 'safa' ? colors.greenLight : colors.goldLight }]}>
           <Text style={{ fontSize: 14, fontFamily: 'PlusJakartaSans_700Bold', color: saiZone === 'safa' ? colors.greenDark : '#97751F' }}>
@@ -179,7 +200,7 @@ function TawafSaiTab({ type }: { type: 'tawaf' | 'sai' }) {
       {autoMode && (
         <Text style={tc.autoHint}>
           {type === 'tawaf'
-            ? 'Putaran terhitung otomatis saat melewati Hajar Aswad'
+            ? 'Putaran terhitung otomatis saat melewati garis Hajar Aswad — mengikuti radius edar di lantai mana pun (dasar/1/atap). Butuh sinyal GPS; di area tertutup gunakan mode Manual.'
             : 'Perjalanan terhitung otomatis saat sampai di Safa/Marwah'}
         </Text>
       )}
