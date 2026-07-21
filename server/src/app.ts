@@ -50,6 +50,11 @@ app.use('/admin', (req, res, next) => {
   res.sendFile(path.join(adminDist, 'index.html'));
 });
 
+// Root -> panel admin (mengarah ke login bila belum masuk). Sebelum router API
+// yang di-mount di '/' agar tidak keburu kena authenticate (401). GET saja;
+// metode lain jatuh ke handler berikutnya.
+app.get('/', (_req, res) => res.redirect('/admin/'));
+
 // API routes
 // Integrasi Safar (service-token, bukan JWT user) — di-mount sebelum router '/'
 // yang memasang authenticate utk semua path.
