@@ -1,5 +1,6 @@
 import { Routes, Route, Navigate, NavLink, useLocation } from 'react-router-dom';
 import { getUser, logout } from './api';
+import { useIdleTimeout } from './useIdleTimeout';
 import Login from './pages/Login';
 import Dashboard from './pages/Dashboard';
 import Users from './pages/Users';
@@ -36,6 +37,7 @@ const nav = [
 
 function Layout({ children }: { children: React.ReactNode }) {
   const user = getUser();
+  useIdleTimeout(); // auto-logout setelah idle (hanya di area terautentikasi)
   return (
     <div style={{ display: 'flex', minHeight: '100vh' }}>
       <aside style={{

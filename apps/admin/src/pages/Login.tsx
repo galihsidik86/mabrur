@@ -9,6 +9,7 @@ export default function Login() {
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const idle = new URLSearchParams(window.location.search).get('idle') === '1';
 
   if (getUser()?.role === 'admin') {
     navigate('/', { replace: true });
@@ -56,6 +57,15 @@ export default function Login() {
             Masuk untuk mengelola sistem
           </p>
         </div>
+
+        {idle && (
+          <p style={{
+            background: '#FAEFC9', color: '#7A5A10', fontSize: 12.5, lineHeight: 1.4,
+            padding: '10px 12px', borderRadius: 10, marginBottom: 16, textAlign: 'center',
+          }}>
+            Sesi berakhir otomatis karena tidak ada aktivitas. Silakan masuk kembali.
+          </p>
+        )}
 
         <label style={labelStyle}>Nomor HP</label>
         <input
