@@ -6,6 +6,8 @@ interface PushMessage {
   body: string;
   data?: Record<string, unknown>;
   channelId?: string;
+  sound?: string;
+  priority?: 'default' | 'normal' | 'high';
 }
 
 export async function sendPush(
@@ -15,9 +17,10 @@ export async function sendPush(
   data?: Record<string, unknown>,
   channelId?: string,
 ): Promise<void> {
+  // Push SOS: bunyikan (iOS senyap tanpa sound) + prioritas tinggi (FCM wake).
   const messages: PushMessage[] = tokens
     .filter(Boolean)
-    .map((to) => ({ to, title, body, data, channelId }));
+    .map((to) => ({ to, title, body, data, channelId, sound: 'default', priority: 'high' }));
 
   if (messages.length === 0) return;
 
