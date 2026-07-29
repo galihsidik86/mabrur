@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import {
   View, Text, ScrollView, TouchableOpacity, TextInput,
-  StyleSheet, Vibration, Dimensions, Platform,
+  StyleSheet, Vibration, Dimensions, Platform, Alert,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
@@ -424,6 +424,8 @@ function WukufTab() {
     if (!start || !end) return;
     const s = new Date(start).getTime();
     const e = new Date(end).getTime();
+    // Guard input tak valid: cegah countdown "SELESAI" palsu bila waktu salah ketik.
+    if (!isFinite(s) || !isFinite(e) || e <= s) { setPhase('setup'); setRemaining(null); return; }
     const timer = setInterval(() => {
       const now = Date.now();
       if (now < s) { setPhase('waiting'); setRemaining(s - now); }
@@ -508,7 +510,14 @@ function WukufTab() {
         <TextInput style={tc.input} value={start} onChangeText={setStart} placeholder="2026-08-09T12:30" placeholderTextColor={colors.textFaint} />
         <Text style={tc.inputLabel}>Selesai (Subuh esok)</Text>
         <TextInput style={tc.input} value={end} onChangeText={setEnd} placeholder="2026-08-10T05:00" placeholderTextColor={colors.textFaint} />
-        <TouchableOpacity style={[tc.primaryBtn, { marginTop: 16 }]} onPress={() => { if (start && end) { setPhase('waiting'); if (!gpsActive) startAreaTracking(); } }}>
+        <TouchableOpacity style={[tc.primaryBtn, { marginTop: 16 }]} onPress={() => {
+          const s = new Date(start).getTime(), e = new Date(end).getTime();
+          if (!start || !end || !isFinite(s) || !isFinite(e) || e <= s) {
+            Alert.alert('Waktu tidak valid', 'Isi waktu Mulai dan Selesai dengan benar (mis. 2026-08-09T12:30), dan Selesai harus setelah Mulai.');
+            return;
+          }
+          setPhase('waiting'); if (!gpsActive) startAreaTracking();
+        }}>
           <Text style={tc.primaryBtnText}>Mulai Countdown</Text>
         </TouchableOpacity>
 
