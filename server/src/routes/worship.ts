@@ -1,4 +1,5 @@
 import { Router, Request, Response, NextFunction } from 'express';
+import tzlookup from 'tz-lookup';
 import { z } from 'zod';
 import { validate } from '../middleware/validate';
 import { authenticate } from '../middleware/auth';
@@ -217,6 +218,27 @@ function resolveMethod(override: string, lat: number, lng: number): PrayerMethod
   return 'mwl';
 }
 
+// Offset zona waktu (jam, DST-aware) untuk koordinat pada tanggal tertentu.
+// Petakan lat/lng → zona IANA (tz-lookup, offline) → offset via ICU. Ini benar
+// walau zona politik ≠ zona matahari (mis. Jawa Timur = WIB, bukan bujur/15) dan
+// untuk musafir (pakai koordinat GPS, bukan setting jam HP). Fallback bulatkan(bujur/15).
+function tzOffsetHours(lat: number, lng: number, date: Date): number {
+  try {
+    const zone = tzlookup(lat, lng);
+    const parts = new Intl.DateTimeFormat('en-US', {
+      timeZone: zone, timeZoneName: 'shortOffset',
+    }).formatToParts(date);
+    const name = parts.find((p) => p.type === 'timeZoneName')?.value ?? '';
+    const m = name.match(/GMT([+-]\d{1,2})(?::(\d{2}))?/);
+    if (m) {
+      const h = parseInt(m[1], 10);
+      const min = m[2] ? parseInt(m[2], 10) : 0;
+      return h < 0 ? h - min / 60 : h + min / 60;
+    }
+  } catch { /* lookup gagal → fallback */ }
+  return Math.round(lng / 15);
+}
+
 // Ramadan (bulan Hijriah ke-9) via kalender Umm al-Qura bawaan ICU.
 // Override eksplisit lewat query menang; gagal-deteksi → false.
 function isRamadan(now: Date, override: unknown): boolean {
@@ -242,9 +264,9 @@ router.get('/prayer-times', async (req: Request, res: Response) => {
   const day = Math.floor((now.getTime() - new Date(now.getFullYear(), 0, 0).getTime()) / 86400000);
   const declination = 23.45 * Math.sin((2 * Math.PI / 365) * (day - 81));
   const eqTime = 9.87 * Math.sin(2 * (2 * Math.PI / 365) * (day - 81)) - 7.53 * Math.cos((2 * Math.PI / 365) * (day - 81)) - 1.5 * Math.sin((2 * Math.PI / 365) * (day - 81));
-  // Estimate timezone from longitude (±0.5h accuracy, sufficient for prayer times)
+  // Zona waktu: query eksplisit → lookup dari koordinat (DST-aware) → bujur/15.
   const rawTz = Number(req.query.tz);
-  const tz = isFinite(rawTz) ? rawTz : Math.round(lng / 15);
+  const tz = isFinite(rawTz) ? rawTz : tzOffsetHours(lat, lng, now);
   const solarNoon = 12 - lng / 15 - eqTime / 60 + tz;
 
   const toRad = (d: number) => d * Math.PI / 180;

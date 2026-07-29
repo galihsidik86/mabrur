@@ -440,9 +440,18 @@ EoT mengompensasi ketidakteraturan orbit bumi (dalam menit).
 ### Langkah 3: Solar Noon (Tengah Hari Matahari)
 
 ```
-timezone = bulatkan(bujur / 15)    // estimasi dari longitude
+timezone = offset zona waktu (jam), urutan penentuan:
+   1. query ?tz= bila diberikan
+   2. lookup koordinat → zona IANA (tz-lookup) → offset DST-aware (Intl)
+   3. fallback: bulatkan(bujur / 15)
 solar_noon = 12 - bujur/15 - EoT/60 + timezone
 ```
+
+Lookup koordinat dipakai karena `bulatkan(bujur/15)` salah bila zona politik ≠ zona
+matahari — mis. Jawa Timur (Surabaya, bujur ~112,7) sebenarnya WIB (+7) tetapi
+`bulatkan(112,7/15) = 8` → azan meleset 1 jam; juga menangani DST dan zona
+setengah jam (mis. India +5,5). Karena berbasis koordinat GPS, tetap benar untuk
+musafir walau jam HP belum menyesuaikan lokasi.
 
 ### Langkah 4: Hour Angle (Sudut Jam)
 
