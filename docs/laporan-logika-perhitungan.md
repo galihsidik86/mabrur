@@ -413,9 +413,9 @@ HASIL: inside = true → di dalam Arafah
 
 ## 7. Perhitungan Waktu Shalat
 
-**File**: `server/src/routes/worship.ts:187-244`
+**File**: `server/src/routes/worship.ts` (rute `GET /prayer-times`)
 
-Menggunakan metode astronomi sederhana berdasarkan posisi matahari. Default lokasi: Makkah (21.4225°N, 39.8262°E).
+Menggunakan metode astronomi sederhana berdasarkan posisi matahari. Default lokasi: Makkah (21.4225°N, 39.8262°E). Parameter query: `lat`, `lng`, `tz` (opsional; fallback `bulatkan(bujur/15)`), `method` & `ramadan` (opsional, override — lihat Langkah 5).
 
 ### Langkah 1: Deklinasi Matahari
 
@@ -458,14 +458,42 @@ FUNGSI hourAngle(altitude):
 
 ### Langkah 5: Waktu Shalat
 
-| Shalat | Formula | Sudut Altitude |
+| Shalat | Formula | Altitude / Aturan |
 |--------|---------|---------------|
-| **Subuh** | solar_noon - hourAngle(-18°) | -18° (fajar astronomis) |
+| **Subuh** | solar_noon - hourAngle(sudut_subuh) | sudut_subuh bergantung metode (lihat bawah) |
 | **Syuruq** | solar_noon - hourAngle(-0,833°) | -0,833° (terbit) |
 | **Dzuhur** | solar_noon + 0,05 jam | Titik tertinggi + buffer |
 | **Ashar** | solar_noon + hourAngle(asrAlt) | Dihitung dari rasio bayangan |
 | **Maghrib** | solar_noon + hourAngle(-0,833°) | -0,833° (terbenam) |
-| **Isya** | solar_noon + hourAngle(-17,5°) | -17,5° (senja astronomis) |
+| **Isya** | interval Maghrib **atau** solar_noon + hourAngle(sudut_isya) | bergantung metode (lihat bawah) |
+
+Dzuhur, Ashar, Syuruq, dan Maghrib **tidak** bergantung metode. Hanya **Subuh** dan **Isya** yang berbeda antar-wilayah.
+
+### Pemilihan Metode Subuh/Isya (per wilayah)
+
+Metode dipilih otomatis dari lokasi (bisa dioverride via `?method=`):
+
+```
+JIKA jarak < 300 km dari Ka'bah (21,4225; 39,8262) ATAU Masjid Nabawi (24,4686; 39,6142)
+    → "ummalqura"
+SELAIN ITU JIKA lat ∈ [-11, 6] DAN lng ∈ [95, 141]   // kotak wilayah Indonesia
+    → "kemenag"
+SELAIN ITU
+    → "mwl"
+```
+
+| Metode | Subuh | Isya | Dipakai |
+|--------|-------|------|---------|
+| **Umm al-Qura** | -18,5° | **Maghrib + 90 menit** (120 menit saat Ramadan) | Mekkah & Madinah — cocok dengan azan Masjidil Haram/Nabawi |
+| **Kemenag** | -20° | -18° | Wilayah Indonesia |
+| **MWL / umum** | -18° | -17,5° | Lokasi lain (perilaku lama) |
+
+- Isya Umm al-Qura memakai **interval tetap dari Maghrib**, bukan sudut senja.
+- **Ramadan** (bulan Hijriah ke-9) dideteksi via kalender Umm al-Qura bawaan ICU (`Intl.DateTimeFormat` calendar `islamic-umalqura`); bisa dioverride `?ramadan=true|false`.
+- Respons menyertakan `method`, `methodLabel`, dan `ramadan` (hanya untuk Umm al-Qura).
+- Aplikasi mobile mengirim `lat`/`lng` perangkat → metode terpilih otomatis tanpa perubahan aplikasi.
+
+> **Catatan akurasi**: matematika inti (deklinasi, EoT, solar noon, hour angle) sudah tervalidasi — Dzuhur/Ashar/Maghrib cocok dengan waktu resmi Mekkah dalam ±2 menit. Sebelum revisi ini Subuh/Isya memakai sudut generik sehingga meleset ~10 menit dari Umm al-Qura di Mekkah; kini selaras.
 
 ### Perhitungan Ashar (Mazhab Syafi'i)
 
@@ -586,12 +614,15 @@ SETIAP update lokasi background:
 | Radius deteksi Jamarat | 30 | meter | Proximity jamarat |
 | Radius peringatan Namirah | 200 | meter | Zona bahaya Arafah |
 | Cooldown notifikasi background | 300 | detik | Anti-spam notifikasi |
-| Sudut Subuh | -18,0 | derajat | Waktu shalat |
-| Sudut Syuruq/Maghrib | -0,833 | derajat | Waktu shalat |
-| Sudut Isya | -17,5 | derajat | Waktu shalat |
+| Sudut Subuh | -18,5 / -20 / -18 | derajat | Umm al-Qura / Kemenag / MWL |
+| Sudut Syuruq/Maghrib | -0,833 | derajat | Waktu shalat (semua metode) |
+| Sudut Isya | -18 / -17,5 | derajat | Kemenag / MWL (Umm al-Qura pakai interval) |
+| Interval Isya Umm al-Qura | 90 (120 Ramadan) | menit | Maghrib + interval |
+| Radius auto Umm al-Qura | 300 | km | Dari Ka'bah/Masjid Nabawi |
 | Deklinasi maks matahari | 23,45 | derajat | Waktu shalat |
 
 ---
 
 *Dokumen ini dibuat dari analisis kode sumber Mabrur pada 9 Juli 2026.*
 *Revisi 29 Juli 2026: tambah mode adaptif multi-lantai tawaf + deteksi lantai barometer (Bagian 3).*
+*Revisi 30 Juli 2026: metode Subuh/Isya per wilayah — Umm al-Qura/Kemenag/MWL (Bagian 7).*
