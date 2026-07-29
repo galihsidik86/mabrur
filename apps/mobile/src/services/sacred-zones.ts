@@ -11,6 +11,7 @@ export function watchSacredLocation(
   callback: (lat: number, lng: number) => void,
 ): { remove: () => void } {
   let sub: Location.LocationSubscription | null = null;
+  let cancelled = false; // remove() bisa dipanggil sebelum promise resolve
 
   Location.watchPositionAsync(
     {
@@ -21,7 +22,11 @@ export function watchSacredLocation(
     (loc) => {
       callback(loc.coords.latitude, loc.coords.longitude);
     },
-  ).then((s) => { sub = s; });
+  ).then((s) => {
+    // Bila sudah di-remove sebelum resolve, langsung buang agar tak bocor.
+    if (cancelled) s.remove();
+    else sub = s;
+  });
 
-  return { remove: () => { sub?.remove(); } };
+  return { remove: () => { cancelled = true; sub?.remove(); sub = null; } };
 }
