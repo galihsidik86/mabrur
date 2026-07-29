@@ -259,7 +259,7 @@ Info lantai bersifat **best-effort** (tidak semua ponsel punya barometer; tekana
 
 ## 4. Pelacakan Sa'i Otomatis
 
-**File**: `apps/mobile/src/services/sacred-zones.ts:171-215`
+**File**: `apps/mobile/src/services/sacred-zones-core.ts` (algoritma murni, `SaiTracker`), `sacred-zones.ts` (re-export + watcher GPS)
 
 ### Koordinat Referensi
 
