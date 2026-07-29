@@ -833,9 +833,15 @@ export default function ToolsScreen() {
 
         {tab === 'kurs' && currency && (
           <View style={tc.wrap}>
-            <Text style={{ fontSize: 20, fontFamily: 'PlusJakartaSans_800ExtraBold', color: colors.primary, textAlign: 'center' }}>1 SAR = Rp {currency.sar_to_idr.toLocaleString()}</Text>
+            <Text style={{ fontSize: 20, fontFamily: 'PlusJakartaSans_800ExtraBold', color: colors.primary, textAlign: 'center' }}>1 SAR = Rp {currency.sar_to_idr.toLocaleString('id')}</Text>
             <TextInput style={[tc.input, { marginTop: 20, textAlign: 'center', fontSize: 18 }]} value={amount} onChangeText={setAmount} placeholder="Jumlah SAR" keyboardType="numeric" placeholderTextColor={colors.textFaint} />
-            {amount ? <Text style={{ fontSize: 24, fontFamily: 'PlusJakartaSans_800ExtraBold', color: colors.green, textAlign: 'center', marginTop: 16 }}>= Rp {Math.round(Number(amount) * currency.sar_to_idr).toLocaleString('id')}</Text> : null}
+            {(() => {
+              // Toleran koma desimal ala Indonesia ("12,5") + cegah tampil "Rp NaN".
+              const n = Number(amount.replace(',', '.'));
+              return amount.trim() && isFinite(n) && n >= 0
+                ? <Text style={{ fontSize: 24, fontFamily: 'PlusJakartaSans_800ExtraBold', color: colors.green, textAlign: 'center', marginTop: 16 }}>= Rp {Math.round(n * currency.sar_to_idr).toLocaleString('id')}</Text>
+                : null;
+            })()}
           </View>
         )}
 
