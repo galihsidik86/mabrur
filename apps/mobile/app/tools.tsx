@@ -19,6 +19,7 @@ import {
 } from '../src/services/sacred-zones';
 import { sendLocalNotification } from '../src/services/notification';
 import { isBarometerAvailable, watchFloor } from '../src/services/floor';
+import { startRecording, stopRecording, uploadSession, isRecording } from '../src/services/trace-recorder';
 
 type Tab = 'hub' | 'tawaf' | 'sai' | 'tasbih' | 'jumrah' | 'wukuf' | 'qiblat' | 'shalat' | 'checklist' | 'kurs' | 'frasa' | 'kesehatan';
 
@@ -75,6 +76,15 @@ function TawafSaiTab({ type }: { type: 'tawaf' | 'sai' }) {
   const trackerRef = useRef<TawafTracker | SaiTracker | null>(null);
   const watchRef = useRef<{ remove: () => void } | null>(null);
   const floorWatchRef = useRef<{ remove: () => void } | null>(null);
+  const autoRecRef = useRef<number | null>(null); // sesi rekam trace (uji akurasi)
+
+  // Stop rekam trace lalu coba unggah; bila gagal (offline) sesi tetap tersimpan
+  // di SQLite dan diunggah otomatis saat app kembali aktif (retryPendingUploads).
+  const finishAutoRecording = () => {
+    const recId = autoRecRef.current;
+    autoRecRef.current = null;
+    if (recId != null) stopRecording().then(() => uploadSession(recId)).catch(() => {});
+  };
 
   const label = type === 'tawaf' ? 'Putaran Tawaf' : "Perjalanan Sa'i";
   const direction = type === 'sai'
@@ -83,7 +93,7 @@ function TawafSaiTab({ type }: { type: 'tawaf' | 'sai' }) {
 
   useEffect(() => {
     activateKeepAwakeAsync('counter');
-    return () => { deactivateKeepAwake('counter'); watchRef.current?.remove(); floorWatchRef.current?.remove(); };
+    return () => { deactivateKeepAwake('counter'); watchRef.current?.remove(); floorWatchRef.current?.remove(); finishAutoRecording(); };
   }, []);
 
   const startAuto = async () => {
@@ -98,6 +108,14 @@ function TawafSaiTab({ type }: { type: 'tawaf' | 'sai' }) {
 
     setAutoMode(true);
     setGpsStatus('Mencari GPS...');
+
+    // Rekam trace mentah (lat/lng/akurasi) ke SQLite lokal untuk uji akurasi —
+    // diunggah otomatis ke server saat Stop, tanpa perlu buka menu Record.
+    try {
+      if (!isRecording()) {
+        autoRecRef.current = await startRecording(type === 'tawaf' ? 'Tawaf (auto)' : "Sa'i (auto)", () => {});
+      }
+    } catch { autoRecRef.current = null; }
 
     if (type === 'tawaf') {
       // Mode adaptif: band radius menyesuaikan lantai (dasar/1/atap), tak lagi
@@ -143,6 +161,7 @@ function TawafSaiTab({ type }: { type: 'tawaf' | 'sai' }) {
     watchRef.current = null;
     floorWatchRef.current?.remove();
     floorWatchRef.current = null;
+    finishAutoRecording();
     setAutoMode(false);
     setGpsStatus('');
     setFloorLabel('');

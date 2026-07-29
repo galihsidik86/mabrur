@@ -1,5 +1,5 @@
 import { useEffect, useState, useRef } from 'react';
-import { View, ActivityIndicator } from 'react-native';
+import { View, ActivityIndicator, AppState } from 'react-native';
 import { Stack, useRouter, useSegments } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import * as SecureStore from 'expo-secure-store';
@@ -19,6 +19,7 @@ import {
 } from '../src/services/notification';
 import { startBackgroundLocation } from '../src/services/background';
 import { scheduleUpcomingNotifications } from '../src/services/schedule-notify';
+import { retryPendingUploads } from '../src/services/trace-recorder';
 import { api } from '../src/services/api';
 import Constants from 'expo-constants';
 
@@ -75,7 +76,19 @@ export default function RootLayout() {
 
       // Schedule reminders for upcoming agenda
       await scheduleUpcomingNotifications();
+
+      // Unggah ulang trace uji-akurasi yang tertunda (gagal kirim saat offline)
+      retryPendingUploads().catch(() => {});
     })();
+  }, [isAuthenticated]);
+
+  // Coba unggah trace tertunda tiap app kembali aktif (mis. sudah dapat wifi)
+  useEffect(() => {
+    if (!isAuthenticated) return;
+    const sub = AppState.addEventListener('change', (state) => {
+      if (state === 'active') retryPendingUploads().catch(() => {});
+    });
+    return () => sub.remove();
   }, [isAuthenticated]);
 
   // Auth routing

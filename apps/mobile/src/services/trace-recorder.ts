@@ -180,6 +180,28 @@ export async function uploadSession(sessionId: number): Promise<void> {
   await d.runAsync('UPDATE sessions SET uploaded_at = ? WHERE id = ?', Date.now(), sessionId);
 }
 
+/**
+ * Unggah ulang semua sesi yang sudah selesai tapi belum terkirim (mis. gagal
+ * karena tak ada sinyal saat di Masjidil Haram). Dipanggil saat app dibuka /
+ * kembali aktif. Hanya sesi ≥ 10 titik yang layak (uploadSession menolak yang
+ * lebih pendek), sehingga tak ada percobaan sia-sia berulang.
+ * Mengembalikan jumlah sesi yang berhasil diunggah.
+ */
+export async function retryPendingUploads(): Promise<number> {
+  const d = await getDb();
+  const pending = await d.getAllAsync<{ id: number }>(`
+    SELECT s.id FROM sessions s
+    WHERE s.ended_at IS NOT NULL AND s.uploaded_at IS NULL
+    AND (SELECT COUNT(*) FROM points p WHERE p.session_id = s.id) >= 10
+    ORDER BY s.started_at
+  `);
+  let ok = 0;
+  for (const s of pending) {
+    try { await uploadSession(s.id); ok++; } catch { /* masih offline — coba lagi nanti */ }
+  }
+  return ok;
+}
+
 export async function exportSession(sessionId: number): Promise<void> {
   const { filename, gpx } = await buildGpx(sessionId);
   const file = new File(Paths.cache, filename);
