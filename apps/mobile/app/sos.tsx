@@ -8,6 +8,7 @@ import {
   ActivityIndicator,
   Alert,
   Image,
+  Linking,
 } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -16,7 +17,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { colors, radius } from '../src/theme';
 import { api } from '../src/services/api';
 import { getPosition } from '../src/services/location';
-import { getGroups } from '../src/services/db';
+import { getGroups, getGroupMembers } from '../src/services/db';
 
 type Category = 'medis' | 'tersesat' | 'kehilangan';
 
@@ -38,6 +39,7 @@ export default function SosScreen() {
   const [history, setHistory] = useState<any[]>([]);
   const [showHistory, setShowHistory] = useState(false);
   const [photo, setPhoto] = useState<string | null>(null);
+  const [muthawwifPhone, setMuthawwifPhone] = useState<string | null>(null);
 
   useEffect(() => {
     (async () => {
@@ -46,7 +48,19 @@ export default function SosScreen() {
         setProfile(p);
       } catch {}
       const groups = await getGroups();
-      if (groups.length > 0) setKloter(groups[0].kloter_code);
+      if (groups.length > 0) {
+        setKloter(groups[0].kloter_code);
+        // Kontak muthawwif untuk tombol telepon darurat (lokal dulu, lalu API)
+        try {
+          let members: Array<{ phone?: string | null; role_in_group: string }> =
+            await getGroupMembers(groups[0].id);
+          if (members.length === 0) {
+            try { members = await api.getGroupMembers(groups[0].id); } catch {}
+          }
+          const mt = members.find((m) => m.role_in_group === 'muthawwif' && m.phone);
+          if (mt?.phone) setMuthawwifPhone(mt.phone);
+        } catch {}
+      }
 
       // Check existing active SOS
       try {
@@ -183,13 +197,22 @@ export default function SosScreen() {
 
             {/* Quick contacts */}
             <View style={s.contactRow}>
-              <TouchableOpacity style={s.contactBtn}>
+              <TouchableOpacity
+                style={[s.contactBtn, !muthawwifPhone && { opacity: 0.5 }]}
+                onPress={() => {
+                  if (!muthawwifPhone) { Alert.alert('Nomor tidak tersedia', 'Kontak muthawwif belum tersinkron. Coba buka menu grup saat online.'); return; }
+                  Linking.openURL(`tel:${muthawwifPhone}`).catch(() => Alert.alert('Gagal', 'Tidak dapat membuka aplikasi telepon.'));
+                }}
+              >
                 <Ionicons name="call-outline" size={16} color="#fff" />
                 <Text style={s.contactText}>Muthawwif</Text>
               </TouchableOpacity>
-              <TouchableOpacity style={s.contactBtn}>
+              <TouchableOpacity
+                style={s.contactBtn}
+                onPress={() => Linking.openURL('tel:911').catch(() => Alert.alert('Gagal', 'Tidak dapat membuka aplikasi telepon.'))}
+              >
                 <Ionicons name="flash-outline" size={16} color="#fff" />
-                <Text style={s.contactText}>Petugas 115</Text>
+                <Text style={s.contactText}>Darurat 911</Text>
               </TouchableOpacity>
             </View>
 
