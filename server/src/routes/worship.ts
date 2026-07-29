@@ -187,6 +187,47 @@ router.get('/health-tips', async (_req: Request, res: Response) => {
 
 // ==================== PRAYER TIMES (calculated) ====================
 
+// Metode sudut senja Subuh/Isya per wilayah. Umm al-Qura memakai INTERVAL
+// (Isya = Maghrib + 90 mnt, 120 mnt saat Ramadan) alih-alih sudut.
+type PrayerMethod = 'ummalqura' | 'kemenag' | 'mwl';
+const PRAYER_METHODS: Record<PrayerMethod, {
+  label: string; fajrAngle: number; ishaAngle?: number; ishaInterval?: number;
+}> = {
+  ummalqura: { label: 'Umm al-Qura (Mekkah/Madinah)', fajrAngle: -18.5, ishaInterval: 90 },
+  kemenag:   { label: 'Kemenag (Indonesia)',          fajrAngle: -20,   ishaAngle: -18 },
+  mwl:       { label: 'Umum (MWL)',                   fajrAngle: -18,   ishaAngle: -17.5 },
+};
+
+function kmBetween(lat1: number, lng1: number, lat2: number, lng2: number): number {
+  const R = 6371, toR = (d: number) => d * Math.PI / 180;
+  const dLat = toR(lat2 - lat1), dLng = toR(lng2 - lng1);
+  const a = Math.sin(dLat / 2) ** 2 +
+    Math.cos(toR(lat1)) * Math.cos(toR(lat2)) * Math.sin(dLng / 2) ** 2;
+  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+}
+
+// Pilih metode: override eksplisit → dekat Haramain (Umm al-Qura) →
+// dalam kotak Indonesia (Kemenag) → default umum.
+function resolveMethod(override: string, lat: number, lng: number): PrayerMethod {
+  if (override === 'ummalqura' || override === 'kemenag' || override === 'mwl') return override;
+  const nearMecca = kmBetween(lat, lng, 21.4225, 39.8262) < 300;
+  const nearMadinah = kmBetween(lat, lng, 24.4686, 39.6142) < 300;
+  if (nearMecca || nearMadinah) return 'ummalqura';
+  if (lat >= -11 && lat <= 6 && lng >= 95 && lng <= 141) return 'kemenag';
+  return 'mwl';
+}
+
+// Ramadan (bulan Hijriah ke-9) via kalender Umm al-Qura bawaan ICU.
+// Override eksplisit lewat query menang; gagal-deteksi → false.
+function isRamadan(now: Date, override: unknown): boolean {
+  if (override === 'true' || override === '1') return true;
+  if (override === 'false' || override === '0') return false;
+  try {
+    const m = new Intl.DateTimeFormat('en-US-u-ca-islamic-umalqura', { month: 'numeric' }).format(now);
+    return Number(m) === 9;
+  } catch { return false; }
+}
+
 router.get('/prayer-times', async (req: Request, res: Response) => {
   // Perbaikan: NaN || default tetap NaN karena NaN bukan falsy
   // Gunakan isFinite() untuk mendeteksi NaN/Infinity
@@ -226,7 +267,11 @@ router.get('/prayer-times', async (req: Request, res: Response) => {
     return `${hh.toString().padStart(2, '0')}:${mm.toString().padStart(2, '0')}`;
   };
 
-  const fajrHA = hourAngle(-18);
+  // Metode Subuh/Isya sesuai wilayah (Umm al-Qura di Mekkah/Madinah, dst.)
+  const method = resolveMethod(String(req.query.method ?? ''), lat, lng);
+  const m = PRAYER_METHODS[method];
+
+  const fajrHA = hourAngle(m.fajrAngle);
   const sunriseHA = hourAngle(-0.833);
 
   // Asr (Shafi'i): shadow = object height + noon shadow
@@ -235,18 +280,27 @@ router.get('/prayer-times', async (req: Request, res: Response) => {
   const asrHA = hourAngle(asrAlt);
 
   const maghribHA = hourAngle(-0.833);
-  const ishaHA = hourAngle(-17.5);
+  const maghrib = solarNoon + maghribHA;
+
+  // Isya: interval dari Maghrib (Umm al-Qura) atau sudut senja (lainnya)
+  const ramadan = isRamadan(now, req.query.ramadan);
+  const isha = m.ishaInterval != null
+    ? maghrib + (ramadan ? 120 : m.ishaInterval) / 60
+    : solarNoon + hourAngle(m.ishaAngle!);
 
   res.json({ data: {
     date: now.toISOString().slice(0, 10),
     location: { lat, lng },
+    method,
+    methodLabel: m.label,
+    ramadan: m.ishaInterval != null ? ramadan : undefined,
     times: {
       fajr: fmt(solarNoon - fajrHA),
       sunrise: fmt(solarNoon - sunriseHA),
       dhuhr: fmt(solarNoon + 0.05),
       asr: fmt(solarNoon + asrHA),
-      maghrib: fmt(solarNoon + maghribHA),
-      isha: fmt(solarNoon + ishaHA),
+      maghrib: fmt(maghrib),
+      isha: fmt(isha),
     },
   }});
 });
