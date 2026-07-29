@@ -13,7 +13,7 @@ import { api } from '../src/services/api';
 import { getPosition, requestPermission } from '../src/services/location';
 import {
   TawafTracker, SaiTracker, detectNearestJamarat,
-  watchSacredLocation, checkArafahPosition,
+  watchSacredLocation, checkArafahPosition, distanceMetersExport,
   KAABAH, SAFA, MARWAH, ARAFAH_CENTER,
   type SaiZone, type ArafahResult,
 } from '../src/services/sacred-zones';
@@ -115,9 +115,8 @@ function TawafSaiTab({ type }: { type: 'tawaf' | 'sai' }) {
 
       watchRef.current = watchSacredLocation((lat, lng) => {
         tracker.update(lat, lng);
-        const dist = Math.round(
-          Math.sqrt((lat - KAABAH.lat) ** 2 + (lng - KAABAH.lng) ** 2) * 111000
-        );
+        // Jarak yang sama (Haversine) dengan yang dipakai algoritma penghitung.
+        const dist = Math.round(distanceMetersExport(lat, lng, KAABAH.lat, KAABAH.lng));
         const r = tracker.getRadius();
         setGpsStatus(`GPS aktif · ${dist}m dari Ka'bah${r ? ` · edar ~${r}m` : ''}`);
       });
@@ -132,12 +131,8 @@ function TawafSaiTab({ type }: { type: 'tawaf' | 'sai' }) {
 
       watchRef.current = watchSacredLocation((lat, lng) => {
         tracker.update(lat, lng);
-        const dS = Math.round(
-          Math.sqrt((lat - SAFA.lat) ** 2 + (lng - SAFA.lng) ** 2) * 111000
-        );
-        const dM = Math.round(
-          Math.sqrt((lat - MARWAH.lat) ** 2 + (lng - MARWAH.lng) ** 2) * 111000
-        );
+        const dS = Math.round(distanceMetersExport(lat, lng, SAFA.lat, SAFA.lng));
+        const dM = Math.round(distanceMetersExport(lat, lng, MARWAH.lat, MARWAH.lng));
         setGpsStatus(`Safa: ${dS}m · Marwah: ${dM}m`);
       });
     }
