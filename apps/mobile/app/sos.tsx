@@ -76,7 +76,7 @@ export default function SosScreen() {
     } finally {
       setSending(false);
     }
-  }, [category]);
+  }, [category, photo]);
 
   const handleCancel = useCallback(async () => {
     if (!sosId) return;
