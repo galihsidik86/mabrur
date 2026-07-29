@@ -92,6 +92,7 @@ export function watchPosition(
   callback: (lat: number, lng: number, accuracy: number | null) => void,
 ): { remove: () => void } {
   let sub: Location.LocationSubscription | null = null;
+  let cancelled = false; // remove() bisa dipanggil sebelum promise resolve
 
   Location.watchPositionAsync(
     {
@@ -103,12 +104,16 @@ export function watchPosition(
       callback(loc.coords.latitude, loc.coords.longitude, loc.coords.accuracy);
     },
   ).then((s) => {
-    sub = s;
+    // Bila sudah di-remove sebelum resolve, langsung buang agar tak bocor.
+    if (cancelled) s.remove();
+    else sub = s;
   });
 
   return {
     remove: () => {
+      cancelled = true;
       sub?.remove();
+      sub = null;
     },
   };
 }

@@ -48,7 +48,8 @@ export default function PetaScreen() {
   const watchRef = useRef<{ remove: () => void } | null>(null);
 
   const distance = nearest?.distance ?? 12000;
-  const warn = distance <= 3000 && !isIhram;
+  // Pakai withinWarning dari findNearest (radius zona), bukan ambang hardcode.
+  const warn = (nearest?.withinWarning ?? false) && !isIhram;
   const ready = isIhram;
   const approach = !warn && !isIhram;
   const progress = Math.max(0, Math.min(1, 1 - distance / 12000));
