@@ -118,7 +118,7 @@ Toggle ihram:
 
 ## 3. Pelacakan Tawaf Otomatis
 
-**File**: `apps/mobile/src/services/sacred-zones.ts:122-164`
+**File**: `apps/mobile/src/services/sacred-zones-core.ts` (algoritma murni, `TawafTracker`), `sacred-zones.ts` (re-export + watcher GPS), `floor-core.ts` + `floor.ts` (deteksi lantai barometer)
 
 ### Koordinat Referensi
 
@@ -174,6 +174,86 @@ Tawaf dilakukan **berlawanan arah jarum jam** (counterclockwise) mengelilingi Ka
 | Debounce | 120 detik | Waktu minimum antar putaran |
 | Total putaran | 7 | Jumlah standar tawaf |
 | Presisi GPS | 2 m / 3 detik | Mode BestForNavigation |
+
+### Dua Mode Band Radius
+
+`TawafTracker` menerima konfigurasi (`TawafConfig`) yang menentukan bagaimana filter jarak (langkah 2 di atas) bekerja. **Deteksi putaran (persilangan sudut, langkah 1/3/4) identik pada kedua mode** — konfigurasi hanya mengubah titik mana yang lolos filter untuk diproses.
+
+| Mode | `adaptive` | Filter jarak | Dipakai oleh |
+|------|-----------|--------------|--------------|
+| **Non-adaptif** (default) | `false` | Band tetap **10–80 m** | Harness pengujian / naskah jurnal — perilaku **dibekukan** agar angka reproduksibel (138/138 sel) |
+| **Adaptif** | `true` | Band mengikuti radius edar terestimasi | Aplikasi (`app/tools.tsx`) — mendukung tawaf lantai atas |
+
+Parameter default (`TawafConfig`):
+
+| Parameter | Default | Keterangan |
+|-----------|---------|------------|
+| `minRadius` | 10 m | Di bawah ini = di dalam/di atas Ka'bah atau noise |
+| `maxRadius` | 80 m | Batas atas band **mode non-adaptif saja** |
+| `adaptive` | `false` | `true` = band menyesuaikan lantai |
+| `hardMaxRadius` | 300 m | Batas absolut mode adaptif (di luar mataf) |
+
+### Mode Adaptif (Multi-Lantai)
+
+Tawaf sah dilakukan di lantai mana pun (mataf/dasar, lantai 1, lantai 2, atap). Di lantai atas jarak horizontal ke Ka'bah bisa **jauh melebihi 80 m**, sehingga band tetap 10–80 m gagal menghitung. Mode adaptif menggantikan band tetap dengan band relatif terhadap **radius edar yang diestimasi** dari riwayat jarak terakhir, plus syarat kestabilan (membedakan "sedang mengedar" dari "berjalan lurus melintas").
+
+```
+Jendela geser jarak: WIN = 15 sampel (~45 detik pada sampling 3 detik)
+
+UNTUK setiap update GPS (mode adaptif):
+  1. TOLAK bila jarak < minRadius (10 m) ATAU jarak > hardMaxRadius (300 m)
+
+  2. Dorong jarak ke jendela geser (buang tertua bila > WIN)
+
+  3. WARM-UP (jendela belum penuh, < 15 sampel):
+     terima titik (agar pelacakan sudut mulai berjalan)
+     radius_estimasi = jarak saat ini
+
+  4. JENDELA PENUH:
+     median = median(jendela)
+     std    = simpangan baku(jendela)
+     radius_estimasi = median
+
+     stabil  = std < max(10, 0,4 × median)      // radius ~konstan → mengedar
+     inBand  = median×0,5 ≤ jarak ≤ median×1,7   // masih di lintasan edar
+
+     terima titik HANYA JIKA (stabil DAN inBand)
+```
+
+- **Kestabilan** menolak lintasan lurus yang kebetulan melintas dekat Ka'bah: pada lintasan lurus, jarak berubah drastis (jauh→dekat→jauh) sehingga `std` besar → ditolak.
+- **`getRadius()`** mengembalikan `round(median)` sebagai radius edar terestimasi, ditampilkan di UI sebagai `edar ~Xm`.
+- Saat berpindah lantai, jendela sementara mencampur radius lama & baru → `std` melonjak → penghitungan **berhenti sementara** (konservatif) hingga jendela terisi radius baru.
+
+> **Catatan reproduktifitas**: mode adaptif **tidak** dipakai harness jurnal. Harness (`docs/accuracy-test/`) menyalin `TawafTracker` dengan default non-adaptif (band 10–80 m). Perubahan mode adaptif tidak mengubah keluaran simulasi Monte Carlo.
+
+### Deteksi Lantai via Barometer
+
+**File**: `apps/mobile/src/services/floor-core.ts` (matematika murni), `floor.ts` (langganan sensor `expo-sensors`)
+
+Info lantai bersifat **best-effort** (tidak semua ponsel punya barometer; tekanan indoor terpengaruh AC) dan hanya untuk **label informatif** — **tidak** memengaruhi penghitungan putaran (band adaptif memakai jarak GPS, bukan tekanan).
+
+```
+1. KETINGGIAN dari tekanan (formula barometrik internasional):
+   altitude = 44330 × (1 − (p / p0)^0,190295)      // p, p0 dalam hPa
+
+2. BASELINE p0 = tekanan TERTINGGI yang pernah teramati
+   (titik terendah yang pernah dilewati → lantai relatif)
+
+3. LANTAI dari ketinggian (tinggi antar-lantai Masjidil Haram ~5,5 m):
+   floor = max(0, round(altitude / 5,5))
+   label:  0 → "Lantai dasar (mataf)"
+           1 → "Lantai 1"
+           2 → "Lantai 2"
+          ≥3 → "Atap"
+```
+
+| Parameter | Nilai | Keterangan |
+|-----------|-------|------------|
+| Tinggi antar-lantai | 5,5 m | Ambang setengah-lantai agar tak mudah lompat |
+| Interval barometer | 2 detik | `Barometer.setUpdateInterval` |
+| Baseline | Tekanan tertinggi teramati | Lantai terendah = acuan (relatif, bukan MSL) |
+
+**Keterbatasan**: bila pengguna memulai di lantai atas dan tak pernah ke bawah, atau ada spike noise tekanan, baseline bisa salah → label lantai bergeser. Karena label tidak dipakai penghitung, kesalahan ini tidak berdampak pada jumlah putaran.
 
 ---
 
@@ -495,9 +575,13 @@ SETIAP update lokasi background:
 | Radius peringatan miqat | 3.000 | meter | Geofence miqat |
 | Radius batas miqat | 1.000 | meter | Geofence miqat |
 | Radius Tanah Haram | 12.000 | meter | Zona haram |
-| Radius zona tawaf (min) | 10 | meter | Tawaf tracker |
-| Radius zona tawaf (max) | 80 | meter | Tawaf tracker |
+| Radius zona tawaf (min) | 10 | meter | Tawaf tracker (kedua mode) |
+| Radius zona tawaf (max) | 80 | meter | Tawaf tracker — mode non-adaptif (jurnal) |
+| Radius tawaf hard-max | 300 | meter | Tawaf tracker — batas absolut mode adaptif |
+| Jendela adaptif tawaf | 15 | sampel (~45 dtk) | Estimasi radius edar mode adaptif |
 | Debounce tawaf | 120 | detik | Cegah double-count |
+| Tinggi antar-lantai (barometer) | 5,5 | meter | Estimasi lantai dari ketinggian |
+| Interval barometer | 2 | detik | Update tekanan deteksi lantai |
 | Radius zona Sa'i | 25 | meter | Deteksi Safa/Marwah |
 | Radius deteksi Jamarat | 30 | meter | Proximity jamarat |
 | Radius peringatan Namirah | 200 | meter | Zona bahaya Arafah |
@@ -510,3 +594,4 @@ SETIAP update lokasi background:
 ---
 
 *Dokumen ini dibuat dari analisis kode sumber Mabrur pada 9 Juli 2026.*
+*Revisi 29 Juli 2026: tambah mode adaptif multi-lantai tawaf + deteksi lantai barometer (Bagian 3).*
