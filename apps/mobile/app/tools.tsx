@@ -6,7 +6,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import { Magnetometer } from 'expo-sensors';
+import * as Location from 'expo-location';
 import { activateKeepAwakeAsync, deactivateKeepAwake } from 'expo-keep-awake';
 import { colors, radius } from '../src/theme';
 import { api } from '../src/services/api';
@@ -581,27 +581,39 @@ function QiblatTab() {
   const [heading, setHeading] = useState(0);
 
   useEffect(() => {
+    let headingSub: Location.LocationSubscription | null = null;
+    let cancelled = false;
+
     (async () => {
       const pos = await getPosition();
       if (pos) {
-        const kLat = 21.4225 * Math.PI / 180, kLng = 39.8262 * Math.PI / 180;
+        // Azimuth awal great-circle ke Ka'bah, relatif UTARA SEJATI (true north).
+        const kLat = KAABAH.lat * Math.PI / 180, kLng = KAABAH.lng * Math.PI / 180;
         const lat = pos.lat * Math.PI / 180, lng = pos.lng * Math.PI / 180;
         const y = Math.sin(kLng - lng) * Math.cos(kLat);
         const x = Math.cos(lat) * Math.sin(kLat) - Math.sin(lat) * Math.cos(kLat) * Math.cos(kLng - lng);
         setBearing(((Math.atan2(y, x) * 180 / Math.PI) + 360) % 360);
       }
+
+      // Heading terkompensasi kemiringan + deklinasi dari expo-location
+      // (fusi akselerometer+magnetometer). trueHeading & bearing sama-sama
+      // mengacu utara sejati sehingga konsisten.
+      try {
+        const sub = await Location.watchHeadingAsync((h) => {
+          // trueHeading = -1 bila deklinasi belum tersedia → pakai magHeading.
+          const hd = h.trueHeading != null && h.trueHeading >= 0 ? h.trueHeading : h.magHeading;
+          setHeading((hd + 360) % 360);
+        });
+        if (cancelled) sub.remove(); else headingSub = sub;
+      } catch { /* sensor/izin tak tersedia */ }
     })();
 
-    const sub = Magnetometer.addListener(({ x, y }) => {
-      let angle = Math.atan2(y, x) * (180 / Math.PI);
-      angle = (angle + 360) % 360;
-      setHeading(360 - angle);
-    });
-    Magnetometer.setUpdateInterval(100);
-    return () => sub.remove();
+    return () => { cancelled = true; headingSub?.remove(); };
   }, []);
 
-  const rotation = bearing != null ? heading + bearing : 0;
+  // Panah kiblat = arah kiblat relatif arah hadap HP. Saat HP menghadap kiblat
+  // (heading = bearing) → rotasi 0 (panah lurus ke atas).
+  const rotation = bearing != null ? bearing - heading : 0;
   const dirs = ['N', 'NE', 'E', 'SE', 'S', 'SW', 'W', 'NW'];
 
   return (
@@ -609,7 +621,7 @@ function QiblatTab() {
       <View style={qb.compassOuter}>
         {/* Cardinal directions */}
         {dirs.map((d, i) => {
-          const a = (i * 45 + heading) * Math.PI / 180;
+          const a = (i * 45 - heading) * Math.PI / 180;
           const r = 115;
           return (
             <Text key={d} style={[qb.cardinal, {
