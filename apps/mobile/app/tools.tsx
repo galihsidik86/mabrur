@@ -87,8 +87,14 @@ function TawafSaiTab({ type }: { type: 'tawaf' | 'sai' }) {
   }, []);
 
   const startAuto = async () => {
+    if (autoMode) return; // sudah aktif — cegah watcher/barometer ganda saat tombol ditekan lagi
     const granted = await requestPermission();
     if (!granted) { setGpsStatus('Izin lokasi ditolak'); return; }
+
+    // Defensif terhadap tap-ganda cepat (dua panggilan lolos guard sebelum state commit):
+    // buang langganan lama sebelum memasang yang baru.
+    watchRef.current?.remove(); watchRef.current = null;
+    floorWatchRef.current?.remove(); floorWatchRef.current = null;
 
     setAutoMode(true);
     setGpsStatus('Mencari GPS...');
