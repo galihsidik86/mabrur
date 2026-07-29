@@ -311,7 +311,7 @@ Sa'i adalah perjalanan bolak-balik antara bukit Safa dan Marwah. Sistem mendetek
 
 ## 5. Deteksi Jamarat (Jumrah)
 
-**File**: `apps/mobile/src/services/sacred-zones.ts:219-233`
+**File**: `apps/mobile/src/services/sacred-zones-core.ts` (algoritma murni, `detectNearestJamarat`), `sacred-zones.ts` (re-export + watcher GPS)
 
 ### Koordinat Tiga Jamarat
 
@@ -351,7 +351,7 @@ Hari ke-4 (13 Dzulhijjah): Ula → Wustha → Aqabah (opsional)
 
 ## 6. Deteksi Posisi Arafah
 
-**File**: `apps/mobile/src/services/sacred-zones.ts:32-93`
+**File**: `apps/mobile/src/services/sacred-zones-core.ts` (algoritma murni, `isPointInPolygon`, `checkArafahPosition`), `sacred-zones.ts` (re-export + watcher GPS)
 
 ### Koordinat Referensi
 
