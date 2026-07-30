@@ -50,11 +50,22 @@ Deploy server seperti biasa (`git pull && npm install && npm run server:build &&
 `npm install` perlu karena ada dependensi baru `livekit-server-sdk`.
 
 ## 3. Build & uji aplikasi mobile
-Modul WebRTC bersifat native → butuh prebuild + build:
+Modul WebRTC bersifat native → butuh prebuild + build.
+
+**Prasyarat build (penting — gotcha yang sudah terbukti):**
+- **JDK 17–21** (mis. JBR Android Studio). JDK 24/25 membuat langkah *prefab*
+  WebRTC gagal (`GeneratePrefabPackages` menganggap warning "restricted method"
+  JVM sebagai error). Set `JAVA_HOME` ke JDK 21 sebelum build.
+- `livekit-client` sudah masuk dependencies (peer dep `@livekit/react-native`;
+  tanpa ini Metro gagal resolve saat bundling).
+- Setelah `prebuild --clean`, `android/local.properties` terhapus → buat ulang
+  `sdk.dir=<path Android SDK>`.
+
 ```bash
 cd apps/mobile
-npm install                       # pasang dep LiveKit (branch ini)
+npm install                       # pasang dep LiveKit + livekit-client (branch ini)
 npx expo prebuild -p android      # terapkan config plugin (izin mikrofon, minSdk, dll)
+export JAVA_HOME="/path/ke/jdk21" # JBR Android Studio: .../Android Studio/jbr
 cd android && ./gradlew assembleRelease
 ```
 Uji end-to-end butuh **2 perangkat** di rombongan yang sama:
