@@ -9,9 +9,13 @@
     "ios": "expo run:ios"
   },
   "dependencies": {
+    "@config-plugins/react-native-webrtc": "^15.0.1",
     "@expo-google-fonts/plus-jakarta-sans": "^0.4.2",
     "@expo/metro-runtime": "~57.0.3",
     "@expo/vector-icons": "^15.0.2",
+    "@livekit/react-native": "^2.12.0",
+    "@livekit/react-native-expo-plugin": "^1.0.2",
+    "@livekit/react-native-webrtc": "^144.1.2",
     "expo": "latest",
     "expo-constants": "~57.0.3",
     "expo-device": "~57.0.0",

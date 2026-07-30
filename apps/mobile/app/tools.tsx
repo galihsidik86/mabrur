@@ -804,6 +804,14 @@ function HubMenu({ onSelect }: { onSelect: (t: Tab) => void }) {
         <Text style={hub.label}>Perekam GPS</Text>
         <Text style={hub.arabic}>riset</Text>
       </TouchableOpacity>
+      {/* prototipe: suara rombongan (broadcast muthawwif → jamaah) */}
+      <TouchableOpacity style={hub.card} onPress={() => router.push('/voice')} activeOpacity={0.7}>
+        <View style={[hub.iconBox, { backgroundColor: colors.primaryDark }]}>
+          <Ionicons name="megaphone" size={24} color="#fff" />
+        </View>
+        <Text style={hub.label}>Suara Rombongan</Text>
+        <Text style={hub.arabic}>beta</Text>
+      </TouchableOpacity>
     </View>
   );
 }

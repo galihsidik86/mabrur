@@ -20,6 +20,10 @@ import {
 import { startBackgroundLocation } from '../src/services/background';
 import { scheduleUpcomingNotifications } from '../src/services/schedule-notify';
 import { retryPendingUploads } from '../src/services/trace-recorder';
+import { registerGlobals as registerLiveKitGlobals } from '@livekit/react-native';
+
+// LiveKit (Suara Rombongan) butuh global WebRTC didaftarkan sekali saat start.
+registerLiveKitGlobals();
 import { api } from '../src/services/api';
 import Constants from 'expo-constants';
 

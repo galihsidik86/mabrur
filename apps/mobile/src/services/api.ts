@@ -184,6 +184,9 @@ export const api = {
     request<any>(`/checklist/${id}`, { method: 'PATCH', body: JSON.stringify({ checked }) }),
   deleteChecklist: (id: string) =>
     request<any>(`/checklist/${id}`, { method: 'DELETE' }),
+  // Suara Rombongan (LiveKit): token + url + peran (speaker/listener) untuk grup user
+  getVoiceToken: () =>
+    request<{ url: string; token: string; room: string; role: 'speaker' | 'listener' }>('/voice/token'),
   getPhrases: () => request<any[]>('/phrases'),
   getHealthTips: () => request<any[]>('/health-tips'),
   getPrayerTimes: (lat?: number, lng?: number) =>

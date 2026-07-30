@@ -1,0 +1,20 @@
+# Konfigurasi LiveKit server (single-node) untuk Suara Rombongan.
+# GANTI api key & secret di bawah, dan pakai NILAI YANG SAMA di .env server API
+# (LIVEKIT_API_KEY / LIVEKIT_API_SECRET). Buat pasangan kunci acak:
+#   docker run --rm livekit/livekit-server generate-keys
+
+port: 7880
+rtc:
+  tcp_port: 7881
+  port_range_start: 50000
+  port_range_end: 60000
+  # VPS ber-IP publik: deteksi IP eksternal otomatis agar media bisa menembus NAT.
+  use_external_ip: true
+
+# key: secret  (minimal 1 pasang). JANGAN pakai contoh ini di produksi.
+keys:
+  APIganti_dengan_key_acak: ganti_dengan_secret_acak_min_32_char
+
+# Logging ringkas
+logging:
+  level: info

@@ -22,7 +22,8 @@
       "supportsTablet": true,
       "infoPlist": {
         "NSLocationWhenInUseUsageDescription": "Mabrur memerlukan lokasi untuk fitur geofence miqat dan SOS.",
-        "NSLocationAlwaysUsageDescription": "Mabrur memerlukan lokasi di latar belakang untuk peringatan batas miqat."
+        "NSLocationAlwaysUsageDescription": "Mabrur memerlukan lokasi di latar belakang untuk peringatan batas miqat.",
+        "NSMicrophoneUsageDescription": "Mabrur memerlukan mikrofon untuk siaran suara rombongan (muthawwif memandu doa)."
       }
     },
     "android": {
@@ -38,7 +39,9 @@
       "expo-sqlite",
       "expo-font",
       "expo-splash-screen",
-      "expo-status-bar"
+      "expo-status-bar",
+      "@livekit/react-native-expo-plugin",
+      "@config-plugins/react-native-webrtc"
     ],
     "extra": {
       "apiUrl": "https://mabrur.sosmartpro.com"
