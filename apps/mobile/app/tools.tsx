@@ -255,9 +255,12 @@ function TasbihTab() {
   useEffect(() => { activateKeepAwakeAsync('tasbih'); return () => { deactivateKeepAwake('tasbih'); }; }, []);
 
   const tap = () => {
+    if (counts[mode] >= m.target) return; // sudah selesai — jangan getar berulang
     const next = [...counts];
-    if (next[mode] < m.target) { next[mode]++; setCounts(next); Vibration.vibrate(30); }
-    if (next[mode] >= m.target) Vibration.vibrate([0, 200, 100, 200]);
+    next[mode]++;
+    setCounts(next);
+    // Getar "selesai" hanya tepat saat mencapai target; selain itu getar biasa.
+    Vibration.vibrate(next[mode] >= m.target ? [0, 200, 100, 200] : 30);
   };
 
   return (
@@ -742,16 +745,25 @@ function ChecklistTab() {
       <View style={{ flexDirection: 'row', gap: 8, marginBottom: 16 }}>
         <TextInput style={[tc.input, { flex: 1 }]} value={newText} onChangeText={setNewText} placeholder="Tambah item..." placeholderTextColor={colors.textFaint} />
         <TouchableOpacity style={{ width: 42, height: 42, borderRadius: 10, backgroundColor: colors.primary, alignItems: 'center', justifyContent: 'center' }}
-          onPress={async () => { if (!newText.trim()) return; try { await api.addChecklist(newText.trim()); setNewText(''); load(); } catch {} }}>
+          onPress={async () => { if (!newText.trim()) return; try { await api.addChecklist(newText.trim()); setNewText(''); load(); } catch { Alert.alert('Gagal menyimpan', 'Item tidak tersimpan. Periksa koneksi internet lalu coba lagi.'); } }}>
           <Ionicons name="add" size={20} color="#fff" />
         </TouchableOpacity>
       </View>
       {items.map((item: any) => (
-        <TouchableOpacity key={item.id} style={{ flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 10, borderBottomWidth: 1, borderBottomColor: colors.borderLight }}
-          onPress={async () => { try { await api.toggleChecklist(item.id, !item.checked); load(); } catch {} }}>
-          <Ionicons name={item.checked ? 'checkbox' : 'square-outline'} size={22} color={item.checked ? colors.green : colors.textFaint} />
-          <Text style={{ fontSize: 14, fontFamily: 'PlusJakartaSans_500Medium', color: item.checked ? colors.textFaint : colors.text, textDecorationLine: item.checked ? 'line-through' : 'none' }}>{item.text}</Text>
-        </TouchableOpacity>
+        <View key={item.id} style={{ flexDirection: 'row', alignItems: 'center', paddingVertical: 10, borderBottomWidth: 1, borderBottomColor: colors.borderLight }}>
+          <TouchableOpacity style={{ flex: 1, flexDirection: 'row', alignItems: 'center', gap: 12 }}
+            onPress={async () => { try { await api.toggleChecklist(item.id, !item.checked); load(); } catch { Alert.alert('Gagal', 'Tidak dapat memperbarui. Periksa koneksi.'); } }}>
+            <Ionicons name={item.checked ? 'checkbox' : 'square-outline'} size={22} color={item.checked ? colors.green : colors.textFaint} />
+            <Text style={{ fontSize: 14, fontFamily: 'PlusJakartaSans_500Medium', color: item.checked ? colors.textFaint : colors.text, textDecorationLine: item.checked ? 'line-through' : 'none' }}>{item.text}</Text>
+          </TouchableOpacity>
+          <TouchableOpacity style={{ padding: 8 }} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+            onPress={() => Alert.alert('Hapus item?', item.text, [
+              { text: 'Batal', style: 'cancel' },
+              { text: 'Hapus', style: 'destructive', onPress: async () => { try { await api.deleteChecklist(item.id); load(); } catch { Alert.alert('Gagal', 'Tidak dapat menghapus. Periksa koneksi.'); } } },
+            ])}>
+            <Ionicons name="trash-outline" size={18} color={colors.textFaint} />
+          </TouchableOpacity>
+        </View>
       ))}
     </View>
   );

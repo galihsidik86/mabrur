@@ -182,6 +182,8 @@ export const api = {
     request<any>('/checklist', { method: 'POST', body: JSON.stringify({ text }) }),
   toggleChecklist: (id: string, checked: boolean) =>
     request<any>(`/checklist/${id}`, { method: 'PATCH', body: JSON.stringify({ checked }) }),
+  deleteChecklist: (id: string) =>
+    request<any>(`/checklist/${id}`, { method: 'DELETE' }),
   getPhrases: () => request<any[]>('/phrases'),
   getHealthTips: () => request<any[]>('/health-tips'),
   getPrayerTimes: (lat?: number, lng?: number) =>
