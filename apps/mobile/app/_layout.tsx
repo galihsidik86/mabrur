@@ -21,6 +21,7 @@ import { startBackgroundLocation } from '../src/services/background';
 import { scheduleUpcomingNotifications } from '../src/services/schedule-notify';
 import { retryPendingUploads } from '../src/services/trace-recorder';
 import { registerGlobals as registerLiveKitGlobals } from '@livekit/react-native';
+import { VoiceHost } from '../src/components/VoiceHost';
 
 // LiveKit (Suara Rombongan) butuh global WebRTC didaftarkan sekali saat start.
 registerLiveKitGlobals();
@@ -130,7 +131,7 @@ export default function RootLayout() {
   }
 
   return (
-    <>
+    <VoiceHost>
       <StatusBar style="dark" />
       <Stack screenOptions={{ headerShown: false }}>
         <Stack.Screen name="login" />
@@ -143,6 +144,6 @@ export default function RootLayout() {
         <Stack.Screen name="rating" />
         <Stack.Screen name="tools" />
       </Stack>
-    </>
+    </VoiceHost>
   );
 }
