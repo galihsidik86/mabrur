@@ -7,6 +7,7 @@ import { View, Text, TouchableOpacity, ActivityIndicator, StyleSheet, Vibration 
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
+import { activateKeepAwakeAsync, deactivateKeepAwake } from 'expo-keep-awake';
 import {
   LiveKitRoom, AudioSession, useLocalParticipant, useParticipants, useConnectionState,
 } from '@livekit/react-native';
@@ -31,7 +32,10 @@ export default function VoiceScreen() {
       }
     })();
     AudioSession.startAudioSession();
-    return () => { AudioSession.stopAudioSession(); mounted = false; };
+    // Jaga layar tetap nyala selama di saluran suara — cegah koneksi WebRTC drop
+    // saat layar meredup/tidur (penyebab umum status "menghubungkan" berulang).
+    activateKeepAwakeAsync('voice');
+    return () => { AudioSession.stopAudioSession(); deactivateKeepAwake('voice'); mounted = false; };
   }, []);
 
   if (error) {
