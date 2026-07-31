@@ -23,10 +23,24 @@ router.get('/token', async (req: Request, res: Response, next: NextFunction) => 
 
     const userId = req.auth!.sub;
 
-    // Keanggotaan grup + peran menentukan hak siaran.
-    const membership = await db('group_members')
-      .where({ user_id: userId, is_active: true })
-      .first();
+    // Rombongan yang disiarkan/didengarkan. Muthawwif bisa berada di >1 rombongan,
+    // jadi terima ?group=<id> agar bisa memilih (dan jamaah tetap di rombongannya).
+    // Tanpa param → deterministik (orderBy group_id), bukan .first() acak.
+    const groupParam = typeof req.query.group === 'string' ? req.query.group : undefined;
+    let membership;
+    if (groupParam) {
+      membership = await db('group_members')
+        .where({ user_id: userId, group_id: groupParam, is_active: true })
+        .first();
+      if (!membership) {
+        throw new AppError(403, 'Kamu bukan anggota rombongan tersebut', 'FORBIDDEN');
+      }
+    } else {
+      membership = await db('group_members')
+        .where({ user_id: userId, is_active: true })
+        .orderBy('group_id')
+        .first();
+    }
     if (!membership?.group_id) {
       throw new AppError(400, 'Kamu belum tergabung dalam rombongan', 'NO_GROUP');
     }
