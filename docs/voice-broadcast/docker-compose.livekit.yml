@@ -1,0 +1,17 @@
+# LiveKit self-host untuk fitur "Suara Rombongan" (broadcast muthawwif → jamaah).
+# Jalankan TERPISAH dari mabrur-api (PM2). Butuh VPS dengan IP publik.
+#
+#   docker compose -f docker-compose.livekit.yml up -d
+#
+# network_mode: host dipakai agar rentang port UDP media (50000-60000) terbuka
+# tanpa memetakan ribuan port satu per satu. Pastikan firewall VPS mengizinkan:
+#   - TCP 7880 (signaling WebSocket)   - TCP 7881 (RTC/TCP fallback)
+#   - UDP 50000-60000 (media)          - UDP 7882 (opsional, TURN)
+services:
+  livekit:
+    image: livekit/livekit-server:v1.8
+    restart: unless-stopped
+    network_mode: host
+    command: --config /etc/livekit.yaml
+    volumes:
+      - ./livekit.yaml:/etc/livekit.yaml:ro

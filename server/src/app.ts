@@ -18,6 +18,7 @@ import enhancementsRoutes from './routes/enhancements';
 import worshipRoutes from './routes/worship';
 import gpsTracesRoutes from './routes/gps-traces';
 import integrationsRoutes from './routes/integrations';
+import voiceRoutes from './routes/voice';
 import path from 'path';
 import { db } from './db';
 
@@ -71,6 +72,7 @@ app.use('/', featuresRoutes);
 app.use('/', enhancementsRoutes);
 app.use('/', worshipRoutes);
 app.use('/', gpsTracesRoutes);
+app.use('/voice', voiceRoutes);
 app.use('/uploads', express.static(path.resolve(__dirname, '../uploads')));
 
 // 404

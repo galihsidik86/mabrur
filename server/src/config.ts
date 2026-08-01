@@ -16,6 +16,12 @@ const envSchema = z.object({
   // Token service-to-service utk integrasi Safar (opsional — endpoint /integrations
   // menolak 503 bila tidak dikonfigurasi). Min 32 karakter.
   SAFAR_SYNC_TOKEN: z.string().min(32).optional(),
+
+  // Suara Rombongan (LiveKit self-host) — opsional. Bila tak diisi, endpoint
+  // /voice/token menolak 503. URL WebSocket signaling (mis. wss://voice.sosmartpro.com).
+  LIVEKIT_URL: z.string().url().optional(),
+  LIVEKIT_API_KEY: z.string().min(1).optional(),
+  LIVEKIT_API_SECRET: z.string().min(1).optional(),
 });
 
 export const config = envSchema.parse(process.env);
