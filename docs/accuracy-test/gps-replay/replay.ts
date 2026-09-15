@@ -6,7 +6,9 @@
  * - Sa'i    : transformasi rigid trace ke sumbu Safa->Marwah (skala dilaporkan);
  *             truth = lintasan terhalus melalui SaiTracker yang sama.
  * - Tawaf   : superimposisi deret residual riil (grid 3 dtk) ke lingkaran ideal
- *             r=25 m, 7 putaran; truth = 7.
+ *             r=25 m, 7 putaran, DENGAN fase diam settle (5 sampel) di awal &
+ *             tail (10 sampel) di akhir (identik run.ts §tawafPath, kebijakan
+ *             UI "GPS aktif ~30 dtk setelah selesai"); truth = 7.
  * - Miqat / Arafah / Jamarat : klasifikasi titik pada K penempatan deterministik
  *             melintasi batas; truth = sisi titik terhalus, prediksi = titik mentah.
  */
@@ -38,7 +40,7 @@ const r2 = (v: number) => +v.toFixed(2);
 
 export interface SaiReplayResult {
   applicable: boolean;
-  scale: number;            // 419 / panjang-leg-aktual (derau ikut terskala)
+  scale: number;            // jarak Safa-Marwah (≈377 m) / panjang-leg-aktual (derau ikut terskala)
   legLengthM: number;
   truthLegs: number;
   predictedLegs: number;
@@ -61,7 +63,7 @@ export function replaySai(raw: EnuPoint[], smooth: EnuPoint[]): SaiReplayResult 
   const kLon = mPerDegLon(SAFA.lat);
   const tgtE = (MARWAH.lng - SAFA.lng) * kLon;
   const tgtN = (MARWAH.lat - SAFA.lat) * M_PER_DEG_LAT;
-  const corridor = Math.hypot(tgtE, tgtN); // ±419 m
+  const corridor = Math.hypot(tgtE, tgtN); // ±377 m (koordinat OSM Safa/Marwah, revisi 2026-09-15)
   const targetBearing = Math.atan2(tgtN, tgtE);
 
   const traceBearing = Math.atan2(smooth[farIdx].n - s0.n, smooth[farIdx].e - s0.e);
@@ -99,28 +101,47 @@ export interface TawafReplayResult {
   residualTiled: boolean;   // deret residual < 700 sampel -> diulang (dicatat)
 }
 
+// Fase diam di awal (settle) & akhir (tail) — TANPA ini, lintasan "mulai
+// dingin langsung berjalan, berhenti TEPAT di 2520°" kehilangan ~1-2 langkah
+// rotasi ke referensi awal TawafTracker (rata-rata sirkular 3 sampel pertama
+// di dalam band, kebijakan "tidak pernah dini") TANPA cara memulihkannya --
+// under-count SISTEMATIS ke 6 bahkan pada residual nol (bukan bug, konsekuensi
+// langsung kebijakan tsb; dibuktikan reviewer, lihat CLAUDE.md & handoff 04r).
+// Pola & jumlah sampel identik dengan harness utama: docs/accuracy-test/run.ts
+// §tawafPath (TAWAF_SETTLE=5 di titik mulai, TAWAF_TAIL=10 di titik selesai,
+// sesuai kebijakan UI "biarkan GPS aktif ~30 dtk setelah terasa selesai").
+const TAWAF_SETTLE = 5, TAWAF_TAIL = 10;
+
 export function replayTawaf(residuals: Residual[]): TawafReplayResult {
   const res3s = resampleResiduals(residuals, 3000);
-  const stepsPerLap = 100, total = 7 * stepsPerLap; // identik dengan harness: 300 dtk/putaran, 3 dtk/sampel
+  const stepsPerLap = 100, total = 7 * stepsPerLap; // 700 langkah putaran, identik dengan harness: 300 dtk/putaran, 3 dtk/sampel
+  const totalSamples = TAWAF_SETTLE + total + TAWAF_TAIL; // 715 sampel dikirim ke tracker
   const startBeta = 271.8;
-  const tiled = res3s.length < total;
+  const tiled = res3s.length < totalSamples;
 
   const tracker = new TawafTracker();
-  for (let s = 0; s < total; s++) {
-    const beta = ((startBeta + s * (360 / stepsPerLap)) * Math.PI) / 180;
+  let sampleIdx = 0;
+  const step = (betaDeg: number) => {
+    const beta = (betaDeg * Math.PI) / 180;
     const rIdeal = 25;
     // CCW (berlawanan jarum jam — tawaf yang sah): dE=r·cosβ, dN=r·sinβ dengan
     // β naik → sudut atan2(dN,dE) naik. (Revisi 2026-09-14, selaras dengan
     // fix arah TawafTracker — lihat sacred-zones-core.ts.)
     const dE = rIdeal * Math.cos(beta), dN = rIdeal * Math.sin(beta);
-    const noise = res3s[s % res3s.length];
+    const noise = res3s[sampleIdx % res3s.length];
     const ll = enuToLatLon(dE + noise.dE, dN + noise.dN, KAABAH);
-    tracker.update(ll.lat, ll.lng, s * 3000); // seam waktu produksi
-  }
+    tracker.update(ll.lat, ll.lng, sampleIdx * 3000); // seam waktu produksi, bertambah tiap sampel
+    sampleIdx++;
+  };
+  for (let i = 0; i < TAWAF_SETTLE; i++) step(startBeta);
+  for (let s = 1; s <= total; s++) step(startBeta + s * (360 / stepsPerLap));
+  const finalBeta = startBeta + total * (360 / stepsPerLap);
+  for (let i = 0; i < TAWAF_TAIL; i++) step(finalBeta);
+
   return {
     truthRounds: 7, predictedRounds: tracker.getRounds(),
     exact: tracker.getRounds() === 7,
-    residualSamplesUsed: Math.min(res3s.length, total), residualTiled: tiled,
+    residualSamplesUsed: Math.min(res3s.length, totalSamples), residualTiled: tiled,
   };
 }
 

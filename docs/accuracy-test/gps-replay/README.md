@@ -55,12 +55,18 @@ GPX/CSV → parser (validasi, dedup, segmen) → ENU lokal → smoothing (MA-11)
    Komponen galat berfrekuensi rendah (autokorelasi kuat, multipath berkelanjutan)
    sebagian terserap ke referensi sehingga **σ efektif adalah batas bawah**.
    Residual dipangkas half-window di kedua ujung untuk menghindari bias tepi.
-3. **Sa'i memakai skala.** Koridor trace dipetakan ke Safa–Marwah 419 m dengan
-   faktor skala s (dilaporkan per trace); derau ikut terskala sebesar s.
+3. **Sa'i memakai skala.** Koridor trace dipetakan ke Safa–Marwah ≈377 m
+   (koordinat OSM, revisi 2026-09-15 — dihitung dinamis dari `SAFA`/`MARWAH`,
+   bukan hardcode) dengan faktor skala s (dilaporkan per trace); derau ikut
+   terskala sebesar s.
 4. **Tawaf memakai superimposisi residual.** Trace jalan kaki tidak berbentuk
    lingkaran r=25 m, maka deret residual riil (grid 3 dtk) ditumpangkan ke
-   lingkaran ideal 7 putaran. Bila deret lebih pendek dari 700 sampel, deret
-   diulang (*tiling*) — pola berulang dicatat di laporan.
+   lingkaran ideal 7 putaran, DENGAN fase diam settle (5 sampel) di titik
+   mulai & tail (10 sampel) di titik selesai — identik pola `run.ts`
+   §tawafPath, tanpanya `TawafTracker` produksi (kebijakan "tidak pernah
+   dini") under-count sistematis ke 6 putaran bahkan tanpa derau. Total 715
+   sampel dikirim ke tracker; bila deret residual lebih pendek dari itu,
+   deret diulang (*tiling*) — pola berulang dicatat di laporan.
 5. **Klasifikasi memusatkan sampel di pita batas** (25 penempatan deterministik,
    ±50 m; jamarat ±15 m). Akurasi replay TIDAK sebanding secara absolut dengan
    angka simulasi (yang menyebar sampel merata di area luas) — bandingkan

@@ -108,7 +108,7 @@ export function buildFieldReport(traces: TraceReportInput[], demo: boolean, resu
     // catatan per algoritma
     const notes: string[] = [];
     if (!r.sai.applicable) notes.push("Sa'i: trace bukan bolak-balik (leg < 50 m) — hasil 0/0 valid tapi tidak informatif.");
-    else notes.push(`Sa'i: skala pemetaan s = ${id(r.sai.scale)} (leg aktual ${id(r.sai.legLengthM, 0)} m → koridor 419 m; derau ikut terskala).`);
+    else notes.push(`Sa'i: skala pemetaan s = ${id(r.sai.scale)} (leg aktual ${id(r.sai.legLengthM, 0)} m → koridor Safa-Marwah ≈377 m; derau ikut terskala).`);
     if (r.tawaf.residualTiled) notes.push(`Tawaf: deret residual (${r.tawaf.residualSamplesUsed} sampel 3 dtk) lebih pendek dari 700 — diulang (tiling), pola berulang tercatat sebagai keterbatasan.`);
     notes.push(`Klasifikasi (miqat/arafah/jamarat): ${'25'} penempatan deterministik melintasi batas; total sampel miqat ${r.miqat.total}, arafah ${r.arafah.total}, jamarat ${r.jamarat.totalTruthDetected}.`);
     L.push(notes.map((n) => `- ${n}`).join('\n'));
