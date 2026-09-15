@@ -142,6 +142,9 @@ export default function ProfileScreen() {
           <Ionicons name="log-out-outline" size={18} color={colors.danger} />
           <Text style={s.logoutText}>{t('profile.logout')}</Text>
         </TouchableOpacity>
+
+        {/* Atribusi data lokasi (Ka'bah, Safa/Marwah, Jamarat, batas Arafah) */}
+        <Text style={s.creditText}>Data lokasi tempat suci: © OpenStreetMap contributors (ODbL)</Text>
       </ScrollView>
     </SafeAreaView>
   );
@@ -177,4 +180,5 @@ const s = StyleSheet.create({
   saveBtnText: { fontSize: 14, fontFamily: 'PlusJakartaSans_700Bold', color: colors.textOnPrimary },
   logoutBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, marginTop: 24, padding: 14, borderWidth: 1, borderColor: colors.primaryLight, borderRadius: 12 },
   logoutText: { fontSize: 14, fontFamily: 'PlusJakartaSans_700Bold', color: colors.danger },
+  creditText: { fontSize: 11, fontFamily: 'PlusJakartaSans_500Medium', color: colors.textFaint, textAlign: 'center', marginTop: 16 },
 });

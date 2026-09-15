@@ -30,7 +30,7 @@ import {
 import { useAuthStore } from '../../src/stores/auth';
 import { getGroups } from '../../src/services/db';
 import MapViewComponent from '../../src/components/MapView';
-import { ARAFAH_BOUNDARY, ARAFAH_CENTER, KAABAH } from '../../src/services/sacred-zones';
+import { ARAFAH_BOUNDARY, ARAFAH_CENTER, KAABAH, NAMIRAH_MOSQUE_CENTER } from '../../src/services/sacred-zones';
 
 const MAP_HEIGHT = 300;
 const screenW = Dimensions.get('window').width;
@@ -213,7 +213,7 @@ export default function PetaScreen() {
             userLocation={userPos}
             markers={[
               { lat: ARAFAH_CENTER.lat, lng: ARAFAH_CENTER.lng, icon: '⛰️', name: 'Jabal Rahmah' },
-              { lat: 21.3630, lng: 39.9760, icon: '🕌', name: 'Masjid Namirah (batas rawan!)' },
+              { lat: NAMIRAH_MOSQUE_CENTER.lat, lng: NAMIRAH_MOSQUE_CENTER.lng, icon: '🕌', name: 'Masjid Namirah (batas rawan!)' },
             ]}
             polygons={[{
               coords: ARAFAH_BOUNDARY,

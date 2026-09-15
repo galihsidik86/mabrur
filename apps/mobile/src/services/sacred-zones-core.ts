@@ -4,31 +4,79 @@
 // sehingga permukaan modul bagi aplikasi tidak berubah.
 
 // ==================== SACRED COORDINATES ====================
+// Revisi 2026-09-15: koordinat diganti dari perkiraan tanpa sumber ke titik
+// OSM konkret (node/way, id tercantum per baris). © OpenStreetMap
+// contributors, ODbL; diakses 2026-09-15. Metodologi & sumber lengkap:
+// .orkestra/runs/20260915-1900-lanjutan-lokasi-pustaka-apk/handoffs/01-research-scout-koordinat.md
 
-export const KAABAH = { lat: 21.42251, lng: 39.82620 };
-export const HAJAR_ASWAD = { lat: 21.42244, lng: 39.82631 }; // SE corner
+export const KAABAH = { lat: 21.4225172, lng: 39.8261942 }; // centroid way 103914569 (5 titik sudut)
+export const HAJAR_ASWAD = { lat: 21.4224985, lng: 39.8262546 }; // node 1199442721 "Black Stone" — TIDAK dipakai TawafTracker (lihat komentar di bawah)
 
-export const SAFA = { lat: 21.42266, lng: 39.82649 };
-export const MARWAH = { lat: 21.42640, lng: 39.82698 };
+export const SAFA = { lat: 21.4217996, lng: 39.8274307 }; // node 4589923995, natural=peak "الصفا"
+export const MARWAH = { lat: 21.4251754, lng: 39.8271276 }; // node 4589923996, natural=peak "المروة"
 
 // ==================== ARAFAH BOUNDARY ====================
-// Padang Arafah: area wukuf yang sah
-// Batas utama menggunakan polygon sederhana (5 titik)
-// Sumber: peta resmi Kementerian Haji Saudi Arabia
+// Padang Arafah: area wukuf yang sah.
+// Sumber: poligon komunitas OSM (landuse=religious, Plain of Arafat,
+// wikidata Q16912386), way 1377422823, v7 — bukan batas resmi pemerintah;
+// © OpenStreetMap contributors, ODbL; diakses 2026-09-15. Divalidasi tidak
+// langsung terhadap fatwa Masjid Namirah (islamweb.net #193141) — lihat
+// handoff 01 di atas §Q1/Q2 untuk pengujian silang lengkap.
 
-export const ARAFAH_CENTER = { lat: 21.3549, lng: 39.9842 }; // Jabal Rahmah
+export const ARAFAH_CENTER = { lat: 21.3547998, lng: 39.9841015 }; // Jabal Rahmah, natural=peak (OSM/Nominatim)
 export const ARAFAH_BOUNDARY: Array<{ lat: number; lng: number }> = [
-  { lat: 21.3750, lng: 39.9600 },  // barat laut
-  { lat: 21.3780, lng: 40.0100 },  // timur laut
-  { lat: 21.3400, lng: 40.0200 },  // timur tenggara
-  { lat: 21.3250, lng: 39.9900 },  // selatan
-  { lat: 21.3350, lng: 39.9550 },  // barat daya
+  { lat: 21.3695977, lng: 39.9773800 },
+  { lat: 21.3761499, lng: 39.9826889 },
+  { lat: 21.3782040, lng: 39.9852638 },
+  { lat: 21.3793226, lng: 39.9866656 },
+  { lat: 21.3771534, lng: 39.9899693 },
+  { lat: 21.3763054, lng: 39.9912909 },
+  { lat: 21.3674582, lng: 39.9905980 },
+  { lat: 21.3649751, lng: 39.9898635 },
+  { lat: 21.3653071, lng: 39.9881482 },
+  { lat: 21.3645777, lng: 39.9872851 },
+  { lat: 21.3623821, lng: 39.9871238 },
+  { lat: 21.3610123, lng: 39.9882060 },
+  { lat: 21.3579478, lng: 39.9928825 },
+  { lat: 21.3563638, lng: 39.9942318 },
+  { lat: 21.3546853, lng: 39.9951724 },
+  { lat: 21.3495338, lng: 39.9965037 },
+  { lat: 21.3472738, lng: 39.9969318 },
+  { lat: 21.3459372, lng: 39.9970903 },
+  { lat: 21.3444054, lng: 39.9970858 },
+  { lat: 21.3418877, lng: 39.9963221 },
+  { lat: 21.3404027, lng: 39.9955882 },
+  { lat: 21.3392462, lng: 39.9947035 },
+  { lat: 21.3382420, lng: 39.9936124 },
+  { lat: 21.3367177, lng: 39.9911417 },
+  { lat: 21.3363585, lng: 39.9901304 },
+  { lat: 21.3353732, lng: 39.9835979 },
+  { lat: 21.3357169, lng: 39.9811298 },
+  { lat: 21.3343626, lng: 39.9762420 },
+  { lat: 21.3343495, lng: 39.9735835 },
+  { lat: 21.3331892, lng: 39.9703003 },
+  { lat: 21.3351444, lng: 39.9666153 },
+  { lat: 21.3456610, lng: 39.9561698 },
+  { lat: 21.3500997, lng: 39.9609418 },
+  { lat: 21.3523336, lng: 39.9642624 },
+  { lat: 21.3540982, lng: 39.9680279 },
+  { lat: 21.3591488, lng: 39.9735006 },
 ];
 
-// Masjid Namirah: sebagian di dalam Arafah, sebagian di luar
-// Wukuf di bagian masjid yang di luar Arafah TIDAK SAH
-export const NAMIRAH_BOUNDARY = { lat: 21.3630, lng: 39.9760 };
-export const NAMIRAH_WARNING_RADIUS = 200; // meter — area peringatan
+// Masjid Namirah: sebagian di dalam Arafah (sisi timur/belakang), sebagian
+// di luar (sisi barat/mihrab, di Wadi Uranah) — dikonfirmasi fatwa
+// islamweb.net #193141 (mengutip Ibn Al-Qayyim, Ibn Taymiyyah, dll.) DAN
+// pengujian geometris independen terhadap poligon di atas (handoff 01 §Q2).
+// NAMIRAH_MOSQUE_CENTER = centroid aritmetika 51 titik jejak bangunan OSM
+// way 112317307; © OpenStreetMap contributors, ODbL; diakses 2026-09-15.
+export const NAMIRAH_MOSQUE_CENTER = { lat: 21.3532148, lng: 39.9658102 };
+// Jarak ke TEPI poligon Arafah untuk memicu peringatan (lihat checkArafahPosition).
+export const NAMIRAH_WARNING_RADIUS = 200; // meter
+// Radius di sekitar NAMIRAH_MOSQUE_CENTER yang membatasi peringatan hanya ke
+// tepi poligon DEKAT masjid — mencegah peringatan salah-pasang di tepi
+// poligon lain yang jauh dari Namirah (revisi 2026-09-15, ganti model lama
+// "1 titik NAMIRAH_BOUNDARY salah lokasi ±1.491 m" + lingkaran).
+const NAMIRAH_PROXIMITY_RADIUS = 1000; // meter
 
 // ==================== ARAFAH ZONE DETECTION ====================
 
@@ -51,6 +99,40 @@ export function isPointInPolygon(
   return inside;
 }
 
+// Konversi meter<->derajat (sama dgn docs/accuracy-test/sim-core.ts) — dipakai
+// HANYA oleh distanceToPolygonBoundaryMeters di bawah (proyeksi planar lokal).
+const M_PER_DEG_LAT = 111320;
+function mPerDegLngLocal(lat: number): number { return 111320 * Math.cos((lat * Math.PI) / 180); }
+
+// Jarak titik ke TEPI poligon terdekat (meter), proyeksi planar East/North
+// berpusat di titik uji — akurat untuk skala poligon Arafah (~5 km), sama
+// pendekatan dgn kurva batas di docs/accuracy-test/experiments/analytic.ts.
+// Dipakai HANYA untuk logika peringatan Namirah (bukan untuk in/out — itu
+// tetap ray casting isPointInPolygon di atas).
+function distanceToPolygonBoundaryMeters(
+  lat: number, lng: number,
+  polygon: Array<{ lat: number; lng: number }>,
+): number {
+  const kLng = mPerDegLngLocal(lat);
+  const toEN = (p: { lat: number; lng: number }) => ({
+    e: (p.lng - lng) * kLng,
+    n: (p.lat - lat) * M_PER_DEG_LAT,
+  });
+  let min = Infinity;
+  const n = polygon.length;
+  for (let i = 0, j = n - 1; i < n; j = i++) {
+    const a = toEN(polygon[j]), b = toEN(polygon[i]);
+    const dx = b.e - a.e, dy = b.n - a.n;
+    const lenSq = dx * dx + dy * dy;
+    let t = lenSq === 0 ? 0 : (-a.e * dx - a.n * dy) / lenSq; // proyeksi titik uji (0,0) ke segmen
+    t = Math.max(0, Math.min(1, t));
+    const cx = a.e + t * dx, cy = a.n + t * dy;
+    const d = Math.hypot(cx, cy);
+    if (d < min) min = d;
+  }
+  return min;
+}
+
 export type ArafahStatus =
   | 'inside'         // di dalam Arafah — wukuf sah
   | 'outside'        // di luar Arafah — wukuf TIDAK sah
@@ -60,13 +142,13 @@ export type ArafahStatus =
 export interface ArafahResult {
   status: ArafahStatus;
   distToCenter: number;       // meter ke Jabal Rahmah
-  distToNamirah: number;      // meter ke batas Namirah
+  distToNamirah: number;      // meter ke Masjid Namirah (NAMIRAH_MOSQUE_CENTER)
   message: string;
 }
 
 export function checkArafahPosition(lat: number, lng: number): ArafahResult {
   const distToCenter = distanceMetersExport(lat, lng, ARAFAH_CENTER.lat, ARAFAH_CENTER.lng);
-  const distToNamirah = distanceMetersExport(lat, lng, NAMIRAH_BOUNDARY.lat, NAMIRAH_BOUNDARY.lng);
+  const distToNamirah = distanceMetersExport(lat, lng, NAMIRAH_MOSQUE_CENTER.lat, NAMIRAH_MOSQUE_CENTER.lng);
   const inArafah = isPointInPolygon(lat, lng, ARAFAH_BOUNDARY);
 
   if (!inArafah) {
@@ -78,7 +160,14 @@ export function checkArafahPosition(lat: number, lng: number): ArafahResult {
     };
   }
 
-  if (distToNamirah <= NAMIRAH_WARNING_RADIUS) {
+  // Peringatan Namirah: HANYA saat dekat TEPI poligon (≤200 m) DAN dekat
+  // Masjid Namirah itu sendiri (≤1.000 m dari NAMIRAH_MOSQUE_CENTER) — kedua
+  // syarat mencegah peringatan salah-pasang di tepi poligon lain yang jauh
+  // dari Namirah (revisi 2026-09-15, lihat komentar NAMIRAH_* di atas).
+  const distToBoundary = distanceToPolygonBoundaryMeters(lat, lng, ARAFAH_BOUNDARY);
+  const nearNamirah = distToBoundary <= NAMIRAH_WARNING_RADIUS && distToNamirah <= NAMIRAH_PROXIMITY_RADIUS;
+
+  if (nearNamirah) {
     return {
       status: 'namirah_danger',
       distToCenter,
@@ -100,10 +189,16 @@ export function distanceMetersExport(lat1: number, lng1: number, lat2: number, l
   return distanceMeters(lat1, lng1, lat2, lng2);
 }
 
+// Revisi 2026-09-15: koordinat lama urutannya TERBALIK (Aqabah app punya
+// bujur PALING TIMUR, seharusnya PALING BARAT/terdekat Makkah). Diganti node
+// OSM historic=monument (lokasi historis, bukan dinding fisik aktual di
+// jembatan bertingkat saat ini — belum ada sumber terbuka untuk itu, lihat
+// handoff 01 §Q3 "Pertanyaan untuk user" no. 1). © OpenStreetMap
+// contributors, ODbL; diakses 2026-09-15.
 export const JAMARAT = {
-  ula: { lat: 21.4212, lng: 39.8717, name: 'Jamarat Ula (Kecil)' },
-  wustha: { lat: 21.4207, lng: 39.8722, name: 'Jamarat Wustha (Tengah)' },
-  aqabah: { lat: 21.4203, lng: 39.8727, name: 'Jamarat Aqabah (Besar)' },
+  ula: { lat: 21.4199079, lng: 39.8741791, name: 'Jamarat Ula (Kecil)' }, // node 4144223248
+  wustha: { lat: 21.4207404, lng: 39.8729996, name: 'Jamarat Wustha (Tengah)' }, // node 4144223249
+  aqabah: { lat: 21.4216493, lng: 39.8709424, name: 'Jamarat Aqabah (Besar)' }, // node 4144223250, paling dekat Makkah
 };
 
 // ==================== DISTANCE HELPER ====================

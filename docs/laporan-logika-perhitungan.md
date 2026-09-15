@@ -122,9 +122,13 @@ Toggle ihram:
 
 ### Koordinat Referensi
 
+> **Revisi 2026-09-15**: diganti dari perkiraan tanpa sumber tercatat ke
+> koordinat OSM konkret. © OpenStreetMap contributors, ODbL; diakses
+> 2026-09-15. Sumber & metodologi lengkap: `.orkestra/runs/20260915-1900-lanjutan-lokasi-pustaka-apk/handoffs/01-research-scout-koordinat.md`.
+
 ```
-Ka'bah:       21.42251°N, 39.82620°E
-Hajar Aswad:  21.42244°N, 39.82631°E (sudut tenggara, titik awal tawaf)
+Ka'bah:       21.4225172°N, 39.8261942°E (centroid way OSM 103914569, 5 titik sudut)
+Hajar Aswad:  21.4224985°N, 39.8262546°E (node OSM 1199442721 "Black Stone")
 ```
 
 ### Algoritma
@@ -372,10 +376,15 @@ Info lantai bersifat **best-effort** (tidak semua ponsel punya barometer; tekana
 
 ### Koordinat Referensi
 
+> **Revisi 2026-09-15**: diganti ke node puncak OSM `natural=peak`. Jarak
+> lama (419 m) tak bersumber; angka lain yang beredar (~450 m) kemungkinan
+> mengukur koridor Mas'a berjalan, bukan jarak lurus titik puncak — lihat
+> handoff 01 §Q4 untuk pembahasan tiga angka berbeda.
+
 ```
-Safa:    21.42266°N, 39.82649°E
-Marwah:  21.42640°N, 39.82698°E
-Jarak antara keduanya: ~415 meter (garis lurus)
+Safa:    21.4217996°N, 39.8274307°E (node OSM 4589923995)
+Marwah:  21.4251754°N, 39.8271276°E (node OSM 4589923996)
+Jarak antara keduanya: ≈376,7 meter (garis lurus, Haversine)
 ```
 
 ### Algoritma
@@ -424,11 +433,19 @@ Sa'i adalah perjalanan bolak-balik antara bukit Safa dan Marwah. Sistem mendetek
 
 ### Koordinat Tiga Jamarat
 
-| Jamarat | Lat | Lng | Nama |
-|---------|-----|-----|------|
-| Ula (Kecil) | 21.4212 | 39.8717 | Jamarat Ula |
-| Wustha (Tengah) | 21.4207 | 39.8722 | Jamarat Wustha |
-| Aqabah (Besar) | 21.4203 | 39.8727 | Jamarat Aqabah |
+> **Revisi 2026-09-15**: koordinat lama TERBALIK arahnya (Aqabah lama punya
+> bujur PALING TIMUR, seharusnya PALING BARAT/terdekat Makkah). Diganti node
+> OSM `historic=monument` (lokasi historis; koordinat dinding fisik AKTUAL di
+> jembatan bertingkat saat ini belum ada sumber terbuka — lihat handoff 01
+> §Q3 "Pertanyaan untuk user"). © OpenStreetMap contributors, ODbL.
+
+| Jamarat | Lat | Lng | Nama | Node OSM |
+|---------|-----|-----|------|----------|
+| Ula (Kecil) | 21.4199079 | 39.8741791 | Jamarat Ula | 4144223248 |
+| Wustha (Tengah) | 21.4207404 | 39.8729996 | Jamarat Wustha | 4144223249 |
+| Aqabah (Besar) | 21.4216493 | 39.8709424 | Jamarat Aqabah (paling dekat Makkah) | 4144223250 |
+
+Jarak antarpilar (Haversine): Ula–Wustha ≈153,2 m; Wustha–Aqabah ≈235,7 m; Ula–Aqabah ≈387,0 m.
 
 ### Algoritma Deteksi Kedekatan
 
@@ -464,16 +481,23 @@ Hari ke-4 (13 Dzulhijjah): Ula → Wustha → Aqabah (opsional)
 
 ### Koordinat Referensi
 
-```
-Jabal Rahmah (pusat):  21.3549°N, 39.9842°E
-Masjid Namirah:        21.3630°N, 39.9760°E
+> **Revisi 2026-09-15**: poligon 5-titik lama (tanpa sumber tercatat, bentuk
+> tak sepadan dgn area Arafah sebenarnya) diganti poligon 36-titik OSM way
+> `1377422823` (`landuse=religious`, "Plain of Arafat", wikidata Q16912386) —
+> poligon komunitas OSM, **bukan** batas resmi pemerintah, tapi divalidasi
+> tidak langsung lewat uji Masjid Namirah (lihat di bawah). Titik tunggal
+> `NAMIRAH_BOUNDARY` (salah lokasi ≈1.491 m dari Masjid Namirah sebenarnya)
+> dihapus, diganti `NAMIRAH_MOSQUE_CENTER` (centroid 51 titik jejak bangunan
+> OSM way `112317307`). © OpenStreetMap contributors, ODbL; diakses
+> 2026-09-15. Sumber & metodologi lengkap: handoff 01 (lihat §3 di atas).
 
-Batas wilayah Arafah (poligon 5 titik):
-  Barat Laut:  21.3750°N, 39.9600°E
-  Timur Laut:  21.3780°N, 40.0100°E
-  Tenggara:    21.3400°N, 40.0200°E
-  Selatan:     21.3250°N, 39.9900°E
-  Barat Daya:  21.3350°N, 39.9550°E
+```
+Jabal Rahmah (pusat):     21.3547998°N, 39.9841015°E (natural=peak OSM)
+Masjid Namirah (pusat):   21.3532148°N, 39.9658102°E (centroid 51 titik, way 112317307)
+
+Batas wilayah Arafah: poligon 36 titik, OSM way 1377422823 — lihat
+apps/mobile/src/services/sacred-zones-core.ts (ARAFAH_BOUNDARY) untuk
+koordinat lengkap; terlalu panjang untuk dikutip di sini.
 ```
 
 ### Algoritma Point-in-Polygon (Ray Casting)
@@ -498,25 +522,43 @@ HASIL: inside = true → di dalam Arafah
 
 ### Status Posisi
 
+> **Revisi 2026-09-15**: model peringatan Namirah lama ("1 titik + radius
+> lingkaran 200 m", titik salah lokasi ≈1.491 m) diganti model berbasis
+> poligon: peringatan HANYA dipicu bila posisi di dalam Arafah DAN dekat TEPI
+> poligon (≤200 m) DAN dekat Masjid Namirah itu sendiri (≤1.000 m dari
+> `NAMIRAH_MOSQUE_CENTER`) — mencegah peringatan salah-pasang di tepi poligon
+> lain yang jauh dari Namirah. Bentuk `ArafahResult` (status/pesan) tidak
+> berubah, jadi UI (`apps/mobile/app/tools.tsx`) tidak perlu diubah.
+
 ```
 1. Hitung posisi:
-   dalam_arafah  = isPointInPolygon(lat, lng, ARAFAH_BOUNDARY)
-   jarak_namirah = haversine(posisi_user, NAMIRAH_BOUNDARY)
+   dalam_arafah    = isPointInPolygon(lat, lng, ARAFAH_BOUNDARY)
+   jarak_pusat     = haversine(posisi_user, ARAFAH_CENTER)          // Jabal Rahmah
+   jarak_namirah   = haversine(posisi_user, NAMIRAH_MOSQUE_CENTER)  // pusat masjid
+   jarak_ke_tepi   = jarak minimum posisi_user ke setiap SISI poligon ARAFAH_BOUNDARY
+                     (proyeksi planar East/North lokal, jarak titik-ke-segmen)
 
 2. Tentukan status:
-   JIKA tidak dalam arafah    → status = "outside"
+   JIKA tidak dalam_arafah                                   → status = "outside"
        Pesan: "Kamu di luar batas Arafah"
-   JIKA jarak_namirah ≤ 200m  → status = "namirah_danger"
+   JIKA jarak_ke_tepi ≤ 200m  DAN  jarak_namirah ≤ 1.000m     → status = "namirah_danger"
        Pesan: "Peringatan: dekat Masjid Namirah — wukuf di sini tidak sah"
-   SELAIN ITU                 → status = "inside"
+   SELAIN ITU                                                 → status = "inside"
        Pesan: "Kamu berada di dalam Arafah"
 ```
 
+Uji geometris terhadap Masjid Namirah (titik-titik di jejak bangunan OSM way
+112317307) mengonfirmasi: sisi barat/mihrab masjid jatuh DI LUAR poligon
+Arafah (Wadi Uranah), sisi timur/belakang jatuh DI DALAM — sejalan dengan
+fatwa islamweb.net #193141 (mengutip Ibn Al-Qayyim, Ibn Taymiyyah, dll.) yang
+menyebut sebagian masjid di dalam Arafah, sebagian di Wadi Uranah.
+
 | Parameter | Nilai |
 |-----------|-------|
-| Radius peringatan Namirah | 200 m |
+| Radius peringatan Namirah (ke tepi poligon) | 200 m |
+| Radius kedekatan Masjid Namirah (ke `NAMIRAH_MOSQUE_CENTER`) | 1.000 m |
 | Metode deteksi area | Ray casting polygon |
-| Jumlah titik poligon | 5 |
+| Jumlah titik poligon | 36 (OSM way 1377422823) |
 
 ---
 
@@ -689,17 +731,22 @@ SETIAP update lokasi background:
 
 ### Tempat Suci
 
-| Lokasi | Lintang (°N) | Bujur (°E) |
-|--------|-------------|------------|
-| Ka'bah | 21.42251 | 39.82620 |
-| Hajar Aswad | 21.42244 | 39.82631 |
-| Bukit Safa | 21.42266 | 39.82649 |
-| Bukit Marwah | 21.42640 | 39.82698 |
-| Jabal Rahmah (Arafah) | 21.35490 | 39.98420 |
-| Masjid Namirah | 21.36300 | 39.97600 |
-| Jamarat Ula | 21.42120 | 39.87170 |
-| Jamarat Wustha | 21.42070 | 39.87220 |
-| Jamarat Aqabah | 21.42030 | 39.87270 |
+> **Revisi 2026-09-15**: seluruh baris diganti ke koordinat OSM bersumber
+> (node/way id di kolom terakhir). © OpenStreetMap contributors, ODbL;
+> diakses 2026-09-15. Lihat handoff 01 untuk metodologi lengkap.
+
+| Lokasi | Lintang (°N) | Bujur (°E) | Sumber OSM |
+|--------|-------------|------------|------------|
+| Ka'bah (pusat) | 21.4225172 | 39.8261942 | centroid way 103914569 |
+| Hajar Aswad | 21.4224985 | 39.8262546 | node 1199442721 |
+| Bukit Safa | 21.4217996 | 39.8274307 | node 4589923995 |
+| Bukit Marwah | 21.4251754 | 39.8271276 | node 4589923996 |
+| Jabal Rahmah (Arafah) | 21.3547998 | 39.9841015 | natural=peak |
+| Masjid Namirah (centroid bangunan) | 21.3532148 | 39.9658102 | centroid way 112317307 (51 titik) |
+| Jamarat Ula | 21.4199079 | 39.8741791 | node 4144223248 |
+| Jamarat Wustha | 21.4207404 | 39.8729996 | node 4144223249 |
+| Jamarat Aqabah | 21.4216493 | 39.8709424 | node 4144223250 |
+| Batas Arafah | poligon 36 titik | poligon 36 titik | way 1377422823 |
 
 ### Miqat
 
@@ -733,7 +780,8 @@ SETIAP update lokasi background:
 | Interval barometer | 2 | detik | Update tekanan deteksi lantai |
 | Radius zona Sa'i | 25 | meter | Deteksi Safa/Marwah |
 | Radius deteksi Jamarat | 30 | meter | Proximity jamarat |
-| Radius peringatan Namirah | 200 | meter | Zona bahaya Arafah |
+| Radius peringatan Namirah (ke tepi poligon) | 200 | meter | Zona bahaya Arafah |
+| Radius kedekatan Masjid Namirah (ke `NAMIRAH_MOSQUE_CENTER`) | 1.000 | meter | Zona bahaya Arafah (revisi 2026-09-15) |
 | Cooldown notifikasi background | 300 | detik | Anti-spam notifikasi |
 | Sudut Subuh | -18,5 / -20 / -18 | derajat | Umm al-Qura / Kemenag / MWL |
 | Sudut Syuruq/Maghrib | -0,833 | derajat | Waktu shalat (semua metode) |
@@ -749,3 +797,4 @@ SETIAP update lokasi background:
 *Revisi 30 Juli 2026: metode Subuh/Isya per wilayah — Umm al-Qura/Kemenag/MWL (Bagian 7).*
 *Revisi 14 September 2026: perbaikan bug kritis arah TawafTracker (Bagian 3) — skema lama menghitung putaran SEARAH jarum jam (CW), bukan BERLAWANAN (CCW) seperti disyaratkan tawaf yang sah (dibuktikan lintasan sintetis CCW 7 putaran → 0 pada skema lama). Diganti dengan akumulasi rotasi kumulatif (bebas dari asumsi azimuth garis Hajar Aswad, yang di skema lama tak pernah diverifikasi) + toleransi derau `ROUND_TOL_DEG` yang menggantikan debounce waktu 120 detik (terbukti tak diperlukan lagi). Lihat tabel ketahanan derau di Bagian 3.*
 *Revisi 15 September 2026: kebijakan "tidak pernah dini" (Bagian 3) — review independen (handoff `05v-code-reviewer-tawaf.md`) menemukan `ROUND_TOL_DEG=60°` (revisi 14 September) membuat aplikasi mengumumkan putaran selesai rata-rata ~30 m busur (p50, hingga ~41 m p95) SEBELUM jamaah benar-benar menyelesaikannya — risiko fikih. `ROUND_TOL_DEG` DIHAPUS, diganti referensi awal rata-rata sirkular (`REF_SAMPLES=3`) + margin=0 murni (tanpa toleransi positif) — keduanya HANYA memperlambat pemicuan, tidak pernah mempercepatnya; diverifikasi 0 m dini pada σ=0 (bukan mendekati nol). Ditambah perbaikan M2: keluar-masuk band kini melacak durasi jeda eksplisit (`MAX_GAP_SEC=90 dtk`) alih-alih membekukan referensi secara diam-diam (dulu berisiko kurang-hitung tanpa sinyal). Evaluasi numerik (handoff `05c-tdd-guide-tawaf-never-early.md`) membuktikan target aspirasional p95 dini ≤5 m TIDAK TERCAPAI bersamaan dengan syarat tepat-7 ≥95% pada r=25 m/σ=5 m (p95 aktual ~7–11 m) — didokumentasikan sebagai keterbatasan presisi GPS konsumer, bukan kegagalan implementasi. Tabel ketahanan derau & tabel konstanta di Bagian 3 diperbarui.*
+*Revisi 15 September 2026 (kedua): koordinat OSM (Bagian 3, 4, 5, 6, 9, 10) — seluruh koordinat sakral (Ka'bah, Hajar Aswad, Safa, Marwah, Jamarat, Jabal Rahmah, Masjid Namirah, batas Arafah) diganti dari perkiraan tanpa sumber tercatat ke titik/poligon OSM konkret (node/way id per baris, © OpenStreetMap contributors, ODbL; diakses 2026-09-15) — lihat `.orkestra/runs/20260915-1900-lanjutan-lokasi-pustaka-apk/handoffs/01-research-scout-koordinat.md` untuk metodologi & sumber lengkap. Perubahan berdampak: Safa–Marwah 419,0→376,7 m; jarak antar-jamarat 76,0/68,2/144,0→153,2/235,7/387,0 m (urutan Aqabah–Wustha–Ula lama TERBALIK, diperbaiki); poligon Arafah 5 titik buatan sendiri→36 titik OSM way 1377422823; model peringatan Namirah diganti dari "1 titik salah lokasi + lingkaran 200 m" menjadi "dekat tepi poligon (≤200 m) DAN dekat Masjid Namirah (≤1.000 m dari centroid bangunan OSM)" — bentuk `ArafahResult`/API `checkArafahPosition` tidak berubah. Angka Tabel 6 (Tawaf) & Tabel 7 (Sa'i) TIDAK berubah (Ka'bah bergeser <1 m, tak berdampak; separasi Safa–Marwah tetap ≫ noise GPS). Naskah & harness (`docs/accuracy-test/`) diregenerasi ulang — lihat `docs/accuracy-test/README.md` §"Revisi 2026-09-15 — koordinat OSM".*
