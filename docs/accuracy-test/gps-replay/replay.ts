@@ -109,7 +109,10 @@ export function replayTawaf(residuals: Residual[]): TawafReplayResult {
   for (let s = 0; s < total; s++) {
     const beta = ((startBeta + s * (360 / stepsPerLap)) * Math.PI) / 180;
     const rIdeal = 25;
-    const dN = rIdeal * Math.cos(beta), dE = rIdeal * Math.sin(beta);
+    // CCW (berlawanan jarum jam — tawaf yang sah): dE=r·cosβ, dN=r·sinβ dengan
+    // β naik → sudut atan2(dN,dE) naik. (Revisi 2026-09-14, selaras dengan
+    // fix arah TawafTracker — lihat sacred-zones-core.ts.)
+    const dE = rIdeal * Math.cos(beta), dN = rIdeal * Math.sin(beta);
     const noise = res3s[s % res3s.length];
     const ll = enuToLatLon(dE + noise.dE, dN + noise.dN, KAABAH);
     tracker.update(ll.lat, ll.lng, s * 3000); // seam waktu produksi

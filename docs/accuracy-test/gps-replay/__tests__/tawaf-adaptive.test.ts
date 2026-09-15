@@ -8,17 +8,34 @@ const mPerDegLng = (lat: number) => M_PER_DEG_LAT * Math.cos((lat * Math.PI) / 1
 // Lintasan melingkar metrik r meter mengelilingi Ka'bah, 7 putaran, sampling 3 dtk.
 // startBeta 271.8° = offset setengah-langkah (hindari sampel tepat di angle 0),
 // sama seperti harness run.ts.
+// Arah CCW (berlawanan jarum jam — tawaf yang sah): dE = r·cos(beta), dN = r·sin(beta)
+// dengan beta naik → sudut atan2(dN,dE) naik → berlawanan jarum jam.
+// (Revisi 2026-09-14: sebelumnya dN=r·cosβ/dE=r·sinβ = azimut kompas naik = CW,
+// bug — lihat sacred-zones-core.ts §TawafTracker.)
+//
+// Revisi 2026-09-15 (kebijakan "tidak pernah dini"): tracker kini merata-
+// ratakan REF_SAMPLES=3 sampel pertama (rata-rata sirkular) sebagai referensi
+// sudut agar bias aman-ke-belakang (lihat sacred-zones-core.ts §1) — bila 3
+// sampel pertama itu diambil SAAT SUDAH BERJALAN (seperti pola lama di sini),
+// sedikit rotasi awal "hilang" (sengaja, demi keamanan). SETTLE_SAMPLES diam
+// di titik mulai menghilangkan kehilangan itu (referensi = titik mulai persis)
+// — konsisten dengan tawaf-direction.test.ts (T1) & realistis (jamaah diam
+// sejenak di sudut Hajar Aswad sebelum melangkah).
+const SETTLE_SAMPLES = 5;
 function circlePath(r: number): Array<{ lat: number; lng: number; t: number }> {
   const stepsPerLap = 100, total = 7 * stepsPerLap, startBeta = 271.8;
   const pts: Array<{ lat: number; lng: number; t: number }> = [];
-  for (let s = 0; s < total; s++) {
-    const beta = ((startBeta + s * (360 / stepsPerLap)) * Math.PI) / 180;
-    const dN = r * Math.cos(beta), dE = r * Math.sin(beta);
-    pts.push({
-      lat: KAABAH.lat + dN / M_PER_DEG_LAT,
-      lng: KAABAH.lng + dE / mPerDegLng(KAABAH.lat),
-      t: s * 3000,
-    });
+  let t = 0;
+  const toLatLng = (betaDeg: number) => {
+    const beta = (betaDeg * Math.PI) / 180;
+    const dE = r * Math.cos(beta), dN = r * Math.sin(beta);
+    return { lat: KAABAH.lat + dN / M_PER_DEG_LAT, lng: KAABAH.lng + dE / mPerDegLng(KAABAH.lat) };
+  };
+  const start = toLatLng(startBeta);
+  for (let i = 0; i < SETTLE_SAMPLES; i++) { pts.push({ ...start, t }); t += 3000; }
+  for (let s = 1; s <= total; s++) {
+    pts.push({ ...toLatLng(startBeta + s * (360 / stepsPerLap)), t });
+    t += 3000;
   }
   return pts;
 }

@@ -29,7 +29,7 @@ This repo underpins the journal manuscript **"Pengujian Akurasi Algoritma Geospa
 | Haversine distance | great-circle, R = 6 371 000 m | `apps/mobile/src/services/location.ts:3` — duplicated (same formula) in `server/src/services/geofence.service.ts:14` and as `distanceMeters` in `apps/mobile/src/services/sacred-zones-core.ts` |
 | Miqat geofence | point-in-circle | mobile nearest+warning: `location.ts:41` (`findNearest`); the 1 000 m `within_boundary` check lives **server-side**: `geofence.service.ts:25` (`nearestMiqat`) |
 | Arafah boundary | ray-casting point-in-polygon (5 vertices) | `sacred-zones-core.ts` (`isPointInPolygon`, `checkArafahPosition`) |
-| Tawaf counter | angular crossing (0° = Hajar Aswad line), 120 s debounce | `sacred-zones-core.ts` (`TawafTracker`; time injectable, default `Date.now()`) |
+| Tawaf counter | unwrapped cumulative-angle accumulation (CCW = valid direction); "never-early" policy (revised 2026-09-15) — circular-mean 3-sample start reference + zero positive tolerance (margin=0) so a round is only counted after truly crossing 360k°, never before; outlier step-clip 150° (continuous-in-zone only); explicit band-exit gap handling (≤90 s = trust unwrap, >90 s = session break, re-acquire reference); no time debounce | `sacred-zones-core.ts` (`TawafTracker`; `now` param used for band-exit gap timing, not debounce) |
 | Sa'i counter | Safa/Marwah zone-alternation state machine, must start at Safa | `sacred-zones-core.ts` (`SaiTracker`) |
 | Jamarat identification | nearest-in-radius (30 m), 3 classes | `sacred-zones-core.ts` (`detectNearestJamarat`) |
 
@@ -39,7 +39,7 @@ Miqat zone data (5 miqat + Tanah Haram; radius 1 000 m, warning 3 000 m) is seed
 
 ### Monte Carlo accuracy harness
 
-`docs/accuracy-test/run.ts` — self-contained; **algorithms are copied from the mobile sources, not imported** (one documented deviation: trackers take an explicit `now` param instead of `Date.now()` for determinism). Key knobs, all near the top of the file: `SEED = 42` (mulberry32 PRNG), `SIGMAS = [0, 1, 3, 5, 10, 15]` m (Gaussian per-axis E/N noise), meter→degree conversion `M_PER_DEG_LAT = 111320` and `mPerDegLng(lat) = 111320·cos(lat)`. Vincenty (WGS-84) is implemented in the same file as the distance reference.
+`docs/accuracy-test/run.ts` — orchestrator; since the 2026-09-14 R10 revision it **imports** coordinates and pure algorithms (`TawafTracker`, `SaiTracker`, `detectNearestJamarat`, `isPointInPolygon`, `KAABAH`/`SAFA`/`MARWAH`/`ARAFAH_BOUNDARY`/`JAMARAT`) directly from `apps/mobile/src/services/sacred-zones-core.ts` via `docs/accuracy-test/sim-core.ts` (same import pattern as `gps-replay/*`). Two things remain copies, both documented in `sim-core.ts`: `haversine` (identical formula to `location.ts`, which pulls in `expo-location` and cannot run under tsx; also identical to `sacred-zones-core.ts`'s private un-exported `distanceMeters`) and `MIQAT` (mirrors the server seed, not part of `sacred-zones-core.ts`). Trackers keep taking an explicit `now` param — this matches the production signature (`update(lat, lng, now = Date.now())`), no longer a harness-only deviation. Additional R4/R6/R8/R9 experiments live in `docs/accuracy-test/experiments/*.ts`, statistics helpers (Wilson CI, AR(1), Rice distribution) in `docs/accuracy-test/stats.ts`. Key knobs, all near the top of `run.ts`: `SEED = 42` (mulberry32 PRNG), `SIGMAS = [0, 1, 3, 5, 10, 15]` m (Gaussian per-axis E/N noise), meter→degree conversion `M_PER_DEG_LAT = 111320` and `mPerDegLng(lat) = 111320·cos(lat)`. Vincenty (WGS-84) is implemented in `sim-core.ts` as the distance reference.
 
 ```bash
 npm run simulate                         # run.ts + verify-manuscript.ts: regenerate results & verify 138 cells vs manuscript (exit 1 on mismatch)
@@ -61,8 +61,9 @@ Any change to `run.ts` parameters or the algorithms invalidates: `results/*.csv`
 | Jamarat pillar spacing Ula–Wustha / Wustha–Aqabah / Ula–Aqabah | 76.0 / 68.2 / 144.0 m | `JAMARAT` coords |
 | Jamarat detection radius | 30 m | `detectNearestJamarat` |
 | Sa'i zone radius (Safa/Marwah) | 25 m | `SaiTracker.ZONE_RADIUS` |
-| Tawaf tracking band | 10–80 m from Ka'bah | `TawafTracker.update` |
-| Tawaf debounce | 120 s | `TawafTracker.MIN_INTERVAL` |
+| Tawaf tracking band | 10–80 m from Ka'bah (default mode) | `TawafTracker.inTawafZone` |
+| Tawaf start-reference samples / outlier clip | 3 (circular mean) / 150° (no time debounce; round tolerance removed 2026-09-15 — never-early policy, margin=0) | `TawafTracker.REF_SAMPLES` / `MAX_STEP_DEG` |
+| Tawaf band-exit session-break threshold | 90 s | `TawafTracker.MAX_GAP_SEC` |
 | Namirah warning radius | 200 m | `NAMIRAH_WARNING_RADIUS` |
 
 The derived distances (419 m, 76/68.2/144 m) are quoted verbatim in the paper — if any coordinate changes, these numbers and the paper change too.

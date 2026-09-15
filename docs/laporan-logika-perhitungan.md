@@ -129,40 +129,117 @@ Hajar Aswad:  21.42244°N, 39.82631°E (sudut tenggara, titik awal tawaf)
 
 ### Algoritma
 
-Tawaf dilakukan **berlawanan arah jarum jam** (counterclockwise) mengelilingi Ka'bah. Sistem mendeteksi putaran dengan menghitung sudut posisi user relatif terhadap Ka'bah.
+> **Revisi 2026-09-14 (perbaikan bug kritis arah)**: skema lama mendeteksi
+> "putaran" saat sudut melintasi 0° dari rentang (0°,90°) ke (−90°,0°) — itu
+> **searah jarum jam (CW)**, bukan berlawanan (CCW) seperti disyaratkan tawaf
+> yang sah. Dibuktikan dengan lintasan sintetis: 7 putaran CCW penuh (r=25 m)
+> menghasilkan **0** pada skema lama; 7 putaran CW (arah salah) menghasilkan
+> **7** — persis terbalik. Skema akumulasi rotasi (bukan persilangan satu
+> garis tetap) menggantikannya, sehingga otomatis hanya menambah hitungan
+> untuk gerak CCW, dan **tidak lagi bergantung pada azimuth garis Hajar
+> Aswad**.
+>
+> **Revisi 2026-09-15 (kebijakan "TIDAK PERNAH DINI")**: revisi 2026-09-14
+> memakai `ROUND_TOL_DEG=60°` — toleransi NEGATIF, putaran dianggap selesai
+> 60° **SEBELUM** 360k tercapai, untuk menyerap derau. Review independen
+> (handoff `05v-code-reviewer-tawaf.md`) menemukan ini membuat aplikasi
+> mengumumkan "putaran selesai" rata-rata **~30 m busur (p50), hingga ~41 m
+> (p95)** SEBELUM jamaah benar-benar menyelesaikan putaran ke-7 — ~19% dari
+> satu putaran penuh (r=25 m), berisiko fikih (jamaah berhenti sebelum genap
+> 7 putaran). **`ROUND_TOL_DEG` dihapus** dan diganti dua mekanisme yang
+> HANYA memperlambat pemicuan (tidak pernah mempercepatnya) — lihat langkah
+> 1 dan 3b di bawah, serta tabel ketahanan derau yang diperbarui.
+
+Tawaf dilakukan **berlawanan arah jarum jam** (counterclockwise) mengelilingi Ka'bah. Sistem mendeteksi putaran dengan menjumlahkan rotasi sudut posisi user relatif terhadap Ka'bah, sampel demi sampel.
 
 ```
-1. HITUNG sudut posisi user terhadap Ka'bah:
+0. REFERENSI AWAL (saat masuk band pertama kali, atau setelah sesi
+   terputus — lihat langkah 3c): buffer REF_SAMPLES=3 sudut sampel
+   pertama, pakai RATA-RATA SIRKULARnya sebagai referensi (sudut_0).
+   Efek: karena 3 sampel ini diambil SAAT jamaah sudah mulai berjalan
+   (setelah titik mulai sebenarnya), rata-ratanya sedikit condong ke arah
+   jalan → referensi "terlalu maju" → SEMUA delta berikutnya sedikit
+   under-estimate rotasi total → pemicuan LEBIH LAMBAT (aman), tidak pernah
+   lebih cepat.
+
+1. HITUNG sudut posisi user terhadap Ka'bah (tiap sampel k):
    dLat = lat_user - lat_kaabah
    dLng = lng_user - lng_kaabah
-   sudut = atan2(dLat, dLng) × 180/π    // hasil: -180° sampai 180°
-   // 0° = arah timur (sisi Hajar Aswad)
+   sudut_k = atan2(dLat, dLng) × 180/π    // hasil: -180° sampai 180°
+   // 0° = arah timur (referensi matematis, BUKAN diasumsikan = garis Hajar
+   // Aswad — hanya SELISIH antar sampel yang dipakai)
 
-2. FILTER: hanya proses jika 10m ≤ jarak_ke_kaabah ≤ 80m
-   (di luar range ini = bukan sedang tawaf)
+2. FILTER: hanya proses jika 10m ≤ jarak_ke_kaabah ≤ 80m (mode non-adaptif)
+   atau band adaptif (lihat "Dua Mode Band Radius" di bawah)
+   (di luar range ini = bukan sedang tawaf; lihat langkah 3c untuk apa
+   yang terjadi saat KEMBALI ke band setelah sempat keluar)
 
-3. DETEKSI PUTARAN: persilangan 0° dari positif ke negatif
-   JIKA sudut_sebelumnya > 0° DAN < 90°
-   DAN sudut_sekarang < 0° DAN > -90°
-   MAKA: putaran terdeteksi (melewati garis Hajar Aswad)
+3a. AKUMULASI ROTASI (unwrap + jumlahkan, per sampel k>0, sesi kontinu):
+   delta_k = wrap(sudut_k - sudut_(k-1), ke rentang (-180°, 180°])
+   JIKA sesi kontinu (tidak baru kembali dari luar band) DAN |delta_k| > 150°:
+      delta_k = tanda(delta_k) × 150°     // potong outlier (spike GPS/dekat pusat)
+   cumAngle += delta_k                     // + = CCW, - = CW
+   bestCum = MAKS(bestCum, cumAngle)       // rekor tertinggi, tak pernah turun
 
-4. DEBOUNCE: minimal 120 detik antar putaran
-   (mencegah double-count jika GPS berfluktuasi)
+3b. HITUNG PUTARAN (margin = 0, TIDAK ADA toleransi positif, monoton,
+    sekali per kenaikan):
+   putaran_baru = MAKS(0, LANTAI((bestCum + ε) / 360°))   // ε=1e-6° murni presisi float
+   JIKA putaran_baru > putaran_sekarang:
+      putaran_sekarang = putaran_baru
+      trigger onChange(putaran_sekarang)
 
-5. VIBRASI: pola [0, 200, 100, 200] ms saat putaran terdeteksi
+3c. KELUAR-MASUK BAND (sesi/jeda — lihat "Keluar-Masuk Band" di bawah):
+   JIKA kembali ke band setelah sempat keluar:
+     gap = waktu_sekarang - waktu_pertama_keluar
+     JIKA gap ≤ MAX_GAP_SEC (90 dtk): delta dihitung UTUH (langkah 3a
+       TANPA potongan 150° — unwrap sendiri sudah membatasi ke ≤180°)
+     JIKA gap > MAX_GAP_SEC: SESI TERPUTUS — ambil ulang referensi
+       (langkah 0), rotasi selama jeda TIDAK dihitung sama sekali
+
+4. VIBRASI: pola [0, 200, 100, 200] ms saat putaran terdeteksi
 ```
+
+Sifat berteleskop dari langkah 3a (Σ delta_k = sudut_akhir − sudut_awal + 360°×n bila tak ada langkah yang melompat >180°) berarti galat HANYA berasal dari derau sudut di titik-titik ujung tiap segmen — derau di titik-titik antara saling meniadakan secara matematis. Dua titik ujung yang tersisa (referensi awal & sampel terkini) masing-masing diberi bias aman-ke-belakang oleh langkah 0 (rata-rata sirkular) dan langkah 3b (tanpa toleransi positif) — **keduanya HANYA memperlambat pemicuan, tidak pernah mempercepatnya**.
+
+**Evaluasi numerik parameter (handoff TDD `05c-tdd-guide-tawaf-never-early.md`)**: `REF_SAMPLES=3` dipilih dari sapuan M∈{1,3,5,7}; kombinasi K-jendela-rata-rata (M∈{1,3,5},K∈{1..20}) dan margin positif (0–60°) SEMUANYA DICOBA sebagai kandidat "titik lemah #2" tapi **ditolak**: keduanya memperbaiki p95 pemicuan-dini hanya dengan menukar sebagian besar proporsi tepat-7 (jendela "ekor" 30 detik pasca-selesai terlalu pendek untuk konvergensi rata-rata pada σ=5 m/r=25 m). Desain akhir memakai `REF_SAMPLES=3` + **tanpa toleransi/jendela tambahan** (margin=0 murni) karena ini satu-satunya kombinasi yang mempertahankan proporsi tepat-7 ≥95% (target wajib) sekaligus **tidak pernah dini sama sekali pada σ=0** (diverifikasi 0 m deviasi, bukan mendekati nol). Konsekuensinya, p95 pemicuan-dini pada σ=5 m aktual **~7–11 m** — LEBIH BESAR dari target aspirasional ≤5 m yang ditetapkan di awal perencanaan tugas ini; evaluasi numerik membuktikan target ≤5 m TIDAK TERCAPAI bersamaan dengan syarat tepat-7 ≥95% pada radius sekecil 25 m dengan jendela ekor 30 detik apa pun yang dicoba (lihat tabel di bawah).
+
+**Debounce waktu (dulu 120 detik, skema garis lama) TETAP TIDAK DIPAKAI.** Skema kumulatif tidak punya "garis" yang bisa terlewati berulang secara jitter — kenaikan hanya terjadi saat `bestCum` (yang tak pernah turun) melewati ambang `360k`. Terverifikasi lewat skenario "mulai & selesai tepat di titik yang sama, diam 30 detik di awal dan akhir, 7 putaran penuh di antaranya" → hasil tepat 7 (bukan 8, bukan 6) **tanpa debounce apa pun**.
+
+### Keluar-Masuk Band (Sesi & Jeda)
+
+> **Temuan review (M2, handoff `05v-code-reviewer-tawaf.md`)**: sebelum revisi
+> 2026-09-15, keluar band membekukan `prevAngle` tanpa mencatat durasi; saat
+> kembali, delta besar (rotasi riil yang terjadi selagi di luar band) DIPOTONG
+> diam-diam oleh `MAX_STEP_DEG=150°`, menyebabkan **kurang-hitung tanpa
+> sinyal ke pengguna** — mis. jamaah terdorong keluar band oleh kerumunan
+> lalu masuk kembali setelah berputar 170° akan kehilangan 20° tanpa
+> pemberitahuan apa pun.
+
+Durasi keluar band kini eksplisit dilacak (parameter `now` pada `update()`):
+
+| Durasi keluar band | Perlakuan | Alasan |
+|---|---|---|
+| ≤ `MAX_GAP_SEC` (90 dtk) | Delta dihitung UTUH via unwrap (−180°,180°], **tanpa** potongan `MAX_STEP_DEG` | Jeda sementara dalam sesi yang sama (mis. terdorong kerumunan 20–40 dtk); unwrap sendiri sudah membatasi ambiguitas ke ≤180°, aman tanpa guard tambahan untuk jeda sependek ini |
+| > `MAX_GAP_SEC` (90 dtk) | Referensi diambil ulang (langkah 0); rotasi selama jeda **tidak dihitung sama sekali** | Sesi dianggap terputus — lebih aman meminta jamaah menambah putaran daripada diam-diam salah hitung dari data yang tak diketahui |
+
+`MAX_GAP_SEC=90` dtk dipilih agar menaungi jeda realistis kerumunan (target uji 20–40 dtk) dengan margin, namun tetap cukup ketat untuk tidak mempercayai delta dari jeda yang benar-benar panjang.
+
+### Konsekuensi yang Harus Dipahami Pengguna
+
+Karena tidak ada toleransi positif, **jika pelacakan GPS dihentikan TEPAT saat jamaah tiba di titik selesai** (tanpa sampel lanjutan), estimasi mungkin belum mencapai ambang 360k dan **putaran terakhir bisa belum tercatat**. Ini BUKAN bug — ini konsekuensi langsung dari kebijakan "tidak pernah dini" (lebih aman meng-under-count sesaat daripada meng-over-count/dini). Mitigasi: UI (`apps/mobile/app/tools.tsx`) mengarahkan pengguna membiarkan GPS aktif beberapa detik setelah merasa selesai, sampai getaran putaran ke-7 benar-benar muncul.
 
 ### Diagram Arah Sudut
 
 ```
               90° (Utara)
                |
-    180°  -----Ka'bah----- 0° (Timur = Hajar Aswad)
+    180°  -----Ka'bah----- 0° (Timur, referensi matematis)
                |
              -90° (Selatan)
 
-    Arah tawaf: 0° → 90° → 180° → -90° → 0° (counterclockwise)
-    Deteksi: saat sudut cross dari positif ke negatif (melewati 0°)
+    Arah tawaf sah: sudut NAIK (CCW) — 0° → 90° → 180° → -90°(=270°) → 360°(=0°)
+    Deteksi: akumulasi kenaikan sudut mencapai kelipatan 360° (bukan lagi
+    persilangan satu garis tetap — lihat "Akumulasi Rotasi" di atas)
 ```
 
 ### Batasan
@@ -170,14 +247,46 @@ Tawaf dilakukan **berlawanan arah jarum jam** (counterclockwise) mengelilingi Ka
 | Parameter | Nilai | Keterangan |
 |-----------|-------|------------|
 | Radius min | 10 m | Terlalu dekat = di dalam Ka'bah |
-| Radius max | 80 m | Terlalu jauh = bukan tawaf |
-| Debounce | 120 detik | Waktu minimum antar putaran |
+| Radius max | 80 m | Terlalu jauh = bukan tawaf (mode non-adaptif) |
+| Referensi awal (`REF_SAMPLES`) | 3 sampel | Rata-rata sirkular, bias aman-ke-belakang (2026-09-15) |
+| Toleransi hitung putaran | **0 (dihapus 2026-09-15)** | `ROUND_TOL_DEG=60°` lama TERBUKTI membuat pemicuan dini ~30 m (p50); diganti margin=0 murni — lihat "Konsekuensi" di atas |
+| Batas outlier per-langkah (`MAX_STEP_DEG`) | 150° | Lompatan sudut lebih besar dipotong — HANYA berlaku pada sesi kontinu (lihat "Keluar-Masuk Band") |
+| Ambang sesi terputus (`MAX_GAP_SEC`) | 90 dtk | Keluar band > ini = referensi diambil ulang, rotasi selama jeda tak dihitung |
+| Debounce waktu (jitter garis) | **dihapus** (2026-09-14) | Terbukti tak diperlukan pada skema kumulatif |
 | Total putaran | 7 | Jumlah standar tawaf |
 | Presisi GPS | 2 m / 3 detik | Mode BestForNavigation |
 
+### Ketahanan Derau (Tabel Empiris, Revisi 2026-09-15)
+
+Simulasi deterministik (mulberry32 seed=42, Gaussian i.i.d. per sumbu σ), 300 percobaan/sel, `TawafTracker` produksi diimpor langsung (bukan disalin). Skenario mengikuti kebijakan "GPS tetap aktif ≥30 dtk setelah selesai": diam 30 dtk di titik mulai, 7 putaran CCW bising, lalu **varian b** = diam 30 dtk lagi di titik selesai, atau **varian c** = lanjut CCW 30° lalu diam 30 dtk. `dini` = pemicuan putaran ke-7 SEBELUM posisi benar mencapai 360°×7 (harus 0 pada σ=0); `terlambat` = sebaliknya (aman).
+
+| r (m) | σ (m) | mode | varian | tepat-7 | dini p50 (m) | dini p95 (m) | terlambat p50 (m) | terlambat p95 (m) |
+|---|---|---|---|---|---|---|---|---|
+| 25 | 0  | default | b | 100,00% | 0,00 | 0,00 | 0,00 | 0,00 |
+| 25 | 0  | default | c | 100,00% | 0,00 | 0,00 | 0,00 | 0,00 |
+| 25 | 3  | default | b | 99,00%  | 1,57 | 6,28 | 0,00 | 0,00 |
+| 25 | 3  | default | c | 100,00% | 1,57 | 6,28 | 3,14 | 6,28 |
+| 25 | 5  | default | b | 98,33%  | 4,71 | 11,00 | 0,00 | 0,00 |
+| 25 | 5  | default | c | 100,00% | 3,14 | 11,00 | 3,14 | 7,85 |
+| 25 | 5  | adaptif | b | 98,33%  | 4,71 | 11,00 | 0,00 | 0,00 |
+| 25 | 5  | adaptif | c | 100,00% | 3,14 | 11,00 | 3,14 | 7,85 |
+| 25 | 10 | default | b | 94,67%  | 12,57 | 28,27 | 0,00 | 0,00 |
+| 25 | 10 | adaptif | c | 96,33%  | 11,00 | 29,85 | 4,71 | 13,09 |
+| 25 | 15 | default | b | 24,00%  | 25,13 | 163,36 | 0,00 | 0,00 |
+| 25 | 15 | adaptif | c | 28,67%  | 25,13 | 164,93 | 12,57 | 13,09 |
+| 60 | 0  | default | b | 100,00% | 0,00 | 0,00 | 0,00 | 0,00 |
+| 60 | 5  | default | b | 99,00%  | 3,77 | 11,31 | 0,00 | 0,00 |
+| 60 | 5  | adaptif | c | 100,00% | 3,77 | 7,54 | 3,77 | 11,31 |
+| 60 | 10 | default | b | 98,33%  | 7,54 | 22,62 | 0,00 | 0,00 |
+| 60 | 15 | default | b | 98,00%  | 11,31 | 33,93 | 0,00 | 0,00 |
+
+Tabel lengkap (semua kombinasi σ∈{0,3,5,10,15}×r∈{25,60}×mode×varian, 40 baris) di handoff TDD `05c-tdd-guide-tawaf-never-early.md`.
+
+**Target wajib (dites otomatis)**: σ=5 m, r∈{25,60}, mode default & adaptif, varian b & c → proporsi tepat-7 ≥ 0,95 — **tercapai** (min 98,33%). σ=0 → **tidak pernah dini** (0,00 m di semua sel, bukan mendekati nol) — **tercapai**. σ=5 → p95 dini aktual **7–11 m**, TERBUKTI TIDAK mencapai target aspirasional ≤5 m yang ditetapkan di awal perencanaan (lihat pembahasan evaluasi parameter di atas) — didokumentasikan sebagai keterbatasan yang melekat pada presisi GPS konsumer (σ≈5 m) relatif terhadap radius edar sekecil 25 m dan jendela ekor 30 detik, bukan kegagalan implementasi. Baris σ=10/15 dilaporkan sebagai referensi (degradasi diharapkan: pada r=25 m, derau tangensial σ/r≈0,6 rad≈34° per titik pada σ=15 m — mendekati skala satu putaran per beberapa sampel, jauh di luar presisi GPS *BestForNavigation* riil ~2 m), bukan target kelulusan.
+
 ### Dua Mode Band Radius
 
-`TawafTracker` menerima konfigurasi (`TawafConfig`) yang menentukan bagaimana filter jarak (langkah 2 di atas) bekerja. **Deteksi putaran (persilangan sudut, langkah 1/3/4) identik pada kedua mode** — konfigurasi hanya mengubah titik mana yang lolos filter untuk diproses.
+`TawafTracker` menerima konfigurasi (`TawafConfig`) yang menentukan bagaimana filter jarak (langkah 2 di atas) bekerja. **Deteksi putaran (akumulasi rotasi, langkah 1/3/4) identik pada kedua mode** — konfigurasi hanya mengubah titik mana yang lolos filter untuk diproses.
 
 | Mode | `adaptive` | Filter jarak | Dipakai oleh |
 |------|-----------|--------------|--------------|
@@ -616,7 +725,10 @@ SETIAP update lokasi background:
 | Radius zona tawaf (max) | 80 | meter | Tawaf tracker — mode non-adaptif (jurnal) |
 | Radius tawaf hard-max | 300 | meter | Tawaf tracker — batas absolut mode adaptif |
 | Jendela adaptif tawaf | 15 | sampel (~45 dtk) | Estimasi radius edar mode adaptif |
-| Debounce tawaf | 120 | detik | Cegah double-count |
+| Referensi awal tawaf (`REF_SAMPLES`) | 3 | sampel | Rata-rata sirkular, bias aman-ke-belakang, sejak revisi 2026-09-15 |
+| Toleransi hitung putaran tawaf | 0 (dihapus) | derajat | `ROUND_TOL_DEG=60°` lama DIHAPUS 2026-09-15 (terbukti memicu dini ~30 m); margin=0 murni |
+| Batas outlier per-langkah tawaf (`MAX_STEP_DEG`) | 150 | derajat | Lompatan sudut dipotong — hanya sesi kontinu, sejak revisi 2026-09-14 |
+| Ambang sesi terputus tawaf (`MAX_GAP_SEC`) | 90 | detik | Keluar band > ini = referensi diambil ulang, sejak revisi 2026-09-15 |
 | Tinggi antar-lantai (barometer) | 5,5 | meter | Estimasi lantai dari ketinggian |
 | Interval barometer | 2 | detik | Update tekanan deteksi lantai |
 | Radius zona Sa'i | 25 | meter | Deteksi Safa/Marwah |
@@ -635,3 +747,5 @@ SETIAP update lokasi background:
 *Dokumen ini dibuat dari analisis kode sumber Mabrur pada 9 Juli 2026.*
 *Revisi 29 Juli 2026: tambah mode adaptif multi-lantai tawaf + deteksi lantai barometer (Bagian 3).*
 *Revisi 30 Juli 2026: metode Subuh/Isya per wilayah — Umm al-Qura/Kemenag/MWL (Bagian 7).*
+*Revisi 14 September 2026: perbaikan bug kritis arah TawafTracker (Bagian 3) — skema lama menghitung putaran SEARAH jarum jam (CW), bukan BERLAWANAN (CCW) seperti disyaratkan tawaf yang sah (dibuktikan lintasan sintetis CCW 7 putaran → 0 pada skema lama). Diganti dengan akumulasi rotasi kumulatif (bebas dari asumsi azimuth garis Hajar Aswad, yang di skema lama tak pernah diverifikasi) + toleransi derau `ROUND_TOL_DEG` yang menggantikan debounce waktu 120 detik (terbukti tak diperlukan lagi). Lihat tabel ketahanan derau di Bagian 3.*
+*Revisi 15 September 2026: kebijakan "tidak pernah dini" (Bagian 3) — review independen (handoff `05v-code-reviewer-tawaf.md`) menemukan `ROUND_TOL_DEG=60°` (revisi 14 September) membuat aplikasi mengumumkan putaran selesai rata-rata ~30 m busur (p50, hingga ~41 m p95) SEBELUM jamaah benar-benar menyelesaikannya — risiko fikih. `ROUND_TOL_DEG` DIHAPUS, diganti referensi awal rata-rata sirkular (`REF_SAMPLES=3`) + margin=0 murni (tanpa toleransi positif) — keduanya HANYA memperlambat pemicuan, tidak pernah mempercepatnya; diverifikasi 0 m dini pada σ=0 (bukan mendekati nol). Ditambah perbaikan M2: keluar-masuk band kini melacak durasi jeda eksplisit (`MAX_GAP_SEC=90 dtk`) alih-alih membekukan referensi secara diam-diam (dulu berisiko kurang-hitung tanpa sinyal). Evaluasi numerik (handoff `05c-tdd-guide-tawaf-never-early.md`) membuktikan target aspirasional p95 dini ≤5 m TIDAK TERCAPAI bersamaan dengan syarat tepat-7 ≥95% pada r=25 m/σ=5 m (p95 aktual ~7–11 m) — didokumentasikan sebagai keterbatasan presisi GPS konsumer, bukan kegagalan implementasi. Tabel ketahanan derau & tabel konstanta di Bagian 3 diperbarui.*
