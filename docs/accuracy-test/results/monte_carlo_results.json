@@ -45,42 +45,54 @@
       "akurasi": 100,
       "presisi": 100,
       "recall": 100,
-      "f1": 100
+      "f1": 100,
+      "ci_lo": 99.95,
+      "ci_hi": 100
     },
     {
       "sigma": 1,
       "akurasi": 100,
       "presisi": 100,
       "recall": 100,
-      "f1": 100
+      "f1": 100,
+      "ci_lo": 99.95,
+      "ci_hi": 100
     },
     {
       "sigma": 3,
       "akurasi": 99.92,
       "presisi": 99.87,
       "recall": 99.94,
-      "f1": 99.91
+      "f1": 99.91,
+      "ci_lo": 99.84,
+      "ci_hi": 99.97
     },
     {
       "sigma": 5,
       "akurasi": 99.81,
       "presisi": 99.68,
       "recall": 99.84,
-      "f1": 99.76
+      "f1": 99.76,
+      "ci_lo": 99.69,
+      "ci_hi": 99.89
     },
     {
       "sigma": 10,
       "akurasi": 99.69,
       "presisi": 99.59,
       "recall": 99.62,
-      "f1": 99.61
+      "f1": 99.61,
+      "ci_lo": 99.54,
+      "ci_hi": 99.79
     },
     {
       "sigma": 15,
       "akurasi": 99.45,
       "presisi": 99.49,
       "recall": 99.11,
-      "f1": 99.3
+      "f1": 99.3,
+      "ci_lo": 99.26,
+      "ci_hi": 99.59
     }
   ],
   "arafah": [
@@ -89,42 +101,54 @@
       "akurasi": 100,
       "presisi": 100,
       "recall": 100,
-      "f1": 100
+      "f1": 100,
+      "ci_lo": 99.97,
+      "ci_hi": 100
     },
     {
       "sigma": 1,
       "akurasi": 99.98,
       "presisi": 100,
       "recall": 99.96,
-      "f1": 99.98
+      "f1": 99.98,
+      "ci_lo": 99.93,
+      "ci_hi": 99.99
     },
     {
       "sigma": 3,
       "akurasi": 99.95,
       "presisi": 99.99,
       "recall": 99.93,
-      "f1": 99.96
+      "f1": 99.96,
+      "ci_lo": 99.89,
+      "ci_hi": 99.98
     },
     {
       "sigma": 5,
       "akurasi": 99.84,
       "presisi": 99.82,
       "recall": 99.9,
-      "f1": 99.86
+      "f1": 99.86,
+      "ci_lo": 99.75,
+      "ci_hi": 99.9
     },
     {
       "sigma": 10,
       "akurasi": 99.63,
       "presisi": 99.68,
       "recall": 99.68,
-      "f1": 99.68
+      "f1": 99.68,
+      "ci_lo": 99.51,
+      "ci_hi": 99.73
     },
     {
       "sigma": 15,
       "akurasi": 99.44,
       "presisi": 99.48,
       "recall": 99.55,
-      "f1": 99.52
+      "f1": 99.52,
+      "ci_lo": 99.29,
+      "ci_hi": 99.56
     }
   ],
   "tawaf": [
@@ -132,43 +156,55 @@
       "sigma": 0,
       "mean": 7,
       "exact7": 100,
+      "ci_lo": 98.74,
+      "ci_hi": 100,
       "mae": 0,
       "rmse": 0
     },
     {
       "sigma": 1,
-      "mean": 7,
-      "exact7": 100,
-      "mae": 0,
-      "rmse": 0
+      "mean": 6.99,
+      "exact7": 98.67,
+      "ci_lo": 96.62,
+      "ci_hi": 99.48,
+      "mae": 0.013,
+      "rmse": 0.115
     },
     {
       "sigma": 3,
-      "mean": 7,
-      "exact7": 100,
-      "mae": 0,
-      "rmse": 0
+      "mean": 6.99,
+      "exact7": 98.67,
+      "ci_lo": 96.62,
+      "ci_hi": 99.48,
+      "mae": 0.013,
+      "rmse": 0.115
     },
     {
       "sigma": 5,
-      "mean": 7,
-      "exact7": 100,
-      "mae": 0,
-      "rmse": 0
+      "mean": 6.98,
+      "exact7": 97.67,
+      "ci_lo": 95.26,
+      "ci_hi": 98.87,
+      "mae": 0.023,
+      "rmse": 0.153
     },
     {
       "sigma": 10,
-      "mean": 7,
-      "exact7": 100,
-      "mae": 0,
-      "rmse": 0
+      "mean": 6.95,
+      "exact7": 92.67,
+      "ci_lo": 89.15,
+      "ci_hi": 95.11,
+      "mae": 0.073,
+      "rmse": 0.271
     },
     {
       "sigma": 15,
-      "mean": 7.31,
-      "exact7": 72.67,
-      "mae": 0.313,
-      "rmse": 0.632
+      "mean": 6.43,
+      "exact7": 28.33,
+      "ci_lo": 23.53,
+      "ci_hi": 33.68,
+      "mae": 1.197,
+      "rmse": 1.607
     }
   ],
   "sai": [
@@ -176,6 +212,8 @@
       "sigma": 0,
       "mean": 7,
       "exact7": 100,
+      "ci_lo": 98.74,
+      "ci_hi": 100,
       "mae": 0,
       "rmse": 0
     },
@@ -183,6 +221,8 @@
       "sigma": 1,
       "mean": 7,
       "exact7": 100,
+      "ci_lo": 98.74,
+      "ci_hi": 100,
       "mae": 0,
       "rmse": 0
     },
@@ -190,6 +230,8 @@
       "sigma": 3,
       "mean": 7,
       "exact7": 100,
+      "ci_lo": 98.74,
+      "ci_hi": 100,
       "mae": 0,
       "rmse": 0
     },
@@ -197,6 +239,8 @@
       "sigma": 5,
       "mean": 7,
       "exact7": 100,
+      "ci_lo": 98.74,
+      "ci_hi": 100,
       "mae": 0,
       "rmse": 0
     },
@@ -204,6 +248,8 @@
       "sigma": 10,
       "mean": 7,
       "exact7": 100,
+      "ci_lo": 98.74,
+      "ci_hi": 100,
       "mae": 0,
       "rmse": 0
     },
@@ -211,6 +257,8 @@
       "sigma": 15,
       "mean": 7,
       "exact7": 100,
+      "ci_lo": 98.74,
+      "ci_hi": 100,
       "mae": 0,
       "rmse": 0
     }
@@ -219,36 +267,48 @@
     {
       "sigma": 0,
       "benar": 100,
+      "ci_lo": 99.97,
+      "ci_hi": 100,
       "salahPilar": 0,
       "takTerdeteksi": 0
     },
     {
       "sigma": 1,
       "benar": 100,
+      "ci_lo": 99.97,
+      "ci_hi": 100,
       "salahPilar": 0,
       "takTerdeteksi": 0
     },
     {
       "sigma": 3,
       "benar": 100,
+      "ci_lo": 99.97,
+      "ci_hi": 100,
       "salahPilar": 0,
       "takTerdeteksi": 0
     },
     {
       "sigma": 5,
       "benar": 100,
+      "ci_lo": 99.97,
+      "ci_hi": 100,
       "salahPilar": 0,
       "takTerdeteksi": 0
     },
     {
       "sigma": 10,
       "benar": 97.31,
+      "ci_lo": 97,
+      "ci_hi": 97.58,
       "salahPilar": 0.03,
       "takTerdeteksi": 2.67
     },
     {
       "sigma": 15,
       "benar": 83.53,
+      "ci_lo": 82.86,
+      "ci_hi": 84.19,
       "salahPilar": 0.32,
       "takTerdeteksi": 16.15
     }
@@ -272,5 +332,238 @@
       "aqabah": 3332,
       "none": 654
     }
+  },
+  "tawaf_histogram": {
+    "0": {
+      "7": 300
+    },
+    "1": {
+      "6": 4,
+      "7": 296
+    },
+    "3": {
+      "6": 4,
+      "7": 296
+    },
+    "5": {
+      "6": 7,
+      "7": 293
+    },
+    "10": {
+      "6": 18,
+      "7": 278,
+      "8": 4
+    },
+    "15": {
+      "2": 2,
+      "3": 6,
+      "4": 18,
+      "5": 53,
+      "6": 71,
+      "7": 85,
+      "8": 47,
+      "9": 11,
+      "10": 4,
+      "11": 2,
+      "12": 1
+    }
+  },
+  "tawaf_early_trigger": [
+    {
+      "sigma": 0,
+      "early_deg_mean": 0,
+      "early_deg_p5": 0,
+      "early_deg_p50": 0,
+      "early_deg_p95": 0,
+      "early_arc_m_mean": 0,
+      "n_exact7": 300,
+      "late_deg_p50": null,
+      "late_deg_p95": null,
+      "late_arc_m_p50": null,
+      "late_arc_m_p95": null
+    },
+    {
+      "sigma": 1,
+      "early_deg_mean": -0.389,
+      "early_deg_p5": -3.6,
+      "early_deg_p50": 0,
+      "early_deg_p95": 0,
+      "early_arc_m_mean": -0.17,
+      "n_exact7": 296,
+      "late_deg_p50": null,
+      "late_deg_p95": null,
+      "late_arc_m_p50": null,
+      "late_arc_m_p95": null
+    },
+    {
+      "sigma": 3,
+      "early_deg_mean": -3.564,
+      "early_deg_p5": -10.8,
+      "early_deg_p50": 0,
+      "early_deg_p95": 0,
+      "early_arc_m_mean": -1.555,
+      "n_exact7": 296,
+      "late_deg_p50": null,
+      "late_deg_p95": null,
+      "late_arc_m_p50": null,
+      "late_arc_m_p95": null
+    },
+    {
+      "sigma": 5,
+      "early_deg_mean": -8.392,
+      "early_deg_p5": -21.6,
+      "early_deg_p50": -7.2,
+      "early_deg_p95": 0,
+      "early_arc_m_mean": -3.662,
+      "n_exact7": 293,
+      "late_deg_p50": null,
+      "late_deg_p95": null,
+      "late_arc_m_p50": null,
+      "late_arc_m_p95": null
+    },
+    {
+      "sigma": 10,
+      "early_deg_mean": -31.455,
+      "early_deg_p5": -72,
+      "early_deg_p50": -25.2,
+      "early_deg_p95": 0,
+      "early_arc_m_mean": -13.725,
+      "n_exact7": 278,
+      "late_deg_p50": null,
+      "late_deg_p95": null,
+      "late_arc_m_p50": null,
+      "late_arc_m_p95": null
+    },
+    {
+      "sigma": 15,
+      "early_deg_mean": -164.287,
+      "early_deg_p5": -428.4,
+      "early_deg_p50": -82.8,
+      "early_deg_p95": 0,
+      "early_arc_m_mean": -71.684,
+      "n_exact7": 85,
+      "late_deg_p50": null,
+      "late_deg_p95": null,
+      "late_arc_m_p50": null,
+      "late_arc_m_p95": null
+    }
+  ],
+  "tawaf_scenarios_meta": {
+    "scenarios": [
+      "I",
+      "II",
+      "III"
+    ],
+    "radii": [
+      12,
+      15,
+      25,
+      40,
+      60
+    ],
+    "modes": [
+      "default",
+      "adaptif"
+    ],
+    "sigmas": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      8,
+      10,
+      12,
+      15
+    ],
+    "trials": 500,
+    "cells": 330
+  },
+  "sai_scenarios_meta": {
+    "o_values": [
+      0,
+      10,
+      20,
+      25,
+      30
+    ],
+    "l_values": [
+      0,
+      10,
+      20
+    ],
+    "sigmas": [
+      0,
+      1,
+      3,
+      5,
+      10,
+      15
+    ],
+    "trials": 500,
+    "cells": 90,
+    "corridor_length_m": 419.4
+  },
+  "noise_models_meta": {
+    "models": [
+      "iid",
+      "ar1_field",
+      "gm30",
+      "gm120",
+      "bias5",
+      "bias10"
+    ],
+    "sigmas": [
+      3,
+      5,
+      10,
+      15
+    ],
+    "trials": 500,
+    "field_rho1": {
+      "east": 0.6325969689232057,
+      "north": 0.5335474693761129
+    },
+    "rho3s": {
+      "east": 0.25315197503940395,
+      "north": 0.1518865065034863
+    },
+    "cells": 108
+  },
+  "analytic_meta": {
+    "perimeter_arafah_m": 21334.9,
+    "area_arafah_box_m2": 53668621.2,
+    "boundary_d_values": [
+      -50,
+      -45,
+      -40,
+      -35,
+      -30,
+      -25,
+      -20,
+      -15,
+      -10,
+      -5,
+      0,
+      5,
+      10,
+      15,
+      20,
+      25,
+      30,
+      35,
+      40,
+      45,
+      50
+    ],
+    "boundary_sigmas": [
+      3,
+      5,
+      10,
+      15
+    ],
+    "boundary_n_per_cell": 20000
   }
 }

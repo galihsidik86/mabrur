@@ -96,26 +96,26 @@
 | sigma=0 exact7 | 100 | 100 | COCOK |
 | sigma=0 mae | 0 | 0 | COCOK |
 | sigma=0 rmse | 0 | 0 | COCOK |
-| sigma=1 mean | 7 | 7 | COCOK |
-| sigma=1 exact7 | 100 | 100 | COCOK |
-| sigma=1 mae | 0 | 0 | COCOK |
-| sigma=1 rmse | 0 | 0 | COCOK |
-| sigma=3 mean | 7 | 7 | COCOK |
-| sigma=3 exact7 | 100 | 100 | COCOK |
-| sigma=3 mae | 0 | 0 | COCOK |
-| sigma=3 rmse | 0 | 0 | COCOK |
-| sigma=5 mean | 7 | 7 | COCOK |
-| sigma=5 exact7 | 100 | 100 | COCOK |
-| sigma=5 mae | 0 | 0 | COCOK |
-| sigma=5 rmse | 0 | 0 | COCOK |
-| sigma=10 mean | 7 | 7 | COCOK |
-| sigma=10 exact7 | 100 | 100 | COCOK |
-| sigma=10 mae | 0 | 0 | COCOK |
-| sigma=10 rmse | 0 | 0 | COCOK |
-| sigma=15 mean | 7,31 | 7,31 | COCOK |
-| sigma=15 exact7 | 72,67 | 72,67 | COCOK |
-| sigma=15 mae | 0,313 | 0,313 | COCOK |
-| sigma=15 rmse | 0,632 | 0,632 | COCOK |
+| sigma=1 mean | 6,99 | 6,99 | COCOK |
+| sigma=1 exact7 | 98,67 | 98,67 | COCOK |
+| sigma=1 mae | 0,013 | 0,013 | COCOK |
+| sigma=1 rmse | 0,115 | 0,115 | COCOK |
+| sigma=3 mean | 6,99 | 6,99 | COCOK |
+| sigma=3 exact7 | 98,67 | 98,67 | COCOK |
+| sigma=3 mae | 0,013 | 0,013 | COCOK |
+| sigma=3 rmse | 0,115 | 0,115 | COCOK |
+| sigma=5 mean | 6,98 | 6,98 | COCOK |
+| sigma=5 exact7 | 97,67 | 97,67 | COCOK |
+| sigma=5 mae | 0,023 | 0,023 | COCOK |
+| sigma=5 rmse | 0,153 | 0,153 | COCOK |
+| sigma=10 mean | 6,95 | 6,95 | COCOK |
+| sigma=10 exact7 | 92,67 | 92,67 | COCOK |
+| sigma=10 mae | 0,073 | 0,073 | COCOK |
+| sigma=10 rmse | 0,271 | 0,271 | COCOK |
+| sigma=15 mean | 6,43 | 6,43 | COCOK |
+| sigma=15 exact7 | 28,33 | 28,33 | COCOK |
+| sigma=15 mae | 1,197 | 1,197 | COCOK |
+| sigma=15 rmse | 1,607 | 1,607 | COCOK |
 
 ### Tabel 7 (Sa'i)
 
