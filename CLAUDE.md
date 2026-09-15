@@ -57,7 +57,10 @@ Any change to `run.ts` parameters or the algorithms invalidates: `results/*.csv`
 
 Coordinates revised 2026-09-15 to sourced OSM node/way points (© OpenStreetMap
 contributors, ODbL; see `.orkestra/runs/20260915-1900-lanjutan-lokasi-pustaka-apk/handoffs/01-research-scout-koordinat.md`
-for methodology/sources) — previous values had no recorded source.
+for methodology/sources). The previous Arafah polygon carried only an untraceable
+note (`// Sumber: peta resmi Kementerian Haji Saudi Arabia`, no document id, scale or
+date) and its shape was demonstrably wrong (Masjid Namirah fell 979 m inside); the
+other coordinates carried no source note at all.
 
 | Quantity | Value | Defined by (all in `sacred-zones-core.ts`) |
 |---|---|---|

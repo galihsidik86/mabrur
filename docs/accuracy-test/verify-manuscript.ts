@@ -21,7 +21,8 @@ const TOL = 0.01; // |kode - naskah| < 0,01 => COCOK; sel bilangan bulat: sama p
 // diperbarui 2026-09-15: koordinat OSM (Safa/Marwah, jamarat, poligon Arafah,
 // Ka'bah) — lihat apps/mobile/src/services/sacred-zones-core.ts dan
 // .orkestra/runs/20260915-1900-lanjutan-lokasi-pustaka-apk/handoffs/01-research-scout-koordinat.md
-// untuk sumber. Sel yang berubah dari koordinat lama (tanpa sumber tercatat):
+// untuk sumber. Sel yang berubah dari koordinat lama (poligon Arafah: keterangan
+// sumber tanpa identitas dokumen; konstanta lain tanpa keterangan):
 // geometry.*, arafah.* (poligon 5→36 titik), jamarat.* + jamarat_confusion_sigma15
 // (urutan pilar dulu terbalik). miqat/tawaf/sai/haversine TIDAK berubah
 // (geometrinya tidak bergantung koordinat yang direvisi, atau bergeser <1 m

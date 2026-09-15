@@ -4,9 +4,11 @@
 // sehingga permukaan modul bagi aplikasi tidak berubah.
 
 // ==================== SACRED COORDINATES ====================
-// Revisi 2026-09-15: koordinat diganti dari perkiraan tanpa sumber ke titik
-// OSM konkret (node/way, id tercantum per baris). © OpenStreetMap
-// contributors, ODbL; diakses 2026-09-15. Metodologi & sumber lengkap:
+// Revisi 2026-09-15: koordinat diganti ke titik OSM konkret (node/way, id
+// tercantum per baris). Sebelumnya: poligon Arafah hanya berketerangan
+// "Sumber: peta resmi Kementerian Haji Saudi Arabia" tanpa identitas dokumen/
+// skala/tanggal (dan bentuknya keliru); konstanta lain tanpa keterangan sumber.
+// © OpenStreetMap contributors, ODbL; diakses 2026-09-15. Metodologi & sumber:
 // .orkestra/runs/20260915-1900-lanjutan-lokasi-pustaka-apk/handoffs/01-research-scout-koordinat.md
 
 export const KAABAH = { lat: 21.4225172, lng: 39.8261942 }; // centroid way 103914569 (5 titik sudut)

@@ -269,7 +269,9 @@ lihat "Angka kunci" di atas) — trade-off yang disengaja demi jaminan
 ## Revisi 2026-09-15 — koordinat OSM (Safa/Marwah, jamarat, poligon Arafah, Ka'bah)
 
 Seluruh koordinat sakral di `apps/mobile/src/services/sacred-zones-core.ts`
-diganti dari perkiraan tanpa sumber tercatat ke titik/poligon OSM konkret
+diganti ke titik/poligon OSM konkret — sebelumnya poligon Arafah hanya
+berketerangan "peta resmi Kementerian Haji Saudi Arabia" tanpa identitas
+dokumen/skala/tanggal, sedangkan konstanta lain tanpa keterangan sumber
 (node/way id per konstanta, © OpenStreetMap contributors, ODbL, diakses
 2026-09-15). Metodologi & sumber lengkap:
 `.orkestra/runs/20260915-1900-lanjutan-lokasi-pustaka-apk/handoffs/01-research-scout-koordinat.md`.
@@ -280,7 +282,7 @@ diganti dari perkiraan tanpa sumber tercatat ke titik/poligon OSM konkret
 | Jamarat Ula–Wustha | 76,0 m | **153,2 m** |
 | Jamarat Wustha–Aqabah | 68,2 m | **235,7 m** |
 | Jamarat Ula–Aqabah | 144,0 m | **387,0 m** |
-| Poligon Arafah | 5 titik buatan sendiri | **36 titik**, OSM way 1377422823 |
+| Poligon Arafah | 5 titik; keterangan "peta resmi Kementerian Haji" tanpa identitas dokumen | **36 titik**, OSM way 1377422823 |
 | Urutan bujur Jamarat | ula < wustha < aqabah (Aqabah TERBALIK, paling timur) | **aqabah < wustha < ula** (Aqabah paling barat = paling dekat Makkah) |
 
 **Bug arah Jamarat**: koordinat lama menempatkan Jamarat Aqabah paling TIMUR
