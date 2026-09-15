@@ -40,13 +40,28 @@ const NASKAH = {
     { sigma: 10, akurasi: 99.63, presisi: 99.68, recall: 99.68, f1: 99.68 },
     { sigma: 15, akurasi: 99.44, presisi: 99.48, recall: 99.55, f1: 99.52 },
   ],
+  // diperbarui 2026-09-15: kebijakan "tidak pernah dini" (Tawaf) — naskah revisi-3.
+  // Revisi 2026-09-14 (sudut kumulatif CCW, angka sebelumnya di sini) memakai
+  // ROUND_TOL_DEG=60° (toleransi NEGATIF — putaran dianggap selesai 60° SEBELUM
+  // 360k tercapai). Review independen (handoff 05v) menemukan ini memicu
+  // pengumuman "putaran selesai" rata-rata ~30 m busur (p50) SEBELUM jamaah
+  // benar-benar menyelesaikannya — risiko fikih. ROUND_TOL_DEG DIHAPUS, diganti
+  // referensi awal rata-rata sirkular (REF_SAMPLES=3) + margin=0 murni (lihat
+  // sacred-zones-core.ts §TawafTracker) — keduanya HANYA memperlambat pemicuan,
+  // tidak pernah mempercepatnya (diverifikasi 0 m dini pada σ=0). Lintasan
+  // harness (run.ts §4) ditambah settle di titik mulai + tail di titik selesai
+  // (kebijakan UI "GPS aktif ≥30 dtk") agar referensi tak kehilangan rotasi awal
+  // — tanpa ini bahkan σ=0 akan under-count sistematis (lihat handoff 05c).
+  // Angka BERUBAH (turun sedikit di σ rendah, bukan lagi 100% persis) karena
+  // desain sekarang sengaja mengorbankan sedikit proporsi tepat-7 demi jaminan
+  // "tidak pernah dini" — trade-off yang disengaja, bukan regresi.
   tawaf: [
     { sigma: 0, mean: 7, exact7: 100, mae: 0, rmse: 0 },
-    { sigma: 1, mean: 7, exact7: 100, mae: 0, rmse: 0 },
-    { sigma: 3, mean: 7, exact7: 100, mae: 0, rmse: 0 },
-    { sigma: 5, mean: 7, exact7: 100, mae: 0, rmse: 0 },
-    { sigma: 10, mean: 7, exact7: 100, mae: 0, rmse: 0 },
-    { sigma: 15, mean: 7.31, exact7: 72.67, mae: 0.313, rmse: 0.632 },
+    { sigma: 1, mean: 6.99, exact7: 98.67, mae: 0.013, rmse: 0.115 },
+    { sigma: 3, mean: 6.99, exact7: 98.67, mae: 0.013, rmse: 0.115 },
+    { sigma: 5, mean: 6.98, exact7: 97.67, mae: 0.023, rmse: 0.153 },
+    { sigma: 10, mean: 6.95, exact7: 92.67, mae: 0.073, rmse: 0.271 },
+    { sigma: 15, mean: 6.43, exact7: 28.33, mae: 1.197, rmse: 1.607 },
   ],
   sai: [0, 1, 3, 5, 10, 15].map((sigma) => ({ sigma, mean: 7, exact7: 100, mae: 0, rmse: 0 })),
   jamarat: [

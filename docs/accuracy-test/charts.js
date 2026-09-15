@@ -31,6 +31,14 @@ const arafah = readCsv('arafah_accuracy.csv');
 const tawaf = readCsv('tawaf_accuracy.csv');
 const sai = readCsv('sai_accuracy.csv');
 const jamarat = readCsv('jamarat_accuracy.csv');
+// R8/R4 (2026-09-14): skenario tawaf & kurva batas geofence. tawaf_scenarios.csv
+// punya kolom non-numerik (scenario/mode) -- diparsing manual (readCsv() dari
+// atas hanya untuk CSV numerik murni seperti 5 CSV di atas).
+const tawafScenarioRows = fs.readFileSync(path.join(RESULTS, 'tawaf_scenarios.csv'), 'utf8').trim().split('\n').slice(1).map((r) => {
+  const [scenario, mode, r_, sigma, n, exact7_pct] = r.split(',');
+  return { scenario, mode, r: Number(r_), sigma: Number(sigma), n: Number(n), exact7_pct: Number(exact7_pct) };
+});
+const boundaryCurve = readCsv('boundary_error_curve.csv');
 
 // ---------- token desain (palet tervalidasi, permukaan putih = halaman jurnal) ----------
 const INK = '#0b0b0b', INK2 = '#52514e', MUTED = '#898781';
@@ -62,14 +70,17 @@ function legendChip(label, color, shape) {
  * Render satu figure line-chart.
  * series: [{ label, color, shape, points: [{x,y}] }]
  * yDomain [min,max], yTicks [], endLabels: 'name+value' | 'value' | null
+ * xDomain/xTicks/xTitle opsional -- default = sumbu sigma (0..15) dipakai fig1-fig6
+ * (revisi R8/R4, 2026-09-14: diparameterkan agar fig7/fig8 bisa memakai sumbu-x lain
+ * — radius/d — tanpa mengubah output 6 figure lama saat parameter tidak diberikan).
  */
-function figure({ id, series, yDomain, yTicks, yTitle, endLabels }) {
+function figure({ id, series, yDomain, yTicks, yTitle, endLabels, xDomain = [0, 15], xTicks = [0, 1, 3, 5, 10, 15], xTitle = 'σ galat GPS (m)' }) {
   const W = 880, H = 500;
   const mL = 62, mR = endLabels === 'name+value' ? 150 : endLabels === 'value' ? 70 : 28;
   const mT = 18, mB = 54;
   const pw = W - mL - mR, ph = H - mT - mB;
-  const X_MAX = 15;
-  const px = (x) => mL + (x / X_MAX) * pw;
+  const [X_MIN, X_MAX] = xDomain;
+  const px = (x) => mL + ((x - X_MIN) / (X_MAX - X_MIN)) * pw;
   const py = (y) => mT + 12 + (1 - (y - yDomain[0]) / (yDomain[1] - yDomain[0])) * (ph - 12); // 12px padding atas: marker di nilai maks tidak terpotong
 
   let s = '';
@@ -81,20 +92,25 @@ function figure({ id, series, yDomain, yTicks, yTitle, endLabels }) {
   // sumbu
   s += `<line x1="${mL}" y1="${mT}" x2="${mL}" y2="${mT + ph}" stroke="${BASE}" stroke-width="1"/>`;
   s += `<line x1="${mL}" y1="${mT + ph}" x2="${mL + pw}" y2="${mT + ph}" stroke="${BASE}" stroke-width="1"/>`;
-  // tick x pada nilai sigma data
-  for (const t of [0, 1, 3, 5, 10, 15]) {
+  // tick x
+  for (const t of xTicks) {
     s += `<line x1="${px(t)}" y1="${mT + ph}" x2="${px(t)}" y2="${mT + ph + 4}" stroke="${BASE}" stroke-width="1"/>`;
     s += `<text x="${px(t)}" y="${mT + ph + 18}" text-anchor="middle" class="tick">${t}</text>`;
   }
   // judul sumbu (token tinta sekunder)
-  s += `<text x="${mL + pw / 2}" y="${H - 12}" text-anchor="middle" class="axis">σ galat GPS (m)</text>`;
+  s += `<text x="${mL + pw / 2}" y="${H - 12}" text-anchor="middle" class="axis">${xTitle}</text>`;
   s += `<text transform="translate(14 ${mT + ph / 2}) rotate(-90)" text-anchor="middle" class="axis">${yTitle}</text>`;
 
-  // garis + marker
+  // garis + marker (style per seri: 'both' default, 'markers' = titik MC tanpa garis,
+  // 'line' = kurva analitik tanpa marker -- dipakai fig8 utk beda MC vs Phi analitik)
   for (const sr of series) {
-    const d = sr.points.map((p, i) => `${i ? 'L' : 'M'} ${px(p.x)} ${py(p.y)}`).join(' ');
-    s += `<path d="${d}" fill="none" stroke="${sr.color}" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>`;
-    for (const p of sr.points) s += marker(sr.shape, px(p.x), py(p.y), sr.color);
+    if (sr.style !== 'markers') {
+      const d = sr.points.map((p, i) => `${i ? 'L' : 'M'} ${px(p.x)} ${py(p.y)}`).join(' ');
+      s += `<path d="${d}" fill="none" stroke="${sr.color}" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>`;
+    }
+    if (sr.style !== 'line') {
+      for (const p of sr.points) s += marker(sr.shape, px(p.x), py(p.y), sr.color);
+    }
   }
 
   // label ujung: teks tinta, anti-tabrakan + leader line bila digeser
@@ -144,13 +160,14 @@ const figures = [
       { label: "Sa'i (tepat-7)", color: C[3], shape: MARKERS[3], points: pts(sai, 'exact7_pct') },
       { label: 'Jamarat (benar)', color: C[4], shape: MARKERS[4], points: pts(jamarat, 'correct') },
     ],
-    yDomain: [70, 100], yTicks: range(70, 100, 5), yTitle: 'Akurasi (%)', endLabels: 'name+value',
+    // 0–100 (2026-09-15): tawaf σ=15 (≈28%) terpotong pada skala lama 70–100
+    yDomain: [0, 100], yTicks: range(0, 100, 20), yTitle: 'Akurasi (%)', endLabels: 'name+value',
   }),
   figure({ id: 'fig2-miqat-metrik', series: metricSeries(miqat), yDomain: [99, 100], yTicks: range(99, 100, 0.2), yTitle: 'Nilai metrik (%)', endLabels: null }),
   figure({ id: 'fig3-arafah-metrik', series: metricSeries(arafah), yDomain: [99, 100], yTicks: range(99, 100, 0.2), yTitle: 'Nilai metrik (%)', endLabels: null }),
-  // Tawaf & Sa'i: satu seri (tanpa legenda), skala-y identik agar bisa dibandingkan berdampingan
-  figure({ id: 'fig4-tawaf', series: [{ label: 'Tawaf', color: C[0], shape: MARKERS[0], points: pts(tawaf, 'exact7_pct') }], yDomain: [70, 100], yTicks: range(70, 100, 5), yTitle: 'Akurasi tepat-7 (%)', endLabels: 'value' }),
-  figure({ id: 'fig5-sai', series: [{ label: "Sa'i", color: C[0], shape: MARKERS[0], points: pts(sai, 'exact7_pct') }], yDomain: [70, 100], yTicks: range(70, 100, 5), yTitle: 'Akurasi tepat-7 (%)', endLabels: 'value' }),
+  // Tawaf & Sa'i: satu seri (tanpa legenda), skala-y identik (0–100) agar bisa dibandingkan berdampingan
+  figure({ id: 'fig4-tawaf', series: [{ label: 'Tawaf', color: C[0], shape: MARKERS[0], points: pts(tawaf, 'exact7_pct') }], yDomain: [0, 100], yTicks: range(0, 100, 20), yTitle: 'Akurasi tepat-7 (%)', endLabels: 'value' }),
+  figure({ id: 'fig5-sai', series: [{ label: "Sa'i", color: C[0], shape: MARKERS[0], points: pts(sai, 'exact7_pct') }], yDomain: [0, 100], yTicks: range(0, 100, 20), yTitle: 'Akurasi tepat-7 (%)', endLabels: 'value' }),
   figure({
     id: 'fig6-jamarat-hasil',
     series: [
@@ -159,6 +176,33 @@ const figures = [
       { label: 'Tak terdeteksi', color: C[2], shape: MARKERS[2], points: pts(jamarat, 'none') },
     ],
     yDomain: [0, 100], yTicks: range(0, 100, 20), yTitle: 'Persentase sampel (%)', endLabels: 'value',
+  }),
+  // fig7 (R8, 2026-09-14): tawaf skenario III (mulai=selesai, diam 30 dtk di
+  // awal+akhir), mode ADAPTIF, tepat-7 vs sigma, satu seri per radius edar.
+  figure({
+    id: 'fig7-tawaf-skenario3-radius',
+    series: [12, 15, 25, 40, 60].map((r, i) => ({
+      label: `r=${r} m`, color: C[i % C.length], shape: MARKERS[i % MARKERS.length],
+      points: tawafScenarioRows.filter((row) => row.scenario === 'III' && row.mode === 'adaptif' && row.r === r)
+        .sort((a, b) => a.sigma - b.sigma).map((row) => ({ x: row.sigma, y: row.exact7_pct })),
+    })),
+    yDomain: [0, 100], yTicks: range(0, 100, 20), yTitle: 'Akurasi tepat-7 (%)', endLabels: 'name+value',
+  }),
+  // fig8 (R4, 2026-09-14): P(salah) MC (titik, tanpa garis) vs Phi(-|d|/sigma)
+  // analitik (garis, tanpa marker) per sigma, sumbu-x = jarak bertanda d (m).
+  figure({
+    id: 'fig8-boundary-mc-vs-analitik',
+    series: [3, 5, 10, 15].flatMap((sigma, i) => {
+      const rows = boundaryCurve.filter((row) => row.sigma === sigma).sort((a, b) => a.d - b.d);
+      const color = C[i % C.length];
+      return [
+        { label: `sigma=${sigma} MC`, color, shape: MARKERS[i % MARKERS.length], style: 'markers', points: rows.map((row) => ({ x: row.d, y: row.mc_wrong_pct })) },
+        { label: `sigma=${sigma} analitik`, color, shape: MARKERS[i % MARKERS.length], style: 'line', points: rows.map((row) => ({ x: row.d, y: row.analytic_wrong_pct })) },
+      ];
+    }),
+    yDomain: [0, 100], yTicks: range(0, 100, 20), yTitle: 'P(salah klasifikasi) (%)',
+    xDomain: [-50, 50], xTicks: [-50, -25, 0, 25, 50], xTitle: 'd = jarak ke batas geofence (m, negatif = di dalam)',
+    endLabels: null,
   }),
 ];
 
