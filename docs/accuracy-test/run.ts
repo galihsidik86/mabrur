@@ -109,7 +109,7 @@ w(`| Jarak Safa–Marwah | ${dSafaMarwah.toFixed(1)} m |`);
 w(`| Jarak Jamarat Ula–Wustha | ${dUW.toFixed(1)} m |`);
 w(`| Jarak Jamarat Wustha–Aqabah | ${dWA.toFixed(1)} m |`);
 w(`| Jarak Jamarat Ula–Aqabah | ${dUA.toFixed(1)} m |`);
-w(`| Radius deteksi Jamarat | 30 m (2×radius=60 m < jarak pilar terdekat 68 m → tidak tumpang tindih) |`);
+w(`| Radius deteksi Jamarat | 30 m (2×radius=60 m < jarak pilar terdekat 153 m → tidak tumpang tindih) |`);
 w(`| Radius zona Sa'i (Safa/Marwah) | 25 m |`);
 w(`| Band radius Tawaf (default) | 10–80 m dari Ka'bah |`);
 w('');
@@ -193,7 +193,7 @@ writeFileSync(join(OUT_DIR, 'miqat_accuracy.csv'), miqatCsv.join('\n'));
 w('');
 
 // ============ 3. DETEKSI ARAFAH (ray casting) ===============================
-w('## 3. Deteksi Arafah — point-in-polygon (ray casting, 5 titik)');
+w('## 3. Deteksi Arafah — point-in-polygon (ray casting, 36 titik, poligon OSM way 1377422823)');
 w('');
 w('Ground truth = point-in-polygon posisi bersih. Prediksi = point-in-polygon posisi ber-noise.');
 w('');
@@ -456,7 +456,7 @@ for (const k of jamKeys) {
   w(`| **${JAMARAT[k].name}** | ${c.ula} | ${c.wustha} | ${c.aqabah} | ${c.none} |`);
 }
 w('');
-w('*Pilar terpisah 68–144 m > 2×radius (60 m) → nyaris tidak ada salah-pilar. Degradasi di sigma besar didominasi "tak terdeteksi": noise mendorong posisi keluar radius 30 m.*');
+w('*Pilar terpisah 153–387 m > 2×radius (60 m) → nyaris tidak ada salah-pilar. Degradasi di sigma besar didominasi "tak terdeteksi": noise mendorong posisi keluar radius 30 m.*');
 w('');
 
 // ============ 7. R8: SKENARIO TAWAF (r x mode x sigma x skenario) ===========
@@ -500,10 +500,10 @@ w(analyticResult.summaryMd);
 w('## Ringkasan & Temuan');
 w('');
 w('- **Haversine**: galat terhadap elipsoid WGS-84 sangat kecil (< 0,5%), memadai untuk skala meter.');
-w('- **Sa\'i**: paling tahan noise — pemisahan geometris Safa–Marwah (≈415 m) ≫ error GPS.');
+w('- **Sa\'i**: paling tahan noise — pemisahan geometris Safa–Marwah (≈377 m) ≫ error GPS.');
 w('- **Geofence Miqat & Arafah**: kesalahan hanya di pita tepi selebar ~sigma; akurasi menurun landai, sesuai prediksi analitik Φ(−d/σ) (§10).');
 w('- **Tawaf**: sensitif pada sigma besar (radius kecil 25 m); skema sudut kumulatif CCW menerapkan kebijakan "tidak pernah dini" (referensi awal rata-rata sirkular + margin=0, tanpa toleransi positif) — pemicuan TIDAK PERNAH mendahului 360k° (0 m dini pada sigma=0), dengan trade-off sedikit KETERLAMBATAN dan penurunan kecil proporsi tepat-7 di sigma rendah (§4) — lihat §7 untuk sensitivitas radius/mode/skenario.');
-w('- **Jamarat**: pemisahan pilar (68–144 m) memadai → salah-pilar hampir nol; kerentanan justru "tak terdeteksi" saat sigma besar (noise keluar radius 30 m), konsisten dengan model Rice analitik (§10).');
+w('- **Jamarat**: pemisahan pilar (153–387 m) memadai → salah-pilar hampir nol; kerentanan justru "tak terdeteksi" saat sigma besar (noise keluar radius 30 m), konsisten dengan model Rice analitik (§10).');
 w('');
 w(`*Dibangun dari analisis kode Mabrur. Seed=${SEED}. CSV per algoritma tersimpan di \`docs/accuracy-test/results/\`.*`);
 

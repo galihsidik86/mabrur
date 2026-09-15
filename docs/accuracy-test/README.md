@@ -38,25 +38,31 @@ Karena PRNG ber-seed dan tidak ada sumber non-determinisme (tidak ada
 `Date.now()`/`Math.random()` di manapun dalam harness — diverifikasi jalan dua
 kali berturut-turut, seluruh berkas keluaran byte-identik), output identik
 bit-per-bit antar eksekusi maupun antar mesin. SHA-256 keluaran (konten LF,
-diverifikasi 2026-09-15 setelah revisi kebijakan tawaf "tidak pernah dini" —
-lihat "Revisi 2026-09-15" di bawah; hanya baris `tawaf_*` yang berubah dari
-verifikasi 2026-09-14):
+diverifikasi 2026-09-15 setelah revisi koordinat OSM (Safa/Marwah, jamarat,
+poligon Arafah, Ka'bah) — lihat "Revisi 2026-09-15 — koordinat OSM" di bawah;
+baris yang bergantung koordinat berubah (`arafah_*`, `jamarat_*`,
+`sai_scenarios`, `noise_models`, `analytic_check`, `monte_carlo_results.json`,
+`summary.md`, `TABLES.md`, `MANUSCRIPT_DIFF.md`); `miqat_*`, `tawaf_*` (kecuali
+histogram/early_trigger tetap sama), `sai_accuracy.csv`,
+`tawaf_scenarios.csv`, `boundary_error_curve.csv` TIDAK berubah (tidak
+bergantung koordinat yang direvisi, atau pergeseran <1 m tak berdampak pada
+digit yang dilaporkan):
 
 | Berkas | SHA-256 |
 |---|---|
 | `miqat_accuracy.csv` | `b6d19b7762ce7e12b7a1ce7889b6e8cfd3fee5db96c1fcd1d04bd2e4ab70aeab` |
-| `arafah_accuracy.csv` | `ab49472a35bafca16e34ab4e2cbc282c9e4808ffbe18e8cf3572ad7679b094af` |
+| `arafah_accuracy.csv` | `ea86324b0155a59881b09c34cd09dc41d110f196d5ce8ca85056b1cee8259b34` |
 | `tawaf_accuracy.csv` | `f484ed7f7195002059ab5a026eb3cabb99b57509d050060dcb46dc8ac8f97f39` |
 | `sai_accuracy.csv` | `a3171ca481caba0c71ce44de3260ddacd23609bf49a3ca7385ccf11b92a4d637` |
-| `jamarat_accuracy.csv` | `dc864adbe8f2f519b82e0de69b71af226e26d51b5a9c0e9103e1d16a37b03ea3` |
+| `jamarat_accuracy.csv` | `41ff75e7f3e67eb778ffd5d2eed72c19ceaefeae0da717f3c4a975b9d8018de3` |
 | `tawaf_scenarios.csv` (R8) | `81494922bed72f6629846492abba3b2463d4a5534485dea4a0921fee43d4074d` |
-| `sai_scenarios.csv` (R9) | `1d44d5c99c95571a0c011d7c32923ab6aa02940f251a4b3b01884b64ef3b3d23` |
-| `noise_models.csv` (R6) | `a478aa3f92c66d0751c5821b54bc6c9f125d5024169c1b2a9d89690b08be914a` |
-| `analytic_check.csv` (R4) | `be0e5f989092d53278fb2ded672540bb5d445c723c74f6373295acc014a58698` |
+| `sai_scenarios.csv` (R9) | `d3cdd649c260ea2961daaa1686338c6103f495d98d067a26269dcd4cae1f863b` |
+| `noise_models.csv` (R6) | `5bf99e1d44d31fe782bf890928e3bfa9c262c52c7ab642eab5acddb6b87de440` |
+| `analytic_check.csv` (R4) | `6f35785b44e1ff1d94529187b7c2232c8c05eeacaa60da2f098b2171b2766b0a` |
 | `boundary_error_curve.csv` (R4) | `e12f0fbc2ba0670ffaf23ff8ec090ecc5c563e9c4bbfeac3a4d00c7d16966a33` |
 | `tawaf_histogram.csv` | `d4fe513d8f2700e015c31825bce5c111c9de589c591c9f5772b67758b8e8f0f0` |
 | `tawaf_early_trigger.csv` | `4095a982125a312ea8180e1931a5974c6493033e40c042fc3e1886fe12abb756` |
-| `monte_carlo_results.json` | `199f369b7e19d486b2f211a61f002554108e868d344eec5c4ff26c44a7fc9a19` |
+| `monte_carlo_results.json` | `05d383d2fdeee5bfec1216787c5f44cb37772839435510abfa08322d1ead6ecf` |
 
 > Catatan EOL: git dapat mengonversi berkas ke CRLF saat checkout di Windows
 > (`core.autocrlf`). Hash di atas dihitung atas konten LF sebagaimana ditulis
@@ -96,10 +102,10 @@ Setelah menjalankan langkah (1), nilai-nilai berikut harus muncul persis
 | `tawaf_accuracy.csv`, σ=10 | akurasi tepat-7 = **92,67%**, rata-rata 6,95 |
 | `tawaf_accuracy.csv`, σ=15 | akurasi tepat-7 = **28,33%**, rata-rata 6,43, CI95 [23,53%, 33,68%] |
 | `sai_accuracy.csv`, semua σ | akurasi tepat-7 = **100,00%** |
-| `jamarat_accuracy.csv`, σ=15 | benar = **83,53%**, salah pilar = 0,32%, tak terdeteksi = 16,15% |
+| `jamarat_accuracy.csv`, σ=15 | benar = **83,53%**, salah pilar = 0%, tak terdeteksi = 16,47% |
 | `miqat_accuracy.csv`, σ=15 | akurasi = **99,45%** |
-| `arafah_accuracy.csv`, σ=15 | akurasi = **99,44%** |
-| `summary.md`, bagian 0 | Safa–Marwah = **419,0 m**; antar-jamarat 76,0 / 68,2 / 144,0 m |
+| `arafah_accuracy.csv`, σ=15 | akurasi = **99,54%** |
+| `summary.md`, bagian 0 | Safa–Marwah = **376,7 m**; antar-jamarat 153,2 / 235,7 / 387,0 m |
 
 ## Pemetaan keluaran → naskah
 
@@ -259,6 +265,46 @@ disembunyikan.
 Angka Tabel 6 tawaf berubah kecil di σ rendah (100%→97,67–98,67% pada σ=1–5;
 lihat "Angka kunci" di atas) — trade-off yang disengaja demi jaminan
 "tidak pernah dini", bukan regresi kualitas algoritma.
+
+## Revisi 2026-09-15 — koordinat OSM (Safa/Marwah, jamarat, poligon Arafah, Ka'bah)
+
+Seluruh koordinat sakral di `apps/mobile/src/services/sacred-zones-core.ts`
+diganti dari perkiraan tanpa sumber tercatat ke titik/poligon OSM konkret
+(node/way id per konstanta, © OpenStreetMap contributors, ODbL, diakses
+2026-09-15). Metodologi & sumber lengkap:
+`.orkestra/runs/20260915-1900-lanjutan-lokasi-pustaka-apk/handoffs/01-research-scout-koordinat.md`.
+
+| Besaran | Lama | Baru (OSM) |
+|---|---|---|
+| Safa–Marwah | 419,0 m | **376,7 m** |
+| Jamarat Ula–Wustha | 76,0 m | **153,2 m** |
+| Jamarat Wustha–Aqabah | 68,2 m | **235,7 m** |
+| Jamarat Ula–Aqabah | 144,0 m | **387,0 m** |
+| Poligon Arafah | 5 titik buatan sendiri | **36 titik**, OSM way 1377422823 |
+| Urutan bujur Jamarat | ula < wustha < aqabah (Aqabah TERBALIK, paling timur) | **aqabah < wustha < ula** (Aqabah paling barat = paling dekat Makkah) |
+
+**Bug arah Jamarat**: koordinat lama menempatkan Jamarat Aqabah paling TIMUR
+(paling jauh dari Makkah) — terbalik dari geografi sebenarnya. Diperbaiki
+dengan node OSM `historic=monument` (lokasi historis; koordinat dinding fisik
+AKTUAL di jembatan bertingkat saat ini belum ada sumber terbuka — lihat
+pertanyaan terbuka di handoff 01).
+
+**Model Namirah diganti total**: dari "1 titik `NAMIRAH_BOUNDARY` (salah
+lokasi ≈1.491 m) + radius lingkaran 200 m" menjadi "di dalam poligon Arafah
+DAN jarak ke TEPI poligon ≤200 m DAN jarak ke `NAMIRAH_MOSQUE_CENTER`
+(centroid 51 titik jejak bangunan OSM way 112317307) ≤1.000 m" — mencegah
+peringatan salah-pasang di tepi poligon lain yang jauh dari Masjid Namirah.
+Bentuk `ArafahResult` (status/pesan) & API `checkArafahPosition` tidak
+berubah, sehingga UI (`apps/mobile/app/tools.tsx`) tidak perlu diubah.
+
+**Dampak ke angka naskah**: geometri (Tabel 2), Tabel 5 (Arafah — poligon
+berubah bentuk & luas total), Tabel 8–9 (Jamarat — jarak pilar & urutan
+berubah total, confusion matrix σ=15 kini nyaris nol salah-pilar karena
+pilar terpisah jauh lebih jauh). Tabel 3 (Haversine), Tabel 4 (Miqat), Tabel
+6 (Tawaf — bergantung KAABAH yang bergeser <1 m, tak berdampak), Tabel 7
+(Sa'i — separasi geometris tetap ≫ noise GPS) TIDAK berubah. Lihat tabel SHA-256
+di atas untuk berkas yang berubah/tidak berubah, dan bagian "Asal algoritma
+yang diuji" untuk cara koordinat diimpor (bukan disalin) dari produksi.
 
 ## Catatan model derau
 

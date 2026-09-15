@@ -20,7 +20,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Journal Research Artifacts (`docs/accuracy-test/`)
 
-This repo underpins the journal manuscript **"Pengujian Akurasi Algoritma Geospasial untuk Deteksi Ritual Haji Berbasis GPS terhadap Galat Posisi"** (active manuscript: `docs/PENGUJIAN_AKURASI_ALGORITMA_GEOSPASIAL_REVISI.docx`). The manuscript claims full reproducibility — reviewers may inspect this repo. **Do not change algorithm logic in `apps/mobile/src/services/` or `server/src/services/geofence.service.ts` without checking whether the paper's numbers must be regenerated.**
+This repo underpins the journal manuscript **"Pengujian Akurasi Algoritma Geospasial untuk Deteksi Ritual Haji Berbasis GPS terhadap Galat Posisi"** (active manuscript: `docs/PENGUJIAN_AKURASI_ALGORITMA_GEOSPASIAL_REVISI.docx`; revision-2 draft reframed as a sensitivity analysis: `docs/PENGUJIAN_AKURASI_ALGORITMA_GEOSPASIAL_REVISI-2.docx` + `-bersih.docx`, untracked, rebuilt from `docs/accuracy-test/results/` by a local build script in `.orkestra/runs/20260913-0602-review-jurnal-angle-a/build/`). The manuscript claims full reproducibility — reviewers may inspect this repo. **Do not change algorithm logic in `apps/mobile/src/services/` or `server/src/services/geofence.service.ts` without checking whether the paper's numbers must be regenerated.**
 
 ### The 6 core algorithms (production code)
 
@@ -28,7 +28,7 @@ This repo underpins the journal manuscript **"Pengujian Akurasi Algoritma Geospa
 |---|---|---|
 | Haversine distance | great-circle, R = 6 371 000 m | `apps/mobile/src/services/location.ts:3` — duplicated (same formula) in `server/src/services/geofence.service.ts:14` and as `distanceMeters` in `apps/mobile/src/services/sacred-zones-core.ts` |
 | Miqat geofence | point-in-circle | mobile nearest+warning: `location.ts:41` (`findNearest`); the 1 000 m `within_boundary` check lives **server-side**: `geofence.service.ts:25` (`nearestMiqat`) |
-| Arafah boundary | ray-casting point-in-polygon (5 vertices) | `sacred-zones-core.ts` (`isPointInPolygon`, `checkArafahPosition`) |
+| Arafah boundary | ray-casting point-in-polygon (36 vertices, OSM way 1377422823, revised 2026-09-15) | `sacred-zones-core.ts` (`isPointInPolygon`, `checkArafahPosition`) |
 | Tawaf counter | unwrapped cumulative-angle accumulation (CCW = valid direction); "never-early" policy (revised 2026-09-15) — circular-mean 3-sample start reference + zero positive tolerance (margin=0) so a round is only counted after truly crossing 360k°, never before; outlier step-clip 150° (continuous-in-zone only); explicit band-exit gap handling (≤90 s = trust unwrap, >90 s = session break, re-acquire reference); no time debounce | `sacred-zones-core.ts` (`TawafTracker`; `now` param used for band-exit gap timing, not debounce) |
 | Sa'i counter | Safa/Marwah zone-alternation state machine, must start at Safa | `sacred-zones-core.ts` (`SaiTracker`) |
 | Jamarat identification | nearest-in-radius (30 m), 3 classes | `sacred-zones-core.ts` (`detectNearestJamarat`) |
@@ -46,7 +46,7 @@ npm run simulate                         # run.ts + verify-manuscript.ts: regene
 node docs/accuracy-test/charts.js        # regenerate 6 figure PNGs @2x (playwright) + captions.md
 npm run replay                           # field validation: replay field_logs/*.gpx through PRODUCTION algorithms (--demo for synthetic fixtures)
 npm run test:replay                      # unit tests for gps-replay parser + coordinate transform
-python docs/accuracy-test/build-docx.py  # rebuild generated Word draft (python-docx)
+python docs/accuracy-test/build-docx.py  # LEGACY (Jul 2026): builds naskah-jurnal-angle-a.docx from paper-draft.md/simpulan-abstrak.md, which still carry pre-2026-09-15 numbers — do not use for submission
 ```
 
 Field-validation pipeline lives in `docs/accuracy-test/gps-replay/` — it imports the algorithms from `apps/mobile/src/services/sacred-zones-core.ts` (the pure-algorithm module split out of `sacred-zones.ts`; the latter re-exports it, app surface unchanged). Real GPS traces go in `field_logs/` (GPX/CSV). Methodological assumptions: `gps-replay/README.md`.
@@ -55,18 +55,23 @@ Any change to `run.ts` parameters or the algorithms invalidates: `results/*.csv`
 
 ### Geometric constants (derived from coordinates in `sacred-zones-core.ts`)
 
+Coordinates revised 2026-09-15 to sourced OSM node/way points (© OpenStreetMap
+contributors, ODbL; see `.orkestra/runs/20260915-1900-lanjutan-lokasi-pustaka-apk/handoffs/01-research-scout-koordinat.md`
+for methodology/sources) — previous values had no recorded source.
+
 | Quantity | Value | Defined by (all in `sacred-zones-core.ts`) |
 |---|---|---|
-| Safa–Marwah separation | 419.0 m | `SAFA`/`MARWAH` coords |
-| Jamarat pillar spacing Ula–Wustha / Wustha–Aqabah / Ula–Aqabah | 76.0 / 68.2 / 144.0 m | `JAMARAT` coords |
+| Safa–Marwah separation | 376.7 m (was 419.0 m) | `SAFA`/`MARWAH` coords (OSM `natural=peak` nodes) |
+| Jamarat pillar spacing Ula–Wustha / Wustha–Aqabah / Ula–Aqabah | 153.2 / 235.7 / 387.0 m (was 76.0 / 68.2 / 144.0 m, and previously in the WRONG longitude order) | `JAMARAT` coords (OSM `historic=monument` nodes) |
 | Jamarat detection radius | 30 m | `detectNearestJamarat` |
 | Sa'i zone radius (Safa/Marwah) | 25 m | `SaiTracker.ZONE_RADIUS` |
 | Tawaf tracking band | 10–80 m from Ka'bah (default mode) | `TawafTracker.inTawafZone` |
 | Tawaf start-reference samples / outlier clip | 3 (circular mean) / 150° (no time debounce; round tolerance removed 2026-09-15 — never-early policy, margin=0) | `TawafTracker.REF_SAMPLES` / `MAX_STEP_DEG` |
 | Tawaf band-exit session-break threshold | 90 s | `TawafTracker.MAX_GAP_SEC` |
-| Namirah warning radius | 200 m | `NAMIRAH_WARNING_RADIUS` |
+| Namirah warning radius (to polygon edge) | 200 m | `NAMIRAH_WARNING_RADIUS` |
+| Namirah mosque proximity radius (gates the warning above) | 1 000 m from `NAMIRAH_MOSQUE_CENTER` (centroid of OSM way 112317307, 51 points) | internal `NAMIRAH_PROXIMITY_RADIUS` in `checkArafahPosition` |
 
-The derived distances (419 m, 76/68.2/144 m) are quoted verbatim in the paper — if any coordinate changes, these numbers and the paper change too.
+The derived distances (376.7 m, 153.2/235.7/387.0 m) are quoted in the revision-2 draft (numbers are read from `results/` at build time) — if any coordinate changes, regenerate results and rebuild that draft. The older manuscript (`REVISI.docx`) and the legacy markdown drafts (`paper-draft.md`, `simpulan-abstrak.md`) still quote the superseded values (419.0 m, 76.0/68.2/144.0 m).
 
 ### Conventions in the research artifacts
 

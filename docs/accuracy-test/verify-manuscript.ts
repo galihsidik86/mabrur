@@ -18,8 +18,16 @@ const TOL = 0.01; // |kode - naskah| < 0,01 => COCOK; sel bilangan bulat: sama p
 
 // ==================== ANGKA ACUAN NASKAH (Tabel 3-9) ====================
 
+// diperbarui 2026-09-15: koordinat OSM (Safa/Marwah, jamarat, poligon Arafah,
+// Ka'bah) — lihat apps/mobile/src/services/sacred-zones-core.ts dan
+// .orkestra/runs/20260915-1900-lanjutan-lokasi-pustaka-apk/handoffs/01-research-scout-koordinat.md
+// untuk sumber. Sel yang berubah dari koordinat lama (tanpa sumber tercatat):
+// geometry.*, arafah.* (poligon 5→36 titik), jamarat.* + jamarat_confusion_sigma15
+// (urutan pilar dulu terbalik). miqat/tawaf/sai/haversine TIDAK berubah
+// (geometrinya tidak bergantung koordinat yang direvisi, atau bergeser <1 m
+// tak berdampak pada digit yang dilaporkan).
 const NASKAH = {
-  geometry: { safa_marwah_m: 419.0, jamarat_ula_wustha_m: 76.0, jamarat_wustha_aqabah_m: 68.2, jamarat_ula_aqabah_m: 144.0 },
+  geometry: { safa_marwah_m: 376.7, jamarat_ula_wustha_m: 153.2, jamarat_wustha_aqabah_m: 235.7, jamarat_ula_aqabah_m: 387.0 },
   haversine: {
     lokal: { mae: 0.649, rmse: 0.811, meanPct: 0.2, maxPct: 0.4267 },
     miqat: { mae: 521.533, rmse: 675.987, meanPct: 0.2654, maxPct: 0.427 },
@@ -34,11 +42,11 @@ const NASKAH = {
   ],
   arafah: [
     { sigma: 0, akurasi: 100, presisi: 100, recall: 100, f1: 100 },
-    { sigma: 1, akurasi: 99.98, presisi: 100, recall: 99.96, f1: 99.98 },
-    { sigma: 3, akurasi: 99.95, presisi: 99.99, recall: 99.93, f1: 99.96 },
-    { sigma: 5, akurasi: 99.84, presisi: 99.82, recall: 99.9, f1: 99.86 },
-    { sigma: 10, akurasi: 99.63, presisi: 99.68, recall: 99.68, f1: 99.68 },
-    { sigma: 15, akurasi: 99.44, presisi: 99.48, recall: 99.55, f1: 99.52 },
+    { sigma: 1, akurasi: 99.98, presisi: 99.96, recall: 99.96, f1: 99.96 },
+    { sigma: 3, akurasi: 99.96, presisi: 99.88, recall: 99.92, f1: 99.9 },
+    { sigma: 5, akurasi: 99.92, presisi: 99.84, recall: 99.8, f1: 99.82 },
+    { sigma: 10, akurasi: 99.83, presisi: 99.69, recall: 99.5, f1: 99.6 },
+    { sigma: 15, akurasi: 99.54, presisi: 99.15, recall: 98.82, f1: 98.98 },
   ],
   // diperbarui 2026-09-15: kebijakan "tidak pernah dini" (Tawaf) — naskah revisi-3.
   // Revisi 2026-09-14 (sudut kumulatif CCW, angka sebelumnya di sini) memakai
@@ -69,13 +77,13 @@ const NASKAH = {
     { sigma: 1, benar: 100, salahPilar: 0, takTerdeteksi: 0 },
     { sigma: 3, benar: 100, salahPilar: 0, takTerdeteksi: 0 },
     { sigma: 5, benar: 100, salahPilar: 0, takTerdeteksi: 0 },
-    { sigma: 10, benar: 97.31, salahPilar: 0.03, takTerdeteksi: 2.67 },
-    { sigma: 15, benar: 83.53, salahPilar: 0.32, takTerdeteksi: 16.15 },
+    { sigma: 10, benar: 97.31, salahPilar: 0, takTerdeteksi: 2.69 },
+    { sigma: 15, benar: 83.53, salahPilar: 0, takTerdeteksi: 16.47 },
   ],
   jamarat_confusion_sigma15: {
-    ula: { ula: 3328, wustha: 4, aqabah: 0, none: 668 },
-    wustha: { ula: 2, wustha: 3364, aqabah: 18, none: 616 },
-    aqabah: { ula: 0, wustha: 14, aqabah: 3332, none: 654 },
+    ula: { ula: 3328, wustha: 0, aqabah: 0, none: 672 },
+    wustha: { ula: 0, wustha: 3364, aqabah: 0, none: 636 },
+    aqabah: { ula: 0, wustha: 0, aqabah: 3332, none: 668 },
   },
 };
 

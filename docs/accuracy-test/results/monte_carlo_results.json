@@ -20,10 +20,10 @@
     }
   },
   "geometry": {
-    "safa_marwah_m": 419,
-    "jamarat_ula_wustha_m": 76,
-    "jamarat_wustha_aqabah_m": 68.2,
-    "jamarat_ula_aqabah_m": 144
+    "safa_marwah_m": 376.7,
+    "jamarat_ula_wustha_m": 153.2,
+    "jamarat_wustha_aqabah_m": 235.7,
+    "jamarat_ula_aqabah_m": 387
   },
   "haversine": {
     "lokal": {
@@ -108,47 +108,47 @@
     {
       "sigma": 1,
       "akurasi": 99.98,
-      "presisi": 100,
+      "presisi": 99.96,
       "recall": 99.96,
-      "f1": 99.98,
-      "ci_lo": 99.93,
-      "ci_hi": 99.99
+      "f1": 99.96,
+      "ci_lo": 99.94,
+      "ci_hi": 100
     },
     {
       "sigma": 3,
-      "akurasi": 99.95,
-      "presisi": 99.99,
-      "recall": 99.93,
-      "f1": 99.96,
-      "ci_lo": 99.89,
+      "akurasi": 99.96,
+      "presisi": 99.88,
+      "recall": 99.92,
+      "f1": 99.9,
+      "ci_lo": 99.9,
       "ci_hi": 99.98
     },
     {
       "sigma": 5,
-      "akurasi": 99.84,
-      "presisi": 99.82,
-      "recall": 99.9,
-      "f1": 99.86,
-      "ci_lo": 99.75,
-      "ci_hi": 99.9
+      "akurasi": 99.92,
+      "presisi": 99.84,
+      "recall": 99.8,
+      "f1": 99.82,
+      "ci_lo": 99.86,
+      "ci_hi": 99.96
     },
     {
       "sigma": 10,
-      "akurasi": 99.63,
-      "presisi": 99.68,
-      "recall": 99.68,
-      "f1": 99.68,
-      "ci_lo": 99.51,
-      "ci_hi": 99.73
+      "akurasi": 99.83,
+      "presisi": 99.69,
+      "recall": 99.5,
+      "f1": 99.6,
+      "ci_lo": 99.73,
+      "ci_hi": 99.89
     },
     {
       "sigma": 15,
-      "akurasi": 99.44,
-      "presisi": 99.48,
-      "recall": 99.55,
-      "f1": 99.52,
-      "ci_lo": 99.29,
-      "ci_hi": 99.56
+      "akurasi": 99.54,
+      "presisi": 99.15,
+      "recall": 98.82,
+      "f1": 98.98,
+      "ci_lo": 99.4,
+      "ci_hi": 99.65
     }
   ],
   "tawaf": [
@@ -301,36 +301,36 @@
       "benar": 97.31,
       "ci_lo": 97,
       "ci_hi": 97.58,
-      "salahPilar": 0.03,
-      "takTerdeteksi": 2.67
+      "salahPilar": 0,
+      "takTerdeteksi": 2.69
     },
     {
       "sigma": 15,
       "benar": 83.53,
       "ci_lo": 82.86,
       "ci_hi": 84.19,
-      "salahPilar": 0.32,
-      "takTerdeteksi": 16.15
+      "salahPilar": 0,
+      "takTerdeteksi": 16.47
     }
   ],
   "jamarat_confusion_sigma15": {
     "ula": {
       "ula": 3328,
-      "wustha": 4,
+      "wustha": 0,
       "aqabah": 0,
-      "none": 668
+      "none": 672
     },
     "wustha": {
-      "ula": 2,
+      "ula": 0,
       "wustha": 3364,
-      "aqabah": 18,
-      "none": 616
+      "aqabah": 0,
+      "none": 636
     },
     "aqabah": {
       "ula": 0,
-      "wustha": 14,
+      "wustha": 0,
       "aqabah": 3332,
-      "none": 654
+      "none": 668
     }
   },
   "tawaf_histogram": {
@@ -504,7 +504,7 @@
     ],
     "trials": 500,
     "cells": 90,
-    "corridor_length_m": 419.4
+    "corridor_length_m": 377.1
   },
   "noise_models_meta": {
     "models": [
@@ -533,7 +533,7 @@
     "cells": 108
   },
   "analytic_meta": {
-    "perimeter_arafah_m": 21334.9,
+    "perimeter_arafah_m": 15178.5,
     "area_arafah_box_m2": 53668621.2,
     "boundary_d_values": [
       -50,

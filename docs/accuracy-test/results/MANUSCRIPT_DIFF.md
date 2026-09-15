@@ -12,10 +12,10 @@
 
 | Sel | Kode | Naskah | Status |
 |---|---|---|---|
-| safa_marwah_m | 419 | 419 | COCOK |
-| jamarat_ula_wustha_m | 76 | 76 | COCOK |
-| jamarat_wustha_aqabah_m | 68,2 | 68,2 | COCOK |
-| jamarat_ula_aqabah_m | 144 | 144 | COCOK |
+| safa_marwah_m | 376,7 | 376,7 | COCOK |
+| jamarat_ula_wustha_m | 153,2 | 153,2 | COCOK |
+| jamarat_wustha_aqabah_m | 235,7 | 235,7 | COCOK |
+| jamarat_ula_aqabah_m | 387 | 387 | COCOK |
 
 ### Tabel 3 (Haversine)
 
@@ -68,25 +68,25 @@
 | sigma=0 recall | 100 | 100 | COCOK |
 | sigma=0 f1 | 100 | 100 | COCOK |
 | sigma=1 akurasi | 99,98 | 99,98 | COCOK |
-| sigma=1 presisi | 100 | 100 | COCOK |
+| sigma=1 presisi | 99,96 | 99,96 | COCOK |
 | sigma=1 recall | 99,96 | 99,96 | COCOK |
-| sigma=1 f1 | 99,98 | 99,98 | COCOK |
-| sigma=3 akurasi | 99,95 | 99,95 | COCOK |
-| sigma=3 presisi | 99,99 | 99,99 | COCOK |
-| sigma=3 recall | 99,93 | 99,93 | COCOK |
-| sigma=3 f1 | 99,96 | 99,96 | COCOK |
-| sigma=5 akurasi | 99,84 | 99,84 | COCOK |
-| sigma=5 presisi | 99,82 | 99,82 | COCOK |
-| sigma=5 recall | 99,9 | 99,9 | COCOK |
-| sigma=5 f1 | 99,86 | 99,86 | COCOK |
-| sigma=10 akurasi | 99,63 | 99,63 | COCOK |
-| sigma=10 presisi | 99,68 | 99,68 | COCOK |
-| sigma=10 recall | 99,68 | 99,68 | COCOK |
-| sigma=10 f1 | 99,68 | 99,68 | COCOK |
-| sigma=15 akurasi | 99,44 | 99,44 | COCOK |
-| sigma=15 presisi | 99,48 | 99,48 | COCOK |
-| sigma=15 recall | 99,55 | 99,55 | COCOK |
-| sigma=15 f1 | 99,52 | 99,52 | COCOK |
+| sigma=1 f1 | 99,96 | 99,96 | COCOK |
+| sigma=3 akurasi | 99,96 | 99,96 | COCOK |
+| sigma=3 presisi | 99,88 | 99,88 | COCOK |
+| sigma=3 recall | 99,92 | 99,92 | COCOK |
+| sigma=3 f1 | 99,9 | 99,9 | COCOK |
+| sigma=5 akurasi | 99,92 | 99,92 | COCOK |
+| sigma=5 presisi | 99,84 | 99,84 | COCOK |
+| sigma=5 recall | 99,8 | 99,8 | COCOK |
+| sigma=5 f1 | 99,82 | 99,82 | COCOK |
+| sigma=10 akurasi | 99,83 | 99,83 | COCOK |
+| sigma=10 presisi | 99,69 | 99,69 | COCOK |
+| sigma=10 recall | 99,5 | 99,5 | COCOK |
+| sigma=10 f1 | 99,6 | 99,6 | COCOK |
+| sigma=15 akurasi | 99,54 | 99,54 | COCOK |
+| sigma=15 presisi | 99,15 | 99,15 | COCOK |
+| sigma=15 recall | 98,82 | 98,82 | COCOK |
+| sigma=15 f1 | 98,98 | 98,98 | COCOK |
 
 ### Tabel 6 (Tawaf)
 
@@ -163,26 +163,26 @@
 | sigma=5 salahPilar | 0 | 0 | COCOK |
 | sigma=5 takTerdeteksi | 0 | 0 | COCOK |
 | sigma=10 benar | 97,31 | 97,31 | COCOK |
-| sigma=10 salahPilar | 0,03 | 0,03 | COCOK |
-| sigma=10 takTerdeteksi | 2,67 | 2,67 | COCOK |
+| sigma=10 salahPilar | 0 | 0 | COCOK |
+| sigma=10 takTerdeteksi | 2,69 | 2,69 | COCOK |
 | sigma=15 benar | 83,53 | 83,53 | COCOK |
-| sigma=15 salahPilar | 0,32 | 0,32 | COCOK |
-| sigma=15 takTerdeteksi | 16,15 | 16,15 | COCOK |
+| sigma=15 salahPilar | 0 | 0 | COCOK |
+| sigma=15 takTerdeteksi | 16,47 | 16,47 | COCOK |
 
 ### Tabel 9 (Confusion)
 
 | Sel | Kode | Naskah | Status |
 |---|---|---|---|
 | ula->ula | 3328 | 3328 | COCOK |
-| ula->wustha | 4 | 4 | COCOK |
+| ula->wustha | 0 | 0 | COCOK |
 | ula->aqabah | 0 | 0 | COCOK |
-| ula->none | 668 | 668 | COCOK |
-| wustha->ula | 2 | 2 | COCOK |
+| ula->none | 672 | 672 | COCOK |
+| wustha->ula | 0 | 0 | COCOK |
 | wustha->wustha | 3364 | 3364 | COCOK |
-| wustha->aqabah | 18 | 18 | COCOK |
-| wustha->none | 616 | 616 | COCOK |
+| wustha->aqabah | 0 | 0 | COCOK |
+| wustha->none | 636 | 636 | COCOK |
 | aqabah->ula | 0 | 0 | COCOK |
-| aqabah->wustha | 14 | 14 | COCOK |
+| aqabah->wustha | 0 | 0 | COCOK |
 | aqabah->aqabah | 3332 | 3332 | COCOK |
-| aqabah->none | 654 | 654 | COCOK |
+| aqabah->none | 668 | 668 | COCOK |
 

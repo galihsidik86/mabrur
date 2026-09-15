@@ -3,7 +3,7 @@
  * mencapai Safa/Marwah persis) & pergeseran lateral koridor, terhadap noise GPS.
  *
  * Geometri (bidang tangen lokal berpusat di SAFA, proyeksi ekuirektangular —
- * memadai untuk skala koridor ~419 m):
+ * memadai untuk skala koridor ~377 m, koordinat OSM revisi 2026-09-15):
  *   u = vektor satuan SAFA->MARWAH (arah koridor)
  *   v = vektor satuan tegak lurus u (diputar 90° CCW: v=(-u_N, u_E)); SISI
  *       (kiri/kanan koridor) yang dipilih arbitrer — hanya BESAR pergeseran
@@ -11,7 +11,7 @@
  *   Titik balik sisi-Safa   = SAFA   + o·u + l·v   (berhenti o m SEBELUM Safa,
  *                                                    diukur sepanjang koridor)
  *   Titik balik sisi-Marwah = SAFA + (Lc-o)·u + l·v (berhenti o m SEBELUM Marwah)
- *   dengan Lc = panjang koridor (≈419 m, dihitung dari koordinat SAFA/MARWAH).
+ *   dengan Lc = panjang koridor (≈377 m, dihitung dari koordinat SAFA/MARWAH).
  * Titik mulai (sebelum leg pertama) SAMA DENGAN titik balik sisi-Safa (jadi ikut
  * bergeser oleh o & l, sesuai instruksi "termasuk titik mulai di sisi Safa").
  * Jarak dari titik balik ke pilar sebenarnya = sqrt(o^2 + l^2); SaiTracker hanya
