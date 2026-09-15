@@ -15,5 +15,8 @@
     "simulate": "tsx docs/accuracy-test/run.ts && tsx docs/accuracy-test/verify-manuscript.ts",
     "replay": "tsx docs/accuracy-test/gps-replay/index.ts",
     "test:replay": "vitest run --config docs/accuracy-test/gps-replay/vitest.config.ts"
+  },
+  "devDependencies": {
+    "playwright": "^1.63.0"
   }
 }
