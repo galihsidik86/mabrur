@@ -220,7 +220,7 @@ function TawafSaiTab({ type }: { type: 'tawaf' | 'sai' }) {
       {autoMode && (
         <Text style={tc.autoHint}>
           {type === 'tawaf'
-            ? 'Putaran terhitung otomatis saat melewati garis Hajar Aswad — mengikuti radius edar di lantai mana pun (dasar/1/atap). Butuh sinyal GPS; di area tertutup gunakan mode Manual.'
+            ? 'Putaran dihitung dari akumulasi rotasi berlawanan jarum jam sejak pelacakan dimulai (mulai pelacakan saat sejajar Hajar Aswad) — mengikuti radius edar di lantai mana pun (dasar/1/atap). Notifikasi putaran bisa muncul beberapa detik SETELAH kamu melewati titik mulai (disengaja, demi akurasi). Biarkan GPS aktif sampai getaran putaran ke-7 muncul. Butuh sinyal GPS; di area tertutup gunakan mode Manual.'
             : 'Perjalanan terhitung otomatis saat sampai di Safa/Marwah'}
         </Text>
       )}
