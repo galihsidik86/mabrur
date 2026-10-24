@@ -170,7 +170,8 @@ router.delete('/saved-locations/:id', async (req: Request, res: Response, next: 
 
 router.get('/phrases', async (_req: Request, res: Response, next: NextFunction) => {
   try {
-    const phrases = await db('arabic_phrases').orderBy('sort_order');
+    // id sebagai pemecah seri: sort_order tidak unik (default 0) -> urutan tetap deterministik.
+    const phrases = await db('arabic_phrases').orderBy('sort_order').orderBy('id');
     res.json({ data: phrases });
   } catch (err) { next(err); }
 });

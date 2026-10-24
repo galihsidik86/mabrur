@@ -11,6 +11,8 @@ import {
   PlusJakartaSans_700Bold,
   PlusJakartaSans_800ExtraBold,
 } from '@expo-google-fonts/plus-jakarta-sans';
+// Amiri: teks Arab berharakat (frasa, doa) tanpa tanda bertumpuk.
+import { Amiri_400Regular, Amiri_700Bold } from '@expo-google-fonts/amiri';
 import * as Notifications from 'expo-notifications';
 import { useAuthStore } from '../src/stores/auth';
 import { initDB } from '../src/services/db';
@@ -44,6 +46,8 @@ export default function RootLayout() {
     PlusJakartaSans_600SemiBold,
     PlusJakartaSans_700Bold,
     PlusJakartaSans_800ExtraBold,
+    Amiri_400Regular,
+    Amiri_700Bold,
   });
 
   // Init DB + session

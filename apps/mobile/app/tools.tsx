@@ -11,6 +11,7 @@ import { activateKeepAwakeAsync, deactivateKeepAwake } from 'expo-keep-awake';
 import { colors, radius } from '../src/theme';
 import { api } from '../src/services/api';
 import CurrencyConverter from '../src/components/CurrencyConverter';
+import PhrasesList from '../src/components/PhrasesList';
 import { getPosition, requestPermission } from '../src/services/location';
 import {
   TawafTracker, SaiTracker, detectNearestJamarat,
@@ -829,11 +830,9 @@ const hub = StyleSheet.create({
 export default function ToolsScreen() {
   const router = useRouter();
   const [tab, setTab] = useState<Tab>('hub');
-  const [phrases, setPhrases] = useState<any[]>([]);
   const [healthTips, setHealthTips] = useState<any[]>([]);
 
   useEffect(() => {
-    if (tab === 'frasa') api.getPhrases().then(setPhrases).catch(() => {});
     if (tab === 'kesehatan') api.getHealthTips().then(setHealthTips).catch(() => {});
   }, [tab]);
 
@@ -860,17 +859,7 @@ export default function ToolsScreen() {
 
         {tab === 'kurs' && <CurrencyConverter />}
 
-        {tab === 'frasa' && (
-          <View style={tc.wrap}>
-            {phrases.map((p: any) => (
-              <View key={p.id} style={{ backgroundColor: colors.card, borderWidth: 1, borderColor: colors.border, borderRadius: 12, padding: 14, marginBottom: 8 }}>
-                <Text style={{ fontSize: 22, fontWeight: '700', color: colors.text, textAlign: 'right', writingDirection: 'rtl' }}>{p.arabic}</Text>
-                <Text style={{ fontSize: 13, fontFamily: 'PlusJakartaSans_500Medium', color: colors.primary, marginTop: 6, fontStyle: 'italic' }}>{p.transliteration}</Text>
-                <Text style={{ fontSize: 13, fontFamily: 'PlusJakartaSans_600SemiBold', color: colors.textSecondary, marginTop: 2 }}>{p.indonesian}</Text>
-              </View>
-            ))}
-          </View>
-        )}
+        {tab === 'frasa' && <PhrasesList />}
 
         {tab === 'kesehatan' && (
           <View style={tc.wrap}>

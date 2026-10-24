@@ -138,6 +138,15 @@ export const en: Record<TranslationKey, string> = {
   'kurs.select_title': 'Choose currency',
   'kurs.search': 'Search name or code (e.g. USD, Ringgit)',
 
+  // Arabic phrases
+  'phrase.empty': 'Phrases are not available yet. Connect to the internet once to download them.',
+  'phrase.cat.salam': 'Greetings & courtesy',
+  'phrase.cat.arah': 'Directions & places',
+  'phrase.cat.transportasi': 'Transport',
+  'phrase.cat.belanja': 'Shopping',
+  'phrase.cat.darurat': 'Emergency',
+  'phrase.cat.makanan': 'Food & drink',
+
   // Profile
   'profile.title': 'Profile',
   'profile.edit': 'Edit Profile',

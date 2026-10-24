@@ -1,5 +1,8 @@
 import { Knex } from 'knex';
 
+// Isi awal versi pertama (tanpa harakat). Teks berharakat + arti English diterapkan oleh
+// migrasi 20261024000001_phrases_harakat, yang berjalan sebelum seed ini sehingga seed ini
+// melewati tabel yang sudah terisi.
 export async function seed(knex: Knex): Promise<void> {
   const has = await knex('arabic_phrases').first();
   if (has) return;

@@ -138,6 +138,15 @@ export const id = {
   'kurs.select_title': 'Pilih mata uang',
   'kurs.search': 'Cari nama atau kode (mis. USD, Ringgit)',
 
+  // Frasa Arab
+  'phrase.empty': 'Frasa belum tersedia. Sambungkan internet sekali untuk mengunduh daftar frasa.',
+  'phrase.cat.salam': 'Salam & sopan santun',
+  'phrase.cat.arah': 'Arah & tempat',
+  'phrase.cat.transportasi': 'Transportasi',
+  'phrase.cat.belanja': 'Belanja',
+  'phrase.cat.darurat': 'Darurat',
+  'phrase.cat.makanan': 'Makanan & minuman',
+
   // Profil
   'profile.title': 'Profil',
   'profile.edit': 'Edit Profil',

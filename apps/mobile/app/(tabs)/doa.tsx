@@ -194,8 +194,8 @@ const s = StyleSheet.create({
     paddingHorizontal: 18,
   },
   arabicText: {
+    fontFamily: 'Amiri_700Bold', // sama dengan menu Frasa; fontWeight diabaikan untuk font kustom
     fontSize: 24,
-    fontWeight: '700',
     color: colors.text,
     lineHeight: 48,
     textAlign: 'right',

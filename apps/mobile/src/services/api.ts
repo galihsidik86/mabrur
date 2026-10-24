@@ -75,6 +75,18 @@ async function request<T = any>(
   return json.data;
 }
 
+/** Frasa Arab (Alat Ibadah). english/transliteration_en kosong pada server versi lama. */
+export interface Phrase {
+  id: string;
+  category: string;
+  sort_order: number;
+  arabic: string;
+  indonesian: string;
+  transliteration: string | null;
+  english?: string | null;
+  transliteration_en?: string | null;
+}
+
 /** Kurs semua mata uang; rates[KODE] = nilai 1 unit `base` dalam KODE. */
 export interface CurrencyRates {
   base: string;
@@ -223,7 +235,7 @@ export const api = {
   // Suara Rombongan (LiveKit): token + url + peran (speaker/listener) untuk grup user
   getVoiceToken: () =>
     request<{ url: string; token: string; room: string; role: 'speaker' | 'listener' }>('/voice/token'),
-  getPhrases: () => request<any[]>('/phrases'),
+  getPhrases: () => request<Phrase[]>('/phrases'),
   getHealthTips: () => request<any[]>('/health-tips'),
   getPrayerTimes: (lat?: number, lng?: number) =>
     request<any>(`/prayer-times${lat ? `?lat=${lat}&lng=${lng}` : ''}`),
