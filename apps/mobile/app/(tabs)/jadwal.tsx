@@ -20,10 +20,11 @@ import {
   getSchedules,
   type Schedule,
 } from '../../src/services/db';
+import { useI18n, type TFunction, type TranslationKey } from '../../src/services/i18n';
 
-function formatTime(iso: string): string {
+function formatTime(iso: string, t: TFunction): string {
   const d = new Date(iso);
-  const months = ['JAN','FEB','MAR','APR','MEI','JUN','JUL','AGU','SEP','OKT','NOV','DES'];
+  const months = t('date.months_short').split(',');
   const day = d.getDate();
   const mon = months[d.getMonth()];
   const h = d.getHours().toString().padStart(2, '0');
@@ -31,10 +32,10 @@ function formatTime(iso: string): string {
   return `${day} ${mon} · ${h}:${m}`;
 }
 
-function statusLabel(s: string): string {
-  if (s === 'done') return 'Selesai';
-  if (s === 'active') return 'Hari ini';
-  return 'Nanti';
+function statusLabelKey(s: string): TranslationKey {
+  if (s === 'done') return 'content.status_done';
+  if (s === 'active') return 'content.status_active';
+  return 'content.status_upcoming';
 }
 
 const dotColors = {
@@ -50,6 +51,7 @@ const chipColors = {
 };
 
 export default function JadwalScreen() {
+  const t = useI18n((st) => st.t);
   const user = useAuthStore((s) => s.user);
   const canEdit = user?.role === 'muthawwif' || user?.role === 'admin';
   const [schedules, setSchedules] = useState<Schedule[]>([]);
@@ -92,9 +94,9 @@ export default function JadwalScreen() {
   return (
     <SafeAreaView style={s.safe} edges={['top']}>
       <ScrollView style={s.scroll} contentContainerStyle={s.content}>
-        <Text style={s.title}>Jadwal & agenda</Text>
+        <Text style={s.title}>{t('content.schedule_title')}</Text>
         <Text style={s.sub}>
-          {groupName ? `Rangkaian ibadah ${groupName}.` : 'Rangkaian ibadah rombongan.'}
+          {groupName ? t('content.schedule_sub_group', { group: groupName }) : t('content.schedule_sub')}
         </Text>
 
         {canEdit && (
@@ -102,24 +104,24 @@ export default function JadwalScreen() {
             <TouchableOpacity onPress={() => setShowForm(!showForm)}
               style={{ backgroundColor: colors.primary, borderRadius: 10, padding: 11, alignItems: 'center', flexDirection: 'row', justifyContent: 'center', gap: 6 }}>
               <Ionicons name={showForm ? 'close' : 'add'} size={18} color={colors.textOnPrimary} />
-              <Text style={{ fontSize: 13, fontFamily: 'PlusJakartaSans_700Bold', color: colors.textOnPrimary }}>{showForm ? 'Tutup' : 'Tambah Jadwal'}</Text>
+              <Text style={{ fontSize: 13, fontFamily: 'PlusJakartaSans_700Bold', color: colors.textOnPrimary }}>{showForm ? t('content.schedule_close') : t('content.schedule_add')}</Text>
             </TouchableOpacity>
             {showForm && (
               <View style={{ marginTop: 10, backgroundColor: colors.card, borderWidth: 1, borderColor: colors.border, borderRadius: 12, padding: 14 }}>
-                <TextInput placeholder="Judul agenda" value={formTitle} onChangeText={setFormTitle}
+                <TextInput placeholder={t('content.schedule_ph_title')} value={formTitle} onChangeText={setFormTitle}
                   style={{ borderWidth: 1, borderColor: colors.border, borderRadius: 8, padding: 10, fontSize: 13, fontFamily: 'PlusJakartaSans_500Medium', color: colors.text, marginBottom: 8 }} placeholderTextColor={colors.textFaint} />
-                <TextInput placeholder="Lokasi" value={formLocation} onChangeText={setFormLocation}
+                <TextInput placeholder={t('content.schedule_ph_location')} value={formLocation} onChangeText={setFormLocation}
                   style={{ borderWidth: 1, borderColor: colors.border, borderRadius: 8, padding: 10, fontSize: 13, fontFamily: 'PlusJakartaSans_500Medium', color: colors.text, marginBottom: 8 }} placeholderTextColor={colors.textFaint} />
-                <TextInput placeholder="Waktu (YYYY-MM-DDTHH:MM)" value={formTime} onChangeText={setFormTime}
+                <TextInput placeholder={t('content.schedule_ph_time')} value={formTime} onChangeText={setFormTime}
                   style={{ borderWidth: 1, borderColor: colors.border, borderRadius: 8, padding: 10, fontSize: 13, fontFamily: 'PlusJakartaSans_500Medium', color: colors.text, marginBottom: 8 }} placeholderTextColor={colors.textFaint} />
                 <TouchableOpacity onPress={async () => {
-                  if (!formTitle || !formTime || !groupId) { Alert.alert('', 'Judul dan waktu wajib diisi'); return; }
+                  if (!formTitle || !formTime || !groupId) { Alert.alert('', t('content.schedule_required')); return; }
                   try {
                     await api.createSchedule(groupId, { title: formTitle, location_name: formLocation, start_time: new Date(formTime).toISOString() });
                     setFormTitle(''); setFormLocation(''); setFormTime(''); setShowForm(false); load();
-                  } catch (e: any) { Alert.alert('Gagal', e.message); }
+                  } catch (e: any) { Alert.alert(t('content.schedule_failed'), e.message); }
                 }} style={{ backgroundColor: colors.green, borderRadius: 8, padding: 11, alignItems: 'center' }}>
-                  <Text style={{ fontSize: 13, fontFamily: 'PlusJakartaSans_700Bold', color: '#fff' }}>Simpan</Text>
+                  <Text style={{ fontSize: 13, fontFamily: 'PlusJakartaSans_700Bold', color: '#fff' }}>{t('content.schedule_save')}</Text>
                 </TouchableOpacity>
               </View>
             )}
@@ -134,7 +136,7 @@ export default function JadwalScreen() {
         ) : schedules.length === 0 ? (
           <View style={s.empty}>
             <Ionicons name="calendar-outline" size={48} color={colors.textFaint} />
-            <Text style={s.emptyText}>Belum ada jadwal untuk rombonganmu</Text>
+            <Text style={s.emptyText}>{t('content.schedule_empty')}</Text>
           </View>
         ) : (
           <View style={s.timeline}>
@@ -153,13 +155,13 @@ export default function JadwalScreen() {
 
                   {/* Content right */}
                   <View style={s.rowContent}>
-                    <Text style={s.time}>{formatTime(item.start_time)}</Text>
+                    <Text style={s.time}>{formatTime(item.start_time, t)}</Text>
                     <View style={s.card}>
                       <View style={s.cardTop}>
                         <Text style={s.cardTitle} numberOfLines={2}>{item.title}</Text>
                         <View style={[s.chip, { backgroundColor: chip.bg }]}>
                           <Text style={[s.chipText, { color: chip.text }]}>
-                            {statusLabel(item.status)}
+                            {t(statusLabelKey(item.status))}
                           </Text>
                         </View>
                       </View>

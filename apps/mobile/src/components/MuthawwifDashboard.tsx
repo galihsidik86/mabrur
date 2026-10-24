@@ -15,7 +15,7 @@ import { colors, radius } from '../theme';
 import { api, type MemberStatus } from '../services/api';
 import { getGroups } from '../services/db';
 import { trackingLabel } from '../services/tracking-label';
-import { useI18n } from '../services/i18n';
+import { useI18n, type TFunction, type TranslationKey } from '../services/i18n';
 import { formatDistance } from '../services/location';
 
 type MemberData = MemberStatus;
@@ -36,11 +36,17 @@ interface SosAlert {
   created_at: string;
 }
 
-const categoryLabels: Record<string, string> = {
-  medis: 'Medis',
-  tersesat: 'Tersesat',
-  kehilangan: 'Kehilangan',
+// Kunci (bukan teks) agar terjemahan dipanggil saat render.
+const categoryKeys: Record<string, TranslationKey> = {
+  medis: 'sos.cat.medis',
+  tersesat: 'sos.cat.tersesat',
+  kehilangan: 'sos.cat.kehilangan',
 };
+
+function categoryLabel(category: string, t: TFunction): string {
+  const key = categoryKeys[category];
+  return key ? t(key) : category;
+}
 
 function initials(name: string): string {
   return name
@@ -54,12 +60,15 @@ function initials(name: string): string {
 // Catatan jarak miqat hanya ditampilkan bila relevan (sedang dalam perjalanan ke miqat).
 const MIQAT_NOTE_M = 20000;
 
-function locationText(m: MemberData, now: number): string {
-  const parts = [trackingLabel(m.tracking, m.last_seen_at, now)];
+function locationText(m: MemberData, now: number, t: TFunction): string {
+  const parts = [trackingLabel(m.tracking, m.last_seen_at, now, t)];
   if (m.far_from_group && m.distance_to_leader != null) {
-    parts.push(`${formatDistance(m.distance_to_leader)} dari muthawwif`);
+    parts.push(t('monitor.from_muthawwif', { distance: formatDistance(m.distance_to_leader) }));
   } else if (m.nearest_miqat && m.nearest_miqat.distance <= MIQAT_NOTE_M) {
-    parts.push(`${formatDistance(m.nearest_miqat.distance)} dari ${m.nearest_miqat.name}`);
+    parts.push(t('monitor.from_place', {
+      distance: formatDistance(m.nearest_miqat.distance),
+      place: m.nearest_miqat.name,
+    }));
   }
   return parts.join(' · ');
 }
@@ -71,12 +80,13 @@ function memberRank(m: MemberData): number {
   return m.status === 'attention' ? 1 : 2;
 }
 
-function reminderResultText(r: { sent: number; skipped_cooldown: number; no_push_token: number }): string {
-  const lines = [`${r.sent} pengingat terkirim.`];
-  if (r.skipped_cooldown > 0) lines.push(`${r.skipped_cooldown} jamaah baru saja diingatkan (tunggu 5 menit).`);
-  if (r.no_push_token > 0) {
-    lines.push(`${r.no_push_token} jamaah tidak bisa menerima notifikasi (belum login di aplikasi atau notifikasi dimatikan). Hubungi lewat telepon/WhatsApp.`);
-  }
+function reminderResultText(
+  r: { sent: number; skipped_cooldown: number; no_push_token: number },
+  t: TFunction,
+): string {
+  const lines = [t('monitor.reminder_sent', { count: r.sent })];
+  if (r.skipped_cooldown > 0) lines.push(t('monitor.reminder_cooldown', { count: r.skipped_cooldown }));
+  if (r.no_push_token > 0) lines.push(t('monitor.reminder_no_token', { count: r.no_push_token }));
   return lines.join('\n');
 }
 
@@ -86,10 +96,10 @@ function openGoogleMaps(lat: number, lng: number) {
   Linking.openURL(`https://www.google.com/maps?q=${lat},${lng}`);
 }
 
-function openWhatsApp(phone: string, name: string, category: string) {
+function openWhatsApp(phone: string, name: string, category: string, t: TFunction) {
   // Format: 08xxx → 628xxx
   let wa = phone.replace(/^0/, '62');
-  const msg = encodeURIComponent(`Assalamualaikum ${name}, kami menerima sinyal SOS (${category}) dari Anda. Apakah Anda baik-baik saja? Kami sedang menuju lokasi Anda.`);
+  const msg = encodeURIComponent(t('monitor.sos_wa_message', { name, category }));
   Linking.openURL(`https://wa.me/${wa}?text=${msg}`);
 }
 
@@ -147,22 +157,22 @@ export default function MuthawwifDashboard({ userName }: { userName: string }) {
     setReminding(true);
     try {
       const result = await api.sendLocationReminders(groupId, userIds);
-      Alert.alert('Pengingat lokasi', reminderResultText(result));
+      Alert.alert(t('monitor.reminder_title'), reminderResultText(result, t));
     } catch {
-      Alert.alert('Gagal mengirim', 'Pengingat tidak terkirim. Periksa koneksi internet lalu coba lagi.');
+      Alert.alert(t('monitor.reminder_failed_title'), t('monitor.reminder_failed_body'));
     } finally {
       setReminding(false);
     }
-  }, [groupId, reminding]);
+  }, [groupId, reminding, t]);
 
   const openMember = (m: MemberData) => {
     if (m.location) {
       router.push({ pathname: '/peta', params: { focus: m.id } });
       return;
     }
-    Alert.alert(m.name, 'Belum ada lokasi dari jamaah ini. Kirim pengingat untuk mengaktifkan GPS & izin lokasi?', [
-      { text: 'Batal', style: 'cancel' },
-      { text: 'Kirim pengingat', onPress: () => remind([m.id]) },
+    Alert.alert(m.name, t('monitor.member_no_location'), [
+      { text: t('common.cancel'), style: 'cancel' },
+      { text: t('monitor.send_reminder'), onPress: () => remind([m.id]) },
     ]);
   };
 
@@ -195,12 +205,14 @@ export default function MuthawwifDashboard({ userName }: { userName: string }) {
               <View style={s.sosIconBox}>
                 <Ionicons name="warning" size={28} color="#fff" />
               </View>
-              <Text style={s.sosTitle}>SOS DARURAT</Text>
+              <Text style={s.sosTitle}>{t('monitor.sos_title')}</Text>
             </View>
 
             {/* Info jamaah */}
             <Text style={s.sosName}>{sos.user_name}</Text>
-            <Text style={s.sosCat}>{categoryLabels[sos.category] || sos.category} · {timeAgo} menit lalu</Text>
+            <Text style={s.sosCat}>
+              {categoryLabel(sos.category, t)} · {t('monitor.sos_minutes_ago', { minutes: timeAgo })}
+            </Text>
             <Text style={s.sosPhone}>{sos.user_phone || '-'}</Text>
 
             {/* Tombol besar — 2 kolom */}
@@ -208,15 +220,15 @@ export default function MuthawwifDashboard({ userName }: { userName: string }) {
               <TouchableOpacity style={s.sosBtnPrimary}
                 onPress={() => {
                   if (sos.lat != null && sos.lng != null) openGoogleMaps(sos.lat, sos.lng);
-                  else Alert.alert('', 'Lokasi GPS tidak tersedia');
+                  else Alert.alert('', t('monitor.sos_no_gps'));
                 }}>
                 <Ionicons name="navigate" size={22} color={colors.dangerDark} />
-                <Text style={s.sosBtnPrimaryText}>Lihat Lokasi</Text>
+                <Text style={s.sosBtnPrimaryText}>{t('monitor.sos_view_location')}</Text>
               </TouchableOpacity>
               <TouchableOpacity style={s.sosBtnWa}
                 onPress={() => {
-                  if (sos.user_phone) openWhatsApp(sos.user_phone, sos.user_name, categoryLabels[sos.category] || sos.category);
-                  else Alert.alert('', 'Nomor HP tidak tersedia');
+                  if (sos.user_phone) openWhatsApp(sos.user_phone, sos.user_name, categoryLabel(sos.category, t), t);
+                  else Alert.alert('', t('monitor.sos_no_phone'));
                 }}>
                 <Ionicons name="logo-whatsapp" size={22} color="#fff" />
                 <Text style={s.sosBtnWhiteText}>WhatsApp</Text>
@@ -226,24 +238,24 @@ export default function MuthawwifDashboard({ userName }: { userName: string }) {
               <TouchableOpacity style={s.sosBtnOutline}
                 onPress={() => {
                   if (sos.user_phone) Linking.openURL(`tel:${sos.user_phone}`);
-                  else Alert.alert('', 'Nomor HP tidak tersedia');
+                  else Alert.alert('', t('monitor.sos_no_phone'));
                 }}>
                 <Ionicons name="call" size={20} color="#fff" />
-                <Text style={s.sosBtnWhiteText}>Telepon</Text>
+                <Text style={s.sosBtnWhiteText}>{t('monitor.sos_call')}</Text>
               </TouchableOpacity>
               <TouchableOpacity style={s.sosBtnOutline}
                 onPress={() => Alert.alert(
-                  'Selesaikan SOS',
-                  `Yakin SOS dari ${sos.user_name} sudah ditangani?`,
+                  t('monitor.sos_resolve_title'),
+                  t('monitor.sos_resolve_confirm', { name: sos.user_name }),
                   [
-                    { text: 'Batal', style: 'cancel' },
-                    { text: 'Ya, Selesai', onPress: async () => {
+                    { text: t('common.cancel'), style: 'cancel' },
+                    { text: t('monitor.sos_resolve_yes'), onPress: async () => {
                       try { await api.resolveSos(sos.id); setSosAlerts((prev) => prev.filter((s2) => s2.id !== sos.id)); } catch {}
                     }},
                   ]
                 )}>
                 <Ionicons name="checkmark-circle" size={20} color="#fff" />
-                <Text style={s.sosBtnWhiteText}>Selesai</Text>
+                <Text style={s.sosBtnWhiteText}>{t('monitor.sos_resolve')}</Text>
               </TouchableOpacity>
             </View>
           </View>
@@ -254,15 +266,15 @@ export default function MuthawwifDashboard({ userName }: { userName: string }) {
       <View style={s.statsRow}>
         <View style={s.statCard}>
           <Text style={s.statNum}>{stats.jamaah_total}</Text>
-          <Text style={s.statLabel}>Total jamaah</Text>
+          <Text style={s.statLabel}>{t('monitor.stat_total')}</Text>
         </View>
         <View style={s.statCard}>
           <Text style={[s.statNum, { color: colors.green }]}>{stats.tracked}</Text>
-          <Text style={s.statLabel}>Terpantau</Text>
+          <Text style={s.statLabel}>{t('monitor.stat_tracked')}</Text>
         </View>
         <View style={s.statCard}>
           <Text style={[s.statNum, { color: colors.danger }]}>{stats.untracked}</Text>
-          <Text style={s.statLabel}>Tidak terpantau</Text>
+          <Text style={s.statLabel}>{t('monitor.stat_untracked')}</Text>
         </View>
       </View>
 
@@ -270,20 +282,20 @@ export default function MuthawwifDashboard({ userName }: { userName: string }) {
         <TouchableOpacity style={s.remindAllBtn} onPress={() => remind()} disabled={reminding}>
           <Ionicons name="notifications-outline" size={18} color={colors.textOnPrimary} />
           <Text style={s.remindAllText}>
-            {reminding ? 'Mengirim…' : `Ingatkan ${stats.untracked} jamaah untuk aktifkan lokasi`}
+            {reminding ? t('monitor.sending') : t('monitor.remind_all', { count: stats.untracked })}
           </Text>
         </TouchableOpacity>
       )}
 
       {/* Member List */}
-      <Text style={s.sectionTitle}>Status rombongan</Text>
+      <Text style={s.sectionTitle}>{t('monitor.group_status')}</Text>
       <View style={s.listCard}>
         {members.map((m, idx) => (
           <TouchableOpacity
             key={m.id}
             style={[s.memberRow, idx > 0 && s.memberRowBorder]}
             onPress={() => openMember(m)}
-            accessibilityHint="Buka posisi di peta"
+            accessibilityHint={t('monitor.open_on_map_hint')}
           >
             <View
               style={[
@@ -297,7 +309,7 @@ export default function MuthawwifDashboard({ userName }: { userName: string }) {
             <View style={{ flex: 1 }}>
               <Text style={s.memberName}>{m.name}</Text>
               <Text style={[s.memberPlace, m.tracking !== 'tracked' && { color: colors.danger }]}>
-                {locationText(m, now)}
+                {locationText(m, now, t)}
               </Text>
             </View>
             {m.role_in_group === 'jamaah' && m.tracking !== 'tracked' && (
@@ -305,7 +317,7 @@ export default function MuthawwifDashboard({ userName }: { userName: string }) {
                 style={s.bellBtn}
                 onPress={() => remind([m.id])}
                 disabled={reminding}
-                accessibilityLabel={`Kirim pengingat lokasi ke ${m.name}`}
+                accessibilityLabel={t('monitor.remind_member_label', { name: m.name })}
               >
                 <Ionicons name="notifications-outline" size={18} color={colors.primary} />
               </TouchableOpacity>
@@ -326,7 +338,7 @@ export default function MuthawwifDashboard({ userName }: { userName: string }) {
                     : { color: colors.greenDark },
                 ]}
               >
-                {m.status === 'attention' ? 'Perhatian' : 'Aman'}
+                {m.status === 'attention' ? t('monitor.chip_attention') : t('monitor.chip_safe')}
               </Text>
             </View>
           </TouchableOpacity>
@@ -334,7 +346,7 @@ export default function MuthawwifDashboard({ userName }: { userName: string }) {
         {members.length === 0 && (
           <View style={s.empty}>
             <Ionicons name="people-outline" size={32} color={colors.textFaint} />
-            <Text style={s.emptyText}>Belum ada data anggota</Text>
+            <Text style={s.emptyText}>{t('monitor.empty_members')}</Text>
           </View>
         )}
       </View>

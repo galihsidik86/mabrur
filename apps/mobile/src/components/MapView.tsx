@@ -1,6 +1,7 @@
 import { View, StyleSheet } from 'react-native';
 import { WebView } from 'react-native-webview';
 import { escapeHtml } from '../services/html-escape';
+import { useI18n } from '../services/i18n';
 
 export interface MapMarker {
   lat: number;
@@ -50,6 +51,7 @@ export default function MapViewComponent({
   markers = [], polygons = [], circles = [],
   userLocation, center, zoom = 15, height = 350,
 }: Props) {
+  const t = useI18n((st) => st.t);
   const c = center || (markers.length > 0
     ? { lat: markers[0].lat, lng: markers[0].lng }
     : userLocation || { lat: 21.4225, lng: 39.8262 });
@@ -82,7 +84,7 @@ export default function MapViewComponent({
   }).join('\n');
 
   const userJs = userLocation
-    ? `L.circleMarker([${userLocation.lat},${userLocation.lng}],{radius:8,color:'#2563EB',fillColor:'#3B82F6',fillOpacity:1,weight:3}).addTo(map).bindPopup('Posisi Anda');L.circleMarker([${userLocation.lat},${userLocation.lng}],{radius:20,color:'#3B82F6',fillColor:'#3B82F6',fillOpacity:0.15,weight:0}).addTo(map);`
+    ? `L.circleMarker([${userLocation.lat},${userLocation.lng}],{radius:8,color:'#2563EB',fillColor:'#3B82F6',fillOpacity:1,weight:3}).addTo(map).bindPopup(${jsString(t('monitor.your_position'))});L.circleMarker([${userLocation.lat},${userLocation.lng}],{radius:20,color:'#3B82F6',fillColor:'#3B82F6',fillOpacity:0.15,weight:0}).addTo(map);`
     : '';
 
   const html = `<!DOCTYPE html>

@@ -2,6 +2,7 @@ import { db } from '../db';
 import { AppError } from '../middleware/error-handler';
 import { audit } from './audit.service';
 import { notifyGroupMuthawwif } from './push.service';
+import { pushText, PUSH_MESSAGES, type PushKey } from './push-messages';
 
 const FIELDS = [
   'sos_alerts.id', 'sos_alerts.user_id', 'sos_alerts.group_id',
@@ -39,11 +40,16 @@ export async function create(
   // Push notification ke muthawwif
   if (membership?.group_id) {
     const user = await db('users').where('id', userId).select('name').first();
-    const catLabel: Record<string, string> = { medis: 'Medis', tersesat: 'Tersesat', kehilangan: 'Kehilangan' };
+    const catKey = `sos.cat.${data.category}`;
     notifyGroupMuthawwif(
       membership.group_id,
-      'SOS Darurat',
-      `${user?.name || 'Jamaah'} butuh bantuan (${catLabel[data.category] || data.category})`,
+      (lang) => ({
+        title: pushText(lang, 'sos.title'),
+        body: pushText(lang, 'sos.body', {
+          name: user?.name || pushText(lang, 'sos.unknown_name'),
+          category: catKey in PUSH_MESSAGES[lang] ? pushText(lang, catKey as PushKey) : data.category,
+        }),
+      }),
       { type: 'sos', sosId: sos.id },
     ).catch(() => {});
   }

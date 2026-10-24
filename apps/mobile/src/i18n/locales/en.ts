@@ -1,6 +1,10 @@
 // English. Istilah mengikuti tabel di dokumen permintaan revisi v2 (Permintaan 7);
 // perlu diperiksa penutur asli sebelum rilis, termasuk istilah ibadah.
 import type { TranslationKey } from './id';
+import { toolsEn } from './parts/tools';
+import { monitorEn } from './parts/monitor';
+import { accountEn } from './parts/account';
+import { contentEn } from './parts/content';
 
 export const en: Record<TranslationKey, string> = {
   // Language
@@ -190,4 +194,10 @@ export const en: Record<TranslationKey, string> = {
   'common.save': 'Save',
   'common.cancel': 'Cancel',
   'common.loading': 'Loading...',
+
+  // Per-feature parts (locales/parts/*)
+  ...toolsEn,
+  ...monitorEn,
+  ...accountEn,
+  ...contentEn,
 };

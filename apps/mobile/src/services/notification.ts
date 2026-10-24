@@ -1,6 +1,7 @@
 import * as Notifications from 'expo-notifications';
 import * as Device from 'expo-device';
 import { Platform } from 'react-native';
+import { translate } from './i18n';
 
 // Saat layar chat sedang terbuka, notifikasi chat tidak perlu muncul (pesan sudah terlihat).
 let chatScreenOpen = false;
@@ -25,11 +26,11 @@ export async function setupNotificationChannels(): Promise<void> {
   if (Platform.OS !== 'android') return;
 
   await Notifications.setNotificationChannelAsync('default', {
-    name: 'Default',
+    name: translate('content.channel_default'),
     importance: Notifications.AndroidImportance.HIGH,
   });
   await Notifications.setNotificationChannelAsync('sos', {
-    name: 'SOS Darurat',
+    name: translate('content.channel_sos'),
     importance: Notifications.AndroidImportance.MAX,
     vibrationPattern: [0, 500, 250, 500],
     enableVibrate: true,
@@ -37,13 +38,13 @@ export async function setupNotificationChannels(): Promise<void> {
   // Kanal terpisah dari SOS agar prioritasnya bisa diatur sendiri oleh pengguna.
   // Server mengirim push chat dengan channelId 'chat' — tanpa kanal ini Android 8+ tidak menampilkannya.
   await Notifications.setNotificationChannelAsync('chat', {
-    name: 'Pesan Rombongan',
+    name: translate('content.channel_chat'),
     importance: Notifications.AndroidImportance.HIGH,
     enableVibrate: true,
     showBadge: true,
   });
   await Notifications.setNotificationChannelAsync('geofence', {
-    name: 'Peringatan Miqat',
+    name: translate('content.channel_geofence'),
     importance: Notifications.AndroidImportance.HIGH,
     enableVibrate: true,
   });

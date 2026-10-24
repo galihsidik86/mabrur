@@ -5,38 +5,40 @@ import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { colors } from '../src/theme';
 import { api } from '../src/services/api';
+import { useI18n } from '../src/services/i18n';
 
 const { width } = Dimensions.get('window');
 
 const slides = [
   {
     icon: 'book' as const,
-    title: 'Tuntunan Ibadah',
-    desc: 'Panduan lengkap umrah dan haji, langkah demi langkah dengan doa dalam bahasa Arab, Latin, dan terjemahan.',
+    title: 'account.onb_guide_title',
+    desc: 'account.onb_guide_desc',
     color: colors.primary,
   },
   {
     icon: 'map' as const,
-    title: 'Geofence Miqat',
-    desc: 'Peringatan otomatis saat mendekati batas miqat. Tidak perlu khawatir melewati batas tanpa ihram.',
+    title: 'account.onb_miqat_title',
+    desc: 'account.onb_miqat_desc',
     color: colors.green,
   },
   {
     icon: 'radio' as const,
-    title: 'SOS Darurat',
-    desc: 'Kirim sinyal darurat ke muthawwif dengan satu ketukan. Lokasi dan data medis otomatis dibagikan.',
+    title: 'account.onb_sos_title',
+    desc: 'account.onb_sos_desc',
     color: colors.danger,
   },
   {
     icon: 'chatbubbles' as const,
-    title: 'Chat & Monitoring',
-    desc: 'Tetap terhubung dengan rombongan. Muthawwif memantau lokasi dan status seluruh jamaah real-time.',
+    title: 'account.onb_chat_title',
+    desc: 'account.onb_chat_desc',
     color: colors.gold,
   },
-];
+] as const;
 
 export default function OnboardingScreen() {
   const router = useRouter();
+  const t = useI18n((st) => st.t);
   const [page, setPage] = useState(0);
 
   const finish = async () => {
@@ -52,8 +54,8 @@ export default function OnboardingScreen() {
         <View style={[s.iconCircle, { backgroundColor: slide.color }]}>
           <Ionicons name={slide.icon} size={48} color="#fff" />
         </View>
-        <Text style={s.title}>{slide.title}</Text>
-        <Text style={s.desc}>{slide.desc}</Text>
+        <Text style={s.title}>{t(slide.title)}</Text>
+        <Text style={s.desc}>{t(slide.desc)}</Text>
       </View>
 
       {/* Dots */}
@@ -67,15 +69,15 @@ export default function OnboardingScreen() {
       <View style={s.buttons}>
         {page < slides.length - 1 ? (
           <>
-            <TouchableOpacity onPress={finish}><Text style={s.skipText}>Lewati</Text></TouchableOpacity>
+            <TouchableOpacity onPress={finish}><Text style={s.skipText}>{t('account.onb_skip')}</Text></TouchableOpacity>
             <TouchableOpacity style={s.nextBtn} onPress={() => setPage(page + 1)}>
-              <Text style={s.nextText}>Lanjut</Text>
+              <Text style={s.nextText}>{t('account.onb_next')}</Text>
               <Ionicons name="arrow-forward" size={18} color={colors.textOnPrimary} />
             </TouchableOpacity>
           </>
         ) : (
           <TouchableOpacity style={[s.nextBtn, { flex: 1 }]} onPress={finish}>
-            <Text style={s.nextText}>Mulai Mabrur</Text>
+            <Text style={s.nextText}>{t('account.onb_start')}</Text>
           </TouchableOpacity>
         )}
       </View>

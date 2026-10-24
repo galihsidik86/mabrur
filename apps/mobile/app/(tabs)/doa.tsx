@@ -12,8 +12,10 @@ import { Ionicons } from '@expo/vector-icons';
 import { colors, radius } from '../../src/theme';
 import { api } from '../../src/services/api';
 import { saveDuas, getDuas, type Dua } from '../../src/services/db';
+import { useI18n } from '../../src/services/i18n';
 
 export default function DoaScreen() {
+  const t = useI18n((st) => st.t);
   const [duas, setDuas] = useState<Dua[]>([]);
   const [openIdx, setOpenIdx] = useState(0);
   const [loading, setLoading] = useState(true);
@@ -45,8 +47,8 @@ export default function DoaScreen() {
   return (
     <SafeAreaView style={s.safe} edges={['top']}>
       <ScrollView style={s.scroll} contentContainerStyle={s.content}>
-        <Text style={s.title}>Doa & bacaan</Text>
-        <Text style={s.sub}>Arab, latin, dan terjemahannya.</Text>
+        <Text style={s.title}>{t('content.dua_title')}</Text>
+        <Text style={s.sub}>{t('content.dua_sub')}</Text>
 
         {loading && duas.length === 0 ? (
           <ActivityIndicator

@@ -1,6 +1,10 @@
 // Bahasa Indonesia — sumber kunci. File bahasa lain wajib punya kunci yang sama
 // (dipaksa oleh tipe TranslationKey + tes server/tests/i18n.test.ts).
 // Teks Arab tidak pernah masuk ke sini: tulisan Arab tidak berubah mengikuti bahasa.
+import { toolsId } from './parts/tools';
+import { monitorId } from './parts/monitor';
+import { accountId } from './parts/account';
+import { contentId } from './parts/content';
 
 export const id = {
   // Bahasa
@@ -190,6 +194,12 @@ export const id = {
   'common.save': 'Simpan',
   'common.cancel': 'Batal',
   'common.loading': 'Memuat...',
+
+  // Bagian per fitur (locales/parts/*)
+  ...toolsId,
+  ...monitorId,
+  ...accountId,
+  ...contentId,
 } as const;
 
 export type TranslationKey = keyof typeof id;

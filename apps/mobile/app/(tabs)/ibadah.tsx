@@ -16,6 +16,7 @@ import {
   getGuidesByType,
   type Guide,
 } from '../../src/services/db';
+import { useI18n } from '../../src/services/i18n';
 
 type TabType = 'umrah' | 'haji' | 'ziarah';
 
@@ -25,6 +26,7 @@ interface ZiarahPlace {
 }
 
 export default function IbadahScreen() {
+  const t = useI18n((st) => st.t);
   const [tab, setTab] = useState<TabType>('umrah');
   const [guides, setGuides] = useState<Guide[]>([]);
   const [ziarah, setZiarah] = useState<ZiarahPlace[]>([]);
@@ -66,21 +68,17 @@ export default function IbadahScreen() {
     load(tab);
   }, [tab, load]);
 
-  const switchTab = (t: TabType) => {
-    if (t !== tab) setTab(t);
+  const switchTab = (next: TabType) => {
+    if (next !== tab) setTab(next);
   };
 
-  const count = guides.length;
-  const subtitle =
-    tab === 'umrah'
-      ? `${count} tahap · ketuk untuk membuka langkah & doa`
-      : `${count} tahap · ketuk untuk membuka langkah & doa`;
+  const subtitle = t('content.guide_steps_count', { count: guides.length });
 
   return (
     <SafeAreaView style={s.safe} edges={['top']}>
       <ScrollView style={s.scroll} contentContainerStyle={s.content}>
-        <Text style={s.title}>Tuntunan ibadah</Text>
-        <Text style={s.sub}>Panduan langkah demi langkah, urut & jelas.</Text>
+        <Text style={s.title}>{t('content.guide_title')}</Text>
+        <Text style={s.sub}>{t('content.guide_sub')}</Text>
 
         {/* Tab selector */}
         <View style={s.tabRow}>
@@ -90,7 +88,7 @@ export default function IbadahScreen() {
             activeOpacity={0.7}
           >
             <Text style={[s.tabText, tab === 'umrah' && s.tabTextActive]}>
-              Umrah
+              {t('content.tab_umrah')}
             </Text>
           </TouchableOpacity>
           <TouchableOpacity
@@ -99,7 +97,7 @@ export default function IbadahScreen() {
             activeOpacity={0.7}
           >
             <Text style={[s.tabText, tab === 'haji' && s.tabTextActive]}>
-              Haji
+              {t('content.tab_hajj')}
             </Text>
           </TouchableOpacity>
           <TouchableOpacity
@@ -108,7 +106,7 @@ export default function IbadahScreen() {
             activeOpacity={0.7}
           >
             <Text style={[s.tabText, tab === 'ziarah' && s.tabTextActive]}>
-              Ziarah
+              {t('content.tab_ziyarah')}
             </Text>
           </TouchableOpacity>
         </View>
@@ -132,7 +130,7 @@ export default function IbadahScreen() {
                     <Text style={s.stepsText}>{z.description}</Text>
                     {z.tips && (
                       <View style={s.prayerBox}>
-                        <Text style={s.prayerLabel}>TIPS</Text>
+                        <Text style={s.prayerLabel}>{t('content.ziyarah_tips')}</Text>
                         <Text style={[s.latinText, { fontStyle: 'normal', marginTop: 4 }]}>{z.tips}</Text>
                       </View>
                     )}
@@ -141,12 +139,12 @@ export default function IbadahScreen() {
               </View>
             ))}
             {ziarah.length === 0 && !loading && (
-              <Text style={{ color: colors.textFaint, textAlign: 'center', marginTop: 40, fontFamily: 'PlusJakartaSans_500Medium' }}>Belum ada data ziarah</Text>
+              <Text style={{ color: colors.textFaint, textAlign: 'center', marginTop: 40, fontFamily: 'PlusJakartaSans_500Medium' }}>{t('content.ziyarah_empty')}</Text>
             )}
           </View>
         ) : (
         <>
-        <Text style={s.subtitle}>{`${guides.length} tahap · ketuk untuk membuka langkah & doa`}</Text>
+        <Text style={s.subtitle}>{subtitle}</Text>
 
         {loading && guides.length === 0 ? (
           <ActivityIndicator
@@ -202,7 +200,7 @@ export default function IbadahScreen() {
                       {guide.arabic_text && (
                         <View style={s.prayerBox}>
                           <Text style={s.prayerLabel}>
-                            DOA SAAT {guide.title.toUpperCase()}
+                            {t('content.guide_prayer_label', { title: guide.title.toUpperCase() })}
                           </Text>
                           <Text style={s.arabicText}>
                             {guide.arabic_text}

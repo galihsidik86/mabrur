@@ -9,6 +9,7 @@ import { api } from '../src/services/api';
 import { getGroups, queueMessage, getQueuedMessages, clearQueuedMessage } from '../src/services/db';
 import { setChatScreenOpen } from '../src/services/notification';
 import { useChatUnread } from '../src/services/chat-unread';
+import { useI18n } from '../src/services/i18n';
 
 interface Message {
   id: string;
@@ -21,6 +22,7 @@ interface Message {
 export default function ChatScreen() {
   const router = useRouter();
   const user = useAuthStore((s) => s.user);
+  const t = useI18n((st) => st.t);
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState('');
   const [groupId, setGroupId] = useState<string | null>(null);
@@ -107,7 +109,7 @@ export default function ChatScreen() {
         <TouchableOpacity onPress={() => router.back()} style={{ padding: 6 }}>
           <Ionicons name="arrow-back" size={22} color={colors.text} />
         </TouchableOpacity>
-        <Text style={s.headerTitle}>Chat Rombongan</Text>
+        <Text style={s.headerTitle}>{t('account.chat_title')}</Text>
         <View style={{ width: 34 }} />
       </View>
       <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
@@ -118,14 +120,14 @@ export default function ChatScreen() {
           keyExtractor={(m) => m.id}
           contentContainerStyle={s.list}
           onContentSizeChange={() => flatListRef.current?.scrollToEnd()}
-          ListEmptyComponent={<Text style={s.empty}>Belum ada pesan. Mulai percakapan!</Text>}
+          ListEmptyComponent={<Text style={s.empty}>{t('account.chat_empty')}</Text>}
         />
         <View style={s.inputRow}>
           <TextInput
             style={s.input}
             value={input}
             onChangeText={setInput}
-            placeholder="Ketik pesan..."
+            placeholder={t('account.chat_placeholder')}
             placeholderTextColor={colors.textFaint}
             multiline
           />

@@ -2,6 +2,7 @@ import { db } from '../db';
 import { AppError } from '../middleware/error-handler';
 import { audit } from './audit.service';
 import { sendPush } from './push.service';
+import { pushText, tokensByLang } from './push-messages';
 import { buildMemberStatuses, pickReminderTargets, reserveReminders, type MemberRow } from './monitoring-core';
 
 export async function getMemberStatuses(groupId: string) {
@@ -45,21 +46,24 @@ export async function sendLocationReminders(groupId: string, senderId: string, u
   // Tanpa await di antara pick dan reserve: request paralel tidak bisa lolos jeda bersamaan.
   reserveReminders(sentLog, targets, now);
 
-  const withToken: Array<{ id: string; push_token: string }> = targets.length === 0 ? [] : await db('users')
+  const withToken: Array<{ id: string; push_token: string; language: string | null }> = targets.length === 0 ? [] : await db('users')
     .whereIn('id', targets)
     .where('is_active', true)
     .whereNotNull('push_token')
-    .select('id', 'push_token');
+    .select('id', 'push_token', 'language');
 
   if (withToken.length > 0) {
     const sender = await db('users').where('id', senderId).select('name').first();
-    await sendPush(
-      withToken.map((u) => u.push_token),
-      'Aktifkan lokasi Anda',
-      `${sender?.name || 'Muthawwif'} meminta Anda menyalakan GPS & izin lokasi Mabrur agar posisi Anda terpantau rombongan. Ketuk untuk mengaktifkan.`,
-      { type: 'location_reminder', groupId },
-      'default',
-    );
+    // Satu push per bahasa penerima (users.language).
+    for (const [lang, tokens] of tokensByLang(withToken)) {
+      await sendPush(
+        tokens,
+        pushText(lang, 'reminder.title'),
+        pushText(lang, 'reminder.body', { sender: sender?.name || pushText(lang, 'reminder.default_sender') }),
+        { type: 'location_reminder', groupId },
+        'default',
+      );
+    }
   }
 
   await audit(senderId, 'monitoring.location_reminder', 'groups', groupId, {

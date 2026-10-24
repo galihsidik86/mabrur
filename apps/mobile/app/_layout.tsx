@@ -16,7 +16,7 @@ import { Amiri_400Regular, Amiri_700Bold } from '@expo-google-fonts/amiri';
 import * as Notifications from 'expo-notifications';
 import { useAuthStore } from '../src/stores/auth';
 import { initDB } from '../src/services/db';
-import { initLanguage } from '../src/services/i18n';
+import { initLanguage, useI18n } from '../src/services/i18n';
 import { useChatUnread } from '../src/services/chat-unread';
 import {
   setupNotificationChannels,
@@ -83,6 +83,9 @@ export default function RootLayout() {
       const apiUrl =
         Constants.expoConfig?.extra?.apiUrl || 'http://10.0.2.2:3000';
       await SecureStore.setItemAsync('api_url', apiUrl);
+
+      // Bahasa pilihan ke server (push SOS/pengingat dalam bahasa ini)
+      api.setLanguage(useI18n.getState().lang).catch(() => {});
 
       // Register push token
       try {

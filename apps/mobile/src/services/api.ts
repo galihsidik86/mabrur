@@ -237,6 +237,10 @@ export const api = {
     request<{ url: string; token: string; room: string; role: 'speaker' | 'listener' }>('/voice/token'),
   getPhrases: () => request<Phrase[]>('/phrases'),
 
+  // Bahasa pilihan -> server memakai untuk push notification (SOS, pengingat lokasi)
+  setLanguage: (language: 'id' | 'en') =>
+    request<{ language: string }>('/profile/language', { method: 'PUT', body: JSON.stringify({ language }) }),
+
   // Kartu Taksi milik pengguna (hotel rombongan, kamar, kontak muthawwif)
   getTaxiCard: (groupId: string) => request<unknown>(`/groups/${groupId}/taxi-card`),
   getHealthTips: () => request<any[]>('/health-tips'),

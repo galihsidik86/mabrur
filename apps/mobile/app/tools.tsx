@@ -22,6 +22,7 @@ import {
 import { sendLocalNotification } from '../src/services/notification';
 import { isBarometerAvailable, watchFloor } from '../src/services/floor';
 import { startRecording, stopRecording, uploadSession, isRecording } from '../src/services/trace-recorder';
+import { useI18n, type TranslationKey } from '../src/services/i18n';
 
 type Tab = 'hub' | 'tawaf' | 'sai' | 'tasbih' | 'jumrah' | 'wukuf' | 'qiblat' | 'shalat' | 'checklist' | 'kurs' | 'frasa' | 'kesehatan';
 
@@ -31,6 +32,7 @@ const { width: W } = Dimensions.get('window');
 function RingCounter({ count, target, onTap, label, arabic, subtitle }: {
   count: number; target: number; onTap: () => void; label: string; arabic?: string; subtitle?: string;
 }) {
+  const t = useI18n((st) => st.t);
   const pct = Math.min(count / target, 1);
   const done = count >= target;
   return (
@@ -48,7 +50,7 @@ function RingCounter({ count, target, onTap, label, arabic, subtitle }: {
       {done && (
         <View style={rc.doneBox}>
           <Ionicons name="checkmark-circle" size={22} color={colors.green} />
-          <Text style={rc.doneText}>Selesai! Alhamdulillah</Text>
+          <Text style={rc.doneText}>{t('tools.done_alhamdulillah')}</Text>
         </View>
       )}
     </View>
@@ -70,11 +72,14 @@ const rc = StyleSheet.create({
 
 // ==================== TAWAF (GPS-ASSISTED) ====================
 function TawafSaiTab({ type }: { type: 'tawaf' | 'sai' }) {
+  const t = useI18n((st) => st.t);
   const [count, setCount] = useState(0);
   const [autoMode, setAutoMode] = useState(false);
   const [gpsStatus, setGpsStatus] = useState<string>('');
   const [saiZone, setSaiZone] = useState<SaiZone>('between');
-  const [floorLabel, setFloorLabel] = useState<string>('');
+  const [floorNumber, setFloorNumber] = useState<number | null>(null);
+  const floorLabel = floorNumber == null ? '' : floorNumber >= 3 ? t('tools.floor.roof')
+    : floorNumber === 0 ? t('tools.floor.ground') : t('tools.floor.n', { n: floorNumber });
   const trackerRef = useRef<TawafTracker | SaiTracker | null>(null);
   const watchRef = useRef<{ remove: () => void } | null>(null);
   const floorWatchRef = useRef<{ remove: () => void } | null>(null);
@@ -88,10 +93,10 @@ function TawafSaiTab({ type }: { type: 'tawaf' | 'sai' }) {
     if (recId != null) stopRecording().then(() => uploadSession(recId)).catch(() => {});
   };
 
-  const label = type === 'tawaf' ? 'Putaran Tawaf' : "Perjalanan Sa'i";
+  const label = type === 'tawaf' ? t('tools.counter.tawaf_label') : t('tools.counter.sai_label');
   const direction = type === 'sai'
     ? (count % 2 === 0 ? 'Shafa → Marwah' : 'Marwah → Shafa')
-    : `Putaran ${count + 1}`;
+    : t('tools.counter.round', { n: count + 1 });
 
   useEffect(() => {
     activateKeepAwakeAsync('counter');
@@ -101,7 +106,7 @@ function TawafSaiTab({ type }: { type: 'tawaf' | 'sai' }) {
   const startAuto = async () => {
     if (autoMode) return; // sudah aktif — cegah watcher/barometer ganda saat tombol ditekan lagi
     const granted = await requestPermission();
-    if (!granted) { setGpsStatus('Izin lokasi ditolak'); return; }
+    if (!granted) { setGpsStatus(t('tools.gps.permission_denied')); return; }
 
     // Defensif terhadap tap-ganda cepat (dua panggilan lolos guard sebelum state commit):
     // buang langganan lama sebelum memasang yang baru.
@@ -109,7 +114,7 @@ function TawafSaiTab({ type }: { type: 'tawaf' | 'sai' }) {
     floorWatchRef.current?.remove(); floorWatchRef.current = null;
 
     setAutoMode(true);
-    setGpsStatus('Mencari GPS...');
+    setGpsStatus(t('tools.gps.searching'));
 
     // Rekam trace mentah (lat/lng/akurasi) ke SQLite lokal untuk uji akurasi —
     // diunggah otomatis ke server saat Stop, tanpa perlu buka menu Record.
@@ -130,7 +135,7 @@ function TawafSaiTab({ type }: { type: 'tawaf' | 'sai' }) {
       trackerRef.current = tracker;
 
       if (await isBarometerAvailable()) {
-        floorWatchRef.current = watchFloor((est) => setFloorLabel(est.label));
+        floorWatchRef.current = watchFloor((est) => setFloorNumber(est.floor));
       }
 
       watchRef.current = watchSacredLocation((lat, lng) => {
@@ -138,7 +143,7 @@ function TawafSaiTab({ type }: { type: 'tawaf' | 'sai' }) {
         // Jarak yang sama (Haversine) dengan yang dipakai algoritma penghitung.
         const dist = Math.round(distanceMetersExport(lat, lng, KAABAH.lat, KAABAH.lng));
         const r = tracker.getRadius();
-        setGpsStatus(`GPS aktif · ${dist}m dari Ka'bah${r ? ` · edar ~${r}m` : ''}`);
+        setGpsStatus(t('tools.tawaf.gps_status', { dist }) + (r ? t('tools.tawaf.gps_radius', { r }) : ''));
       });
     } else {
       const tracker = new SaiTracker();
@@ -166,7 +171,7 @@ function TawafSaiTab({ type }: { type: 'tawaf' | 'sai' }) {
     finishAutoRecording();
     setAutoMode(false);
     setGpsStatus('');
-    setFloorLabel('');
+    setFloorNumber(null);
   };
 
   return (
@@ -177,13 +182,13 @@ function TawafSaiTab({ type }: { type: 'tawaf' | 'sai' }) {
           style={[tc.modeToggleBtn, !autoMode && tc.modeToggleBtnActive]}
           onPress={stopAuto}>
           <Ionicons name="hand-left" size={16} color={!autoMode ? '#fff' : colors.textMuted} />
-          <Text style={[tc.modeToggleText, !autoMode && { color: '#fff' }]}>Manual</Text>
+          <Text style={[tc.modeToggleText, !autoMode && { color: '#fff' }]}>{t('tools.mode.manual')}</Text>
         </TouchableOpacity>
         <TouchableOpacity
           style={[tc.modeToggleBtn, autoMode && tc.modeToggleBtnActive]}
           onPress={startAuto}>
           <Ionicons name="navigate" size={16} color={autoMode ? '#fff' : colors.textMuted} />
-          <Text style={[tc.modeToggleText, autoMode && { color: '#fff' }]}>Auto GPS</Text>
+          <Text style={[tc.modeToggleText, autoMode && { color: '#fff' }]}>{t('tools.mode.auto')}</Text>
         </TouchableOpacity>
       </View>
 
@@ -205,7 +210,7 @@ function TawafSaiTab({ type }: { type: 'tawaf' | 'sai' }) {
       {autoMode && type === 'sai' && saiZone !== 'between' ? (
         <View style={[tc.zoneIndicator, { backgroundColor: saiZone === 'safa' ? colors.greenLight : colors.goldLight }]}>
           <Text style={{ fontSize: 14, fontFamily: 'PlusJakartaSans_700Bold', color: saiZone === 'safa' ? colors.greenDark : '#97751F' }}>
-            📍 Kamu di {saiZone === 'safa' ? 'Bukit Safa' : 'Bukit Marwah'}
+            📍 {saiZone === 'safa' ? t('tools.sai.at_safa') : t('tools.sai.at_marwah')}
           </Text>
         </View>
       ) : null}
@@ -222,17 +227,17 @@ function TawafSaiTab({ type }: { type: 'tawaf' | 'sai' }) {
       {autoMode && (
         <Text style={tc.autoHint}>
           {type === 'tawaf'
-            ? 'Putaran dihitung dari akumulasi rotasi berlawanan jarum jam sejak pelacakan dimulai (mulai pelacakan saat sejajar Hajar Aswad) — mengikuti radius edar di lantai mana pun (dasar/1/atap). Notifikasi putaran bisa muncul beberapa detik SETELAH kamu melewati titik mulai (disengaja, demi akurasi). Biarkan GPS aktif sampai getaran putaran ke-7 muncul. Butuh sinyal GPS; di area tertutup gunakan mode Manual.'
-            : 'Perjalanan terhitung otomatis saat sampai di Safa/Marwah'}
+            ? t('tools.tawaf.auto_hint')
+            : t('tools.sai.auto_hint')}
         </Text>
       )}
 
       <View style={tc.btns}>
         <TouchableOpacity style={tc.undoBtn} onPress={() => setCount(Math.max(0, count - 1))}>
-          <Ionicons name="arrow-undo" size={18} color={colors.textMuted} /><Text style={tc.undoBtnText}>Undo</Text>
+          <Ionicons name="arrow-undo" size={18} color={colors.textMuted} /><Text style={tc.undoBtnText}>{t('tools.undo')}</Text>
         </TouchableOpacity>
         <TouchableOpacity style={tc.undoBtn} onPress={() => { setCount(0); if (type === 'tawaf' && trackerRef.current instanceof TawafTracker) trackerRef.current.reset(); if (type === 'sai' && trackerRef.current instanceof SaiTracker) trackerRef.current.reset(); }}>
-          <Ionicons name="refresh" size={18} color={colors.textMuted} /><Text style={tc.undoBtnText}>Reset</Text>
+          <Ionicons name="refresh" size={18} color={colors.textMuted} /><Text style={tc.undoBtnText}>{t('tools.reset')}</Text>
         </TouchableOpacity>
       </View>
     </View>
@@ -241,15 +246,16 @@ function TawafSaiTab({ type }: { type: 'tawaf' | 'sai' }) {
 
 // ==================== TASBIH (6 MODE) ====================
 const TASBIH_MODES = [
-  { id: 'subhanallah', arabic: 'سُبْحَانَ اللَّهِ', latin: 'Subhanallah', meaning: 'Maha Suci Allah', target: 33 },
-  { id: 'alhamdulillah', arabic: 'الْحَمْدُ لِلَّهِ', latin: 'Alhamdulillah', meaning: 'Segala puji bagi Allah', target: 33 },
-  { id: 'allahuakbar', arabic: 'اللَّهُ أَكْبَرُ', latin: 'Allahu Akbar', meaning: 'Allah Maha Besar', target: 33 },
-  { id: 'lailaha', arabic: 'لَا إِلَٰهَ إِلَّا اللَّهُ', latin: 'La ilaha illallah', meaning: 'Tiada Tuhan selain Allah', target: 100 },
-  { id: 'salawat', arabic: 'اللَّهُمَّ صَلِّ عَلَى مُحَمَّدٍ', latin: 'Allahumma shalli ala Muhammad', meaning: 'Salawat atas Nabi', target: 100 },
-  { id: 'istighfar', arabic: 'أَسْتَغْفِرُ اللَّهَ', latin: 'Astaghfirullah', meaning: 'Aku mohon ampun kepada Allah', target: 100 },
-];
+  { id: 'subhanallah', arabic: 'سُبْحَانَ اللَّهِ', latin: 'Subhanallah', meaningKey: 'tools.tasbih.subhanallah', target: 33 },
+  { id: 'alhamdulillah', arabic: 'الْحَمْدُ لِلَّهِ', latin: 'Alhamdulillah', meaningKey: 'tools.tasbih.alhamdulillah', target: 33 },
+  { id: 'allahuakbar', arabic: 'اللَّهُ أَكْبَرُ', latin: 'Allahu Akbar', meaningKey: 'tools.tasbih.allahuakbar', target: 33 },
+  { id: 'lailaha', arabic: 'لَا إِلَٰهَ إِلَّا اللَّهُ', latin: 'La ilaha illallah', meaningKey: 'tools.tasbih.lailaha', target: 100 },
+  { id: 'salawat', arabic: 'اللَّهُمَّ صَلِّ عَلَى مُحَمَّدٍ', latin: 'Allahumma shalli ala Muhammad', meaningKey: 'tools.tasbih.salawat', target: 100 },
+  { id: 'istighfar', arabic: 'أَسْتَغْفِرُ اللَّهَ', latin: 'Astaghfirullah', meaningKey: 'tools.tasbih.istighfar', target: 100 },
+] as const satisfies ReadonlyArray<{ id: string; arabic: string; latin: string; meaningKey: TranslationKey; target: number }>;
 
 function TasbihTab() {
+  const t = useI18n((st) => st.t);
   const [mode, setMode] = useState(0);
   const [counts, setCounts] = useState(TASBIH_MODES.map(() => 0));
   const m = TASBIH_MODES[mode];
@@ -268,29 +274,29 @@ function TasbihTab() {
   return (
     <View style={tc.wrap}>
       <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ maxHeight: 44, marginBottom: 8 }} contentContainerStyle={{ gap: 6, paddingHorizontal: 4 }}>
-        {TASBIH_MODES.map((t, i) => (
-          <TouchableOpacity key={t.id} onPress={() => setMode(i)}
+        {TASBIH_MODES.map((tm, i) => (
+          <TouchableOpacity key={tm.id} onPress={() => setMode(i)}
             style={[tc.modeBtn, mode === i && tc.modeBtnActive]}>
-            <Text style={[tc.modeBtnText, mode === i && { color: '#fff' }]}>{t.latin.split(' ')[0]}</Text>
+            <Text style={[tc.modeBtnText, mode === i && { color: '#fff' }]}>{tm.latin.split(' ')[0]}</Text>
           </TouchableOpacity>
         ))}
       </ScrollView>
 
       <RingCounter count={counts[mode]} target={m.target} onTap={tap}
-        arabic={m.arabic} subtitle={m.meaning} label={m.latin} />
+        arabic={m.arabic} subtitle={t(m.meaningKey)} label={m.latin} />
 
       {/* Progress grid */}
       <View style={tc.grid}>
-        {TASBIH_MODES.map((t, i) => (
-          <View key={t.id} style={[tc.gridItem, counts[i] >= t.target && { borderColor: colors.green }]}>
-            <Text style={[tc.gridNum, counts[i] >= t.target && { color: colors.green }]}>{counts[i]}/{t.target}</Text>
-            <Text style={tc.gridLabel}>{t.latin.split(' ')[0]}</Text>
+        {TASBIH_MODES.map((tm, i) => (
+          <View key={tm.id} style={[tc.gridItem, counts[i] >= tm.target && { borderColor: colors.green }]}>
+            <Text style={[tc.gridNum, counts[i] >= tm.target && { color: colors.green }]}>{counts[i]}/{tm.target}</Text>
+            <Text style={tc.gridLabel}>{tm.latin.split(' ')[0]}</Text>
           </View>
         ))}
       </View>
 
       <TouchableOpacity style={tc.undoBtn} onPress={() => { const n = [...counts]; n[mode] = Math.max(0, n[mode] - 1); setCounts(n); }}>
-        <Ionicons name="arrow-undo" size={16} color={colors.textMuted} /><Text style={tc.undoBtnText}>Undo</Text>
+        <Ionicons name="arrow-undo" size={16} color={colors.textMuted} /><Text style={tc.undoBtnText}>{t('tools.undo')}</Text>
       </TouchableOpacity>
     </View>
   );
@@ -298,12 +304,13 @@ function TasbihTab() {
 
 // ==================== JUMRAH (4 hari × 3 jamarat × 7 batu) ====================
 const JAMARAT = [
-  { name: 'Jamarat Ula (Kecil)', arabic: 'الجمرة الأولى' },
-  { name: 'Jamarat Wustha (Tengah)', arabic: 'الجمرة الوسطى' },
-  { name: 'Jamarat Aqabah (Besar)', arabic: 'جمرة العقبة' },
-];
+  { nameKey: 'tools.jumrah.ula', arabic: 'الجمرة الأولى' },
+  { nameKey: 'tools.jumrah.wustha', arabic: 'الجمرة الوسطى' },
+  { nameKey: 'tools.jumrah.aqabah', arabic: 'جمرة العقبة' },
+] as const satisfies ReadonlyArray<{ nameKey: TranslationKey; arabic: string }>;
 
 function JumrahTab() {
+  const t = useI18n((st) => st.t);
   const [day, setDay] = useState(0);
   const [stones, setStones] = useState(() =>
     Array.from({ length: 4 }, () => Array.from({ length: 3 }, () => 0))
@@ -324,7 +331,7 @@ function JumrahTab() {
     watchRef.current = watchSacredLocation((lat, lng) => {
       const nearest = detectNearestJamarat(lat, lng);
       if (nearest) {
-        setNearestJam(`📍 Dekat ${nearest.name} (${nearest.distance}m)`);
+        setNearestJam(`📍 ${t('tools.jumrah.near', { name: t(`tools.jumrah.${nearest.key}`), distance: nearest.distance })}`);
       } else {
         setNearestJam(null);
       }
@@ -337,7 +344,7 @@ function JumrahTab() {
     if (next[day][j] >= 7) Vibration.vibrate([0, 150, 80, 150]);
   };
 
-  const dayLabels = ['10 Dzulhijjah', '11 Dzulhijjah', '12 Dzulhijjah', '13 Dzulhijjah'];
+  const dayLabels = [10, 11, 12, 13].map((d) => t('tools.jumrah.date', { d }));
   const jams = day === 0 ? [2] : [0, 1, 2]; // Day 1: only Aqabah
 
   return (
@@ -346,21 +353,21 @@ function JumrahTab() {
       {!autoMode ? (
         <TouchableOpacity style={[tc.modeToggleBtn, { alignSelf: 'center', marginBottom: 12 }]} onPress={startAutoJumrah}>
           <Ionicons name="navigate" size={14} color={colors.textMuted} />
-          <Text style={tc.modeToggleText}>Aktifkan deteksi jamarat otomatis</Text>
+          <Text style={tc.modeToggleText}>{t('tools.jumrah.auto_enable')}</Text>
         </TouchableOpacity>
       ) : nearestJam ? (
         <View style={[tc.gpsBar, { backgroundColor: colors.goldLight }]}>
           <Text style={[tc.gpsText, { color: '#97751F' }]}>{nearestJam}</Text>
         </View>
       ) : (
-        <View style={tc.gpsBar}><View style={tc.gpsDot} /><Text style={tc.gpsText}>GPS aktif · mendeteksi jamarat terdekat...</Text></View>
+        <View style={tc.gpsBar}><View style={tc.gpsDot} /><Text style={tc.gpsText}>{t('tools.jumrah.detecting')}</Text></View>
       )}
 
       <View style={{ flexDirection: 'row', gap: 6, justifyContent: 'center', marginBottom: 16 }}>
         {dayLabels.map((d, i) => (
           <TouchableOpacity key={i} onPress={() => setDay(i)}
             style={[tc.modeBtn, day === i && tc.modeBtnActive, { paddingHorizontal: 14 }]}>
-            <Text style={[tc.modeBtnText, day === i && { color: '#fff' }]}>Hari {i + 1}</Text>
+            <Text style={[tc.modeBtnText, day === i && { color: '#fff' }]}>{t('tools.jumrah.day', { n: i + 1 })}</Text>
           </TouchableOpacity>
         ))}
       </View>
@@ -373,7 +380,7 @@ function JumrahTab() {
           <View key={j} style={[jm.card, done && { borderColor: colors.green }]}>
             <View style={jm.header}>
               <View>
-                <Text style={jm.name}>{JAMARAT[j].name}</Text>
+                <Text style={jm.name}>{t(JAMARAT[j].nameKey)}</Text>
                 <Text style={jm.arabic}>{JAMARAT[j].arabic}</Text>
               </View>
               {done && <Ionicons name="checkmark-circle" size={24} color={colors.green} />}
@@ -387,7 +394,7 @@ function JumrahTab() {
               <TouchableOpacity style={[jm.throwBtn, done && { backgroundColor: colors.greenLight }]}
                 onPress={() => throwStone(j)} disabled={done} activeOpacity={0.7}>
                 <Text style={[jm.throwText, done && { color: colors.greenDark }]}>
-                  {done ? 'Selesai' : `Lempar (${c}/7)`}
+                  {done ? t('tools.jumrah.done') : t('tools.jumrah.throw', { count: c })}
                 </Text>
               </TouchableOpacity>
               <TouchableOpacity onPress={() => { const n = stones.map((d) => [...d]); n[day][j] = Math.max(0, n[day][j] - 1); setStones(n); }}
@@ -416,6 +423,7 @@ const jm = StyleSheet.create({
 
 // ==================== WUKUF TIMER + ARAFAH GEOFENCE ====================
 function WukufTab() {
+  const t = useI18n((st) => st.t);
   const [start, setStart] = useState('');
   const [end, setEnd] = useState('');
   const [remaining, setRemaining] = useState<number | null>(null);
@@ -453,8 +461,8 @@ function WukufTab() {
         if (now - lastNotifRef.current > 3 * 60 * 1000) {
           lastNotifRef.current = now;
           sendLocalNotification(
-            result.status === 'outside' ? 'Di Luar Arafah!' : 'Hati-hati: Batas Namirah',
-            result.message,
+            result.status === 'outside' ? t('tools.wukuf.notif_outside') : t('tools.wukuf.notif_namirah'),
+            t(`tools.wukuf.msg_${result.status}`),
           );
           Vibration.vibrate([0, 500, 200, 500]);
         }
@@ -482,57 +490,57 @@ function WukufTab() {
   if (phase === 'setup') {
     return (
       <View style={tc.wrap}>
-        <Text style={{ fontSize: 16, fontFamily: 'PlusJakartaSans_700Bold', color: colors.text, textAlign: 'center' }}>Wukuf di Arafah</Text>
+        <Text style={{ fontSize: 16, fontFamily: 'PlusJakartaSans_700Bold', color: colors.text, textAlign: 'center' }}>{t('tools.wukuf.title')}</Text>
         <Text style={{ fontSize: 13, fontFamily: 'PlusJakartaSans_500Medium', color: colors.textMuted, textAlign: 'center', marginTop: 4, lineHeight: 20 }}>
-          Masukkan waktu Dzuhur (mulai) dan Subuh (selesai) pada 9 Dzulhijjah. Tanyakan muthawwif untuk waktu pastinya.
+          {t('tools.wukuf.intro')}
         </Text>
 
         {/* Area Monitor */}
         {!gpsActive ? (
           <TouchableOpacity style={[tc.primaryBtn, { marginTop: 20, backgroundColor: colors.green }]} onPress={startAreaTracking}>
             <Ionicons name="navigate" size={18} color="#fff" />
-            <Text style={[tc.primaryBtnText, { marginLeft: 6 }]}>Cek Posisi di Arafah</Text>
+            <Text style={[tc.primaryBtnText, { marginLeft: 6 }]}>{t('tools.wukuf.check_position')}</Text>
           </TouchableOpacity>
         ) : arafah ? (
           <View style={[wk.areaCard, { borderColor: statusColor }]}>
             <View style={wk.areaHeader}>
               <Ionicons name={statusIcon as any} size={24} color={statusColor} />
               <Text style={[wk.areaStatus, { color: statusColor }]}>
-                {arafah.status === 'inside' ? 'DI DALAM ARAFAH' : arafah.status === 'namirah_danger' ? 'ZONA PERINGATAN' : 'DI LUAR ARAFAH'}
+                {arafah.status === 'inside' ? t('tools.wukuf.status_inside') : arafah.status === 'namirah_danger' ? t('tools.wukuf.status_warning') : t('tools.wukuf.status_outside')}
               </Text>
             </View>
-            <Text style={wk.areaMessage}>{arafah.message}</Text>
+            <Text style={wk.areaMessage}>{t(`tools.wukuf.msg_${arafah.status}`)}</Text>
             <View style={wk.areaStats}>
-              <Text style={wk.areaStat}>Jabal Rahmah: {(arafah.distToCenter / 1000).toFixed(1)} km</Text>
-              <Text style={wk.areaStat}>Masjid Namirah: {Math.round(arafah.distToNamirah)} m</Text>
+              <Text style={wk.areaStat}>{t('tools.wukuf.stat_jabal', { km: (arafah.distToCenter / 1000).toFixed(1) })}</Text>
+              <Text style={wk.areaStat}>{t('tools.wukuf.stat_namirah', { m: Math.round(arafah.distToNamirah) })}</Text>
             </View>
           </View>
         ) : (
-          <View style={tc.gpsBar}><View style={tc.gpsDot} /><Text style={tc.gpsText}>Mencari GPS...</Text></View>
+          <View style={tc.gpsBar}><View style={tc.gpsDot} /><Text style={tc.gpsText}>{t('tools.gps.searching')}</Text></View>
         )}
 
-        <Text style={[tc.inputLabel, { marginTop: 20 }]}>Mulai (setelah Dzuhur)</Text>
+        <Text style={[tc.inputLabel, { marginTop: 20 }]}>{t('tools.wukuf.start_label')}</Text>
         <TextInput style={tc.input} value={start} onChangeText={setStart} placeholder="2026-08-09T12:30" placeholderTextColor={colors.textFaint} />
-        <Text style={tc.inputLabel}>Selesai (Subuh esok)</Text>
+        <Text style={tc.inputLabel}>{t('tools.wukuf.end_label')}</Text>
         <TextInput style={tc.input} value={end} onChangeText={setEnd} placeholder="2026-08-10T05:00" placeholderTextColor={colors.textFaint} />
         <TouchableOpacity style={[tc.primaryBtn, { marginTop: 16 }]} onPress={() => {
           const s = new Date(start).getTime(), e = new Date(end).getTime();
           if (!start || !end || !isFinite(s) || !isFinite(e) || e <= s) {
-            Alert.alert('Waktu tidak valid', 'Isi waktu Mulai dan Selesai dengan benar (mis. 2026-08-09T12:30), dan Selesai harus setelah Mulai.');
+            Alert.alert(t('tools.wukuf.invalid_title'), t('tools.wukuf.invalid_body'));
             return;
           }
           setPhase('waiting'); if (!gpsActive) startAreaTracking();
         }}>
-          <Text style={tc.primaryBtnText}>Mulai Countdown</Text>
+          <Text style={tc.primaryBtnText}>{t('tools.wukuf.start_countdown')}</Text>
         </TouchableOpacity>
 
         {/* Info penting */}
         <View style={wk.infoBox}>
-          <Text style={wk.infoTitle}>Batas Area Arafah</Text>
-          <Text style={wk.infoText}>• Wukuf HANYA sah jika berada di dalam batas Padang Arafah</Text>
-          <Text style={wk.infoText}>• Masjid Namirah: bagian barat masjid ada di LUAR Arafah — hati-hati!</Text>
-          <Text style={wk.infoText}>• Lembah Uranah (barat Arafah) BUKAN bagian Arafah</Text>
-          <Text style={wk.infoText}>• Aktifkan GPS agar app memperingatkan jika kamu keluar area</Text>
+          <Text style={wk.infoTitle}>{t('tools.wukuf.info_title')}</Text>
+          <Text style={wk.infoText}>• {t('tools.wukuf.info_1')}</Text>
+          <Text style={wk.infoText}>• {t('tools.wukuf.info_2')}</Text>
+          <Text style={wk.infoText}>• {t('tools.wukuf.info_3')}</Text>
+          <Text style={wk.infoText}>• {t('tools.wukuf.info_4')}</Text>
         </View>
       </View>
     );
@@ -548,24 +556,24 @@ function WukufTab() {
           <View style={wk.areaHeader}>
             <Ionicons name={statusIcon as any} size={22} color={statusColor} />
             <Text style={[wk.areaStatus, { color: statusColor, fontSize: 13 }]}>
-              {arafah.status === 'inside' ? 'DI DALAM ARAFAH ✓' : arafah.status === 'namirah_danger' ? 'ZONA PERINGATAN ⚠' : 'DI LUAR ARAFAH ✗'}
+              {arafah.status === 'inside' ? `${t('tools.wukuf.status_inside')} ✓` : arafah.status === 'namirah_danger' ? `${t('tools.wukuf.status_warning')} ⚠` : `${t('tools.wukuf.status_outside')} ✗`}
             </Text>
           </View>
-          {arafah.status !== 'inside' && <Text style={[wk.areaMessage, { fontSize: 12 }]}>{arafah.message}</Text>}
+          {arafah.status !== 'inside' && <Text style={[wk.areaMessage, { fontSize: 12 }]}>{t(`tools.wukuf.msg_${arafah.status}`)}</Text>}
         </View>
       )}
 
       <View style={[wk.hero, { backgroundColor: bgColor }]}>
         <Text style={wk.heroLabel}>
-          {phase === 'waiting' ? 'MENUNGGU WUKUF' : phase === 'active' ? 'WUKUF BERLANGSUNG' : 'WUKUF SELESAI'}
+          {phase === 'waiting' ? t('tools.wukuf.hero_waiting') : phase === 'active' ? t('tools.wukuf.hero_active') : t('tools.wukuf.hero_done')}
         </Text>
         <Text style={wk.heroTime}>{remaining != null ? fmt(remaining) : '--:--:--'}</Text>
         <Text style={wk.heroSub}>
-          {phase === 'waiting' ? 'Menunggu waktu Dzuhur' : phase === 'active' ? 'Perbanyak doa & dzikir' : 'Alhamdulillah, wukuf sempurna'}
+          {phase === 'waiting' ? t('tools.wukuf.sub_waiting') : phase === 'active' ? t('tools.wukuf.sub_active') : t('tools.wukuf.sub_done')}
         </Text>
       </View>
       <TouchableOpacity onPress={() => { setPhase('setup'); setStart(''); setEnd(''); watchRef2.current?.remove(); setGpsActive(false); setArafah(null); }}>
-        <Text style={tc.resetText}>Reset</Text>
+        <Text style={tc.resetText}>{t('tools.reset')}</Text>
       </TouchableOpacity>
     </View>
   );
@@ -591,6 +599,7 @@ const wk = StyleSheet.create({
 
 // ==================== QIBLAT (REAL COMPASS) ====================
 function QiblatTab() {
+  const t = useI18n((st) => st.t);
   const [bearing, setBearing] = useState<number | null>(null);
   const [heading, setHeading] = useState(0);
 
@@ -652,7 +661,7 @@ function QiblatTab() {
         <View style={qb.center}><Text style={qb.centerDot}>●</Text></View>
       </View>
       <Text style={qb.deg}>{bearing != null ? `${Math.round(bearing)}°` : 'GPS...'}</Text>
-      <Text style={qb.hint}>Arah kiblat · Putar HP hingga 🕋 di atas</Text>
+      <Text style={qb.hint}>{t('tools.qiblat.hint')}</Text>
     </View>
   );
 }
@@ -671,26 +680,26 @@ const qb = StyleSheet.create({
 
 // ==================== PRAYER TIMES (ENHANCED) ====================
 function ShalatTab() {
+  const t = useI18n((st) => st.t);
   const [times, setTimes] = useState<any>(null);
-  const [nextPrayer, setNextPrayer] = useState<{ name: string; time: string; mins: number } | null>(null);
+  const [nextPrayer, setNextPrayer] = useState<{ key: string; time: string; mins: number } | null>(null);
 
   useEffect(() => {
     (async () => {
       const pos = await getPosition();
       try {
-        const t = await api.getPrayerTimes(pos?.lat, pos?.lng);
-        setTimes(t);
+        const pt = await api.getPrayerTimes(pos?.lat, pos?.lng);
+        setTimes(pt);
 
         // Find next prayer
         const now = new Date();
         const nowMins = now.getHours() * 60 + now.getMinutes();
-        const names: Record<string, string> = { fajr: 'Subuh', dhuhr: 'Dzuhur', asr: 'Ashar', maghrib: 'Maghrib', isha: 'Isya' };
         const order = ['fajr', 'dhuhr', 'asr', 'maghrib', 'isha'];
         for (const key of order) {
-          const [h, m] = (t.times[key] as string).split(':').map(Number);
+          const [h, m] = (pt.times[key] as string).split(':').map(Number);
           const prayerMins = h * 60 + m;
           if (prayerMins > nowMins) {
-            setNextPrayer({ name: names[key], time: t.times[key], mins: prayerMins - nowMins });
+            setNextPrayer({ key, time: pt.times[key], mins: prayerMins - nowMins });
             break;
           }
         }
@@ -698,17 +707,20 @@ function ShalatTab() {
     })();
   }, []);
 
-  const names: Record<string, string> = { fajr: 'Subuh', sunrise: 'Syuruq', dhuhr: 'Dzuhur', asr: 'Ashar', maghrib: 'Maghrib', isha: 'Isya' };
+  const names: Record<string, string> = {
+    fajr: t('tools.prayer.fajr'), sunrise: t('tools.prayer.sunrise'), dhuhr: t('tools.prayer.dhuhr'),
+    asr: t('tools.prayer.asr'), maghrib: t('tools.prayer.maghrib'), isha: t('tools.prayer.isha'),
+  };
   const icons: Record<string, string> = { fajr: '🌅', sunrise: '☀️', dhuhr: '🌤', asr: '⛅', maghrib: '🌇', isha: '🌙' };
 
   return (
     <View style={tc.wrap}>
       {nextPrayer && (
         <View style={sh.nextCard}>
-          <Text style={sh.nextLabel}>SHALAT BERIKUTNYA</Text>
-          <Text style={sh.nextName}>{nextPrayer.name}</Text>
+          <Text style={sh.nextLabel}>{t('tools.prayer.next_label')}</Text>
+          <Text style={sh.nextName}>{names[nextPrayer.key]}</Text>
           <Text style={sh.nextTime}>{nextPrayer.time}</Text>
-          <Text style={sh.nextMins}>{nextPrayer.mins} menit lagi</Text>
+          <Text style={sh.nextMins}>{t('tools.prayer.mins_left', { mins: nextPrayer.mins })}</Text>
         </View>
       )}
       {times && Object.entries(times.times).map(([key, time]) => (
@@ -718,7 +730,7 @@ function ShalatTab() {
           <Text style={sh.time}>{time as string}</Text>
         </View>
       ))}
-      {!times && <Text style={tc.loadingText}>Menghitung waktu shalat...</Text>}
+      {!times && <Text style={tc.loadingText}>{t('tools.prayer.loading')}</Text>}
     </View>
   );
 }
@@ -737,31 +749,32 @@ const sh = StyleSheet.create({
 
 // ==================== CHECKLIST / KURS / FRASA / HEALTH (same as before, condensed) ====================
 function ChecklistTab() {
+  const t = useI18n((st) => st.t);
   const [items, setItems] = useState<any[]>([]); const [newText, setNewText] = useState('');
   const load = useCallback(async () => { try { setItems(await api.getChecklist()); } catch {} }, []);
   useEffect(() => { load(); }, [load]);
   const done = items.filter((i: any) => i.checked).length;
   return (
     <View style={tc.wrap}>
-      <Text style={tc.checkProgress}>{done}/{items.length} disiapkan</Text>
+      <Text style={tc.checkProgress}>{t('tools.checklist.progress', { done, total: items.length })}</Text>
       <View style={{ flexDirection: 'row', gap: 8, marginBottom: 16 }}>
-        <TextInput style={[tc.input, { flex: 1 }]} value={newText} onChangeText={setNewText} placeholder="Tambah item..." placeholderTextColor={colors.textFaint} />
+        <TextInput style={[tc.input, { flex: 1 }]} value={newText} onChangeText={setNewText} placeholder={t('tools.checklist.add_placeholder')} placeholderTextColor={colors.textFaint} />
         <TouchableOpacity style={{ width: 42, height: 42, borderRadius: 10, backgroundColor: colors.primary, alignItems: 'center', justifyContent: 'center' }}
-          onPress={async () => { if (!newText.trim()) return; try { await api.addChecklist(newText.trim()); setNewText(''); load(); } catch { Alert.alert('Gagal menyimpan', 'Item tidak tersimpan. Periksa koneksi internet lalu coba lagi.'); } }}>
+          onPress={async () => { if (!newText.trim()) return; try { await api.addChecklist(newText.trim()); setNewText(''); load(); } catch { Alert.alert(t('tools.checklist.save_fail_title'), t('tools.checklist.save_fail_body')); } }}>
           <Ionicons name="add" size={20} color="#fff" />
         </TouchableOpacity>
       </View>
       {items.map((item: any) => (
         <View key={item.id} style={{ flexDirection: 'row', alignItems: 'center', paddingVertical: 10, borderBottomWidth: 1, borderBottomColor: colors.borderLight }}>
           <TouchableOpacity style={{ flex: 1, flexDirection: 'row', alignItems: 'center', gap: 12 }}
-            onPress={async () => { try { await api.toggleChecklist(item.id, !item.checked); load(); } catch { Alert.alert('Gagal', 'Tidak dapat memperbarui. Periksa koneksi.'); } }}>
+            onPress={async () => { try { await api.toggleChecklist(item.id, !item.checked); load(); } catch { Alert.alert(t('tools.checklist.fail_title'), t('tools.checklist.toggle_fail')); } }}>
             <Ionicons name={item.checked ? 'checkbox' : 'square-outline'} size={22} color={item.checked ? colors.green : colors.textFaint} />
             <Text style={{ fontSize: 14, fontFamily: 'PlusJakartaSans_500Medium', color: item.checked ? colors.textFaint : colors.text, textDecorationLine: item.checked ? 'line-through' : 'none' }}>{item.text}</Text>
           </TouchableOpacity>
           <TouchableOpacity style={{ padding: 8 }} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-            onPress={() => Alert.alert('Hapus item?', item.text, [
-              { text: 'Batal', style: 'cancel' },
-              { text: 'Hapus', style: 'destructive', onPress: async () => { try { await api.deleteChecklist(item.id); load(); } catch { Alert.alert('Gagal', 'Tidak dapat menghapus. Periksa koneksi.'); } } },
+            onPress={() => Alert.alert(t('tools.checklist.delete_confirm'), item.text, [
+              { text: t('common.cancel'), style: 'cancel' },
+              { text: t('tools.checklist.delete'), style: 'destructive', onPress: async () => { try { await api.deleteChecklist(item.id); load(); } catch { Alert.alert(t('tools.checklist.fail_title'), t('tools.checklist.delete_fail')); } } },
             ])}>
             <Ionicons name="trash-outline" size={18} color={colors.textFaint} />
           </TouchableOpacity>
@@ -774,18 +787,19 @@ function ChecklistTab() {
 // ==================== HUB (MAIN MENU) ====================
 function HubMenu({ onSelect }: { onSelect: (t: Tab) => void }) {
   const router = useRouter();
+  const t = useI18n((st) => st.t);
   const items: Array<{ id: Tab; icon: React.ComponentProps<typeof Ionicons>['name']; label: string; arabic: string; color: string }> = [
-    { id: 'tawaf', icon: 'refresh-circle', label: 'Tawaf', arabic: 'طَوَاف', color: colors.primary },
-    { id: 'sai', icon: 'swap-horizontal', label: "Sa'i", arabic: 'سَعْي', color: colors.green },
-    { id: 'tasbih', icon: 'ellipsis-horizontal-circle', label: 'Tasbih', arabic: 'تَسْبِيح', color: colors.gold },
-    { id: 'jumrah', icon: 'radio-button-on', label: 'Jumrah', arabic: 'جَمَرَات', color: colors.danger },
-    { id: 'wukuf', icon: 'timer', label: 'Wukuf', arabic: 'وُقُوف', color: colors.primaryDark },
-    { id: 'qiblat', icon: 'compass', label: 'Kiblat', arabic: 'قِبْلَة', color: colors.green },
-    { id: 'shalat', icon: 'time', label: 'Shalat', arabic: 'صَلَاة', color: colors.primary },
-    { id: 'checklist', icon: 'checkbox', label: 'Checklist', arabic: 'قائمة', color: colors.gold },
-    { id: 'kurs', icon: 'cash', label: 'Kurs', arabic: 'عملة', color: colors.green },
-    { id: 'frasa', icon: 'language', label: 'Frasa Arab', arabic: 'عربي', color: colors.primaryDark },
-    { id: 'kesehatan', icon: 'medkit', label: 'Kesehatan', arabic: 'صحة', color: colors.danger },
+    { id: 'tawaf', icon: 'refresh-circle', label: t('tools.hub.tawaf'), arabic: 'طَوَاف', color: colors.primary },
+    { id: 'sai', icon: 'swap-horizontal', label: t('tools.hub.sai'), arabic: 'سَعْي', color: colors.green },
+    { id: 'tasbih', icon: 'ellipsis-horizontal-circle', label: t('tools.hub.tasbih'), arabic: 'تَسْبِيح', color: colors.gold },
+    { id: 'jumrah', icon: 'radio-button-on', label: t('tools.hub.jumrah'), arabic: 'جَمَرَات', color: colors.danger },
+    { id: 'wukuf', icon: 'timer', label: t('tools.hub.wukuf'), arabic: 'وُقُوف', color: colors.primaryDark },
+    { id: 'qiblat', icon: 'compass', label: t('tools.hub.qiblat'), arabic: 'قِبْلَة', color: colors.green },
+    { id: 'shalat', icon: 'time', label: t('tools.hub.shalat'), arabic: 'صَلَاة', color: colors.primary },
+    { id: 'checklist', icon: 'checkbox', label: t('tools.hub.checklist'), arabic: 'قائمة', color: colors.gold },
+    { id: 'kurs', icon: 'cash', label: t('tools.hub.kurs'), arabic: 'عملة', color: colors.green },
+    { id: 'frasa', icon: 'language', label: t('tools.hub.frasa'), arabic: 'عربي', color: colors.primaryDark },
+    { id: 'kesehatan', icon: 'medkit', label: t('tools.hub.kesehatan'), arabic: 'صحة', color: colors.danger },
   ];
   return (
     <View style={hub.grid}>
@@ -803,16 +817,16 @@ function HubMenu({ onSelect }: { onSelect: (t: Tab) => void }) {
         <View style={[hub.iconBox, { backgroundColor: colors.textMuted }]}>
           <Ionicons name="analytics" size={24} color="#fff" />
         </View>
-        <Text style={hub.label}>Perekam GPS</Text>
-        <Text style={hub.arabic}>riset</Text>
+        <Text style={hub.label}>{t('tools.hub.gps_recorder')}</Text>
+        <Text style={hub.arabic}>{t('tools.hub.gps_recorder_sub')}</Text>
       </TouchableOpacity>
       {/* prototipe: suara rombongan (broadcast muthawwif → jamaah) */}
       <TouchableOpacity style={hub.card} onPress={() => router.push('/voice')} activeOpacity={0.7}>
         <View style={[hub.iconBox, { backgroundColor: colors.primaryDark }]}>
           <Ionicons name="megaphone" size={24} color="#fff" />
         </View>
-        <Text style={hub.label}>Suara Rombongan</Text>
-        <Text style={hub.arabic}>beta</Text>
+        <Text style={hub.label}>{t('tools.hub.voice')}</Text>
+        <Text style={hub.arabic}>{t('tools.hub.voice_sub')}</Text>
       </TouchableOpacity>
     </View>
   );
@@ -829,6 +843,7 @@ const hub = StyleSheet.create({
 // ==================== MAIN ====================
 export default function ToolsScreen() {
   const router = useRouter();
+  const t = useI18n((st) => st.t);
   const [tab, setTab] = useState<Tab>('hub');
   const [healthTips, setHealthTips] = useState<any[]>([]);
 
@@ -842,7 +857,7 @@ export default function ToolsScreen() {
         <TouchableOpacity onPress={() => tab === 'hub' ? router.back() : setTab('hub')} style={{ padding: 6 }}>
           <Ionicons name={tab === 'hub' ? 'arrow-back' : 'grid'} size={22} color={colors.text} />
         </TouchableOpacity>
-        <Text style={tc.headerTitle}>{tab === 'hub' ? 'Alat Ibadah' : tab.charAt(0).toUpperCase() + tab.slice(1)}</Text>
+        <Text style={tc.headerTitle}>{tab === 'hub' ? t('tools.title') : t(`tools.tab.${tab}`)}</Text>
         <View style={{ width: 34 }} />
       </View>
 

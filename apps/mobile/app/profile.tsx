@@ -44,11 +44,11 @@ export default function ProfileScreen() {
       if (emergency) data.emergency_contact = emergency;
       if (Object.keys(data).length > 0) {
         await api.updateProfile(data);
-        Alert.alert('Berhasil', 'Profil diperbarui');
+        Alert.alert(t('account.success'), t('account.profile_updated'));
         setPassword('');
       }
     } catch (err: any) {
-      Alert.alert('Gagal', err.message);
+      Alert.alert(t('account.failed'), err.message);
     } finally { setSaving(false); }
   };
 
@@ -56,6 +56,11 @@ export default function ProfileScreen() {
     { code: 'id', label: t('lang.id') },
     { code: 'en', label: t('lang.en') },
   ];
+
+  const roleLabel = user?.role === 'admin' ? t('account.role_admin')
+    : user?.role === 'muthawwif' ? t('mode.muthawwif')
+    : user?.role === 'jamaah' ? t('mode.jamaah')
+    : user?.role;
 
   return (
     <SafeAreaView style={s.safe}>
@@ -74,7 +79,7 @@ export default function ProfileScreen() {
           </View>
           <Text style={s.userName}>{user?.name}</Text>
           <Text style={s.userPhone}>{user?.phone}</Text>
-          <View style={s.roleBadge}><Text style={s.roleText}>{user?.role}</Text></View>
+          <View style={s.roleBadge}><Text style={s.roleText}>{roleLabel}</Text></View>
         </View>
 
         {/* Language */}
@@ -93,9 +98,9 @@ export default function ProfileScreen() {
           <>
             <Text style={s.sectionTitle}>{t('profile.stats')}</Text>
             <View style={s.statsRow}>
-              <View style={s.statCard}><Text style={s.statNum}>{stats.ibadah_done}</Text><Text style={s.statLabel}>Ibadah selesai</Text></View>
-              <View style={s.statCard}><Text style={s.statNum}>{stats.sos_total}</Text><Text style={s.statLabel}>SOS dikirim</Text></View>
-              <View style={s.statCard}><Text style={[s.statNum, { color: stats.is_ihram ? colors.green : colors.textMuted }]}>{stats.is_ihram ? '✓' : '—'}</Text><Text style={s.statLabel}>Status ihram</Text></View>
+              <View style={s.statCard}><Text style={s.statNum}>{stats.ibadah_done}</Text><Text style={s.statLabel}>{t('account.stat_ibadah_done')}</Text></View>
+              <View style={s.statCard}><Text style={s.statNum}>{stats.sos_total}</Text><Text style={s.statLabel}>{t('account.stat_sos_sent')}</Text></View>
+              <View style={s.statCard}><Text style={[s.statNum, { color: stats.is_ihram ? colors.green : colors.textMuted }]}>{stats.is_ihram ? '✓' : '—'}</Text><Text style={s.statLabel}>{t('account.stat_ihram')}</Text></View>
             </View>
           </>
         )}
@@ -103,13 +108,13 @@ export default function ProfileScreen() {
         {/* Edit */}
         <Text style={s.sectionTitle}>{t('profile.edit')}</Text>
         <View style={s.formCard}>
-          <Text style={s.label}>Nama</Text>
+          <Text style={s.label}>{t('account.field_name')}</Text>
           <TextInput style={s.input} value={name} onChangeText={setName} />
           <Text style={[s.label, { marginTop: 12 }]}>{t('profile.change_password')}</Text>
-          <TextInput style={s.input} value={password} onChangeText={setPassword} secureTextEntry placeholder="Kosongkan jika tidak diubah" placeholderTextColor={colors.textFaint} />
-          <Text style={[s.label, { marginTop: 12 }]}>Gol. Darah</Text>
+          <TextInput style={s.input} value={password} onChangeText={setPassword} secureTextEntry placeholder={t('account.password_placeholder')} placeholderTextColor={colors.textFaint} />
+          <Text style={[s.label, { marginTop: 12 }]}>{t('account.field_blood_type')}</Text>
           <TextInput style={s.input} value={bloodType} onChangeText={setBloodType} />
-          <Text style={[s.label, { marginTop: 12 }]}>Kontak Darurat</Text>
+          <Text style={[s.label, { marginTop: 12 }]}>{t('account.field_emergency')}</Text>
           <TextInput style={s.input} value={emergency} onChangeText={setEmergency} keyboardType="phone-pad" />
           <TouchableOpacity style={s.saveBtn} onPress={handleSave} disabled={saving}>
             <Text style={s.saveBtnText}>{saving ? t('common.loading') : t('common.save')}</Text>
@@ -117,12 +122,12 @@ export default function ProfileScreen() {
         </View>
 
         {/* Dark Mode */}
-        <Text style={s.sectionTitle}>Tampilan</Text>
+        <Text style={s.sectionTitle}>{t('account.appearance')}</Text>
         <TouchableOpacity onPress={() => { toggleDark(); api.setTheme(isDark ? 'light' : 'dark').catch(() => {}); }}
           style={{ backgroundColor: colors.card, borderWidth: 1, borderColor: colors.border, borderRadius: 12, padding: 14, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
             <Ionicons name={isDark ? 'moon' : 'sunny'} size={20} color={colors.primary} />
-            <Text style={{ fontSize: 14, fontFamily: 'PlusJakartaSans_600SemiBold', color: colors.text }}>Dark Mode</Text>
+            <Text style={{ fontSize: 14, fontFamily: 'PlusJakartaSans_600SemiBold', color: colors.text }}>{t('account.dark_mode')}</Text>
           </View>
           <View style={{ width: 44, height: 24, borderRadius: 12, backgroundColor: isDark ? colors.primary : colors.border, justifyContent: 'center', padding: 2 }}>
             <View style={{ width: 20, height: 20, borderRadius: 10, backgroundColor: '#fff', alignSelf: isDark ? 'flex-end' : 'flex-start' }} />
@@ -133,7 +138,7 @@ export default function ProfileScreen() {
         <TouchableOpacity onPress={() => router.push('/rating')}
           style={{ marginTop: 12, backgroundColor: colors.card, borderWidth: 1, borderColor: colors.border, borderRadius: 12, padding: 14, flexDirection: 'row', alignItems: 'center', gap: 10 }}>
           <Ionicons name="star" size={20} color={colors.gold} />
-          <Text style={{ fontSize: 14, fontFamily: 'PlusJakartaSans_600SemiBold', color: colors.text, flex: 1 }}>Beri Rating & Feedback</Text>
+          <Text style={{ fontSize: 14, fontFamily: 'PlusJakartaSans_600SemiBold', color: colors.text, flex: 1 }}>{t('account.rating_link')}</Text>
           <Ionicons name="chevron-forward" size={18} color={colors.textFaint} />
         </TouchableOpacity>
 
@@ -143,7 +148,7 @@ export default function ProfileScreen() {
         </TouchableOpacity>
 
         {/* Atribusi data lokasi (Ka'bah, Safa/Marwah, Jamarat, batas Arafah) */}
-        <Text style={s.creditText}>Data lokasi tempat suci: © OpenStreetMap contributors (ODbL)</Text>
+        <Text style={s.creditText}>{t('account.osm_credit')}</Text>
       </ScrollView>
     </SafeAreaView>
   );

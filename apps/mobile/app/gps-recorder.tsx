@@ -12,12 +12,14 @@ import {
   startRecording, stopRecording, isRecording, listSessions,
   deleteSession, exportSession, uploadSession, TraceSession, LivePoint,
 } from '../src/services/trace-recorder';
+import { useI18n } from '../src/services/i18n';
 
+// key = label sesi tersimpan (data riset, jangan diterjemahkan); label/hint = kunci i18n.
 const SCENARIOS = [
-  { key: 'A-lapangan-terbuka', label: 'A. Lapangan terbuka', hint: 'Jalan lurus ±300 m, langit terbuka' },
-  { key: 'B-padat-bangunan', label: 'B. Padat bangunan', hint: 'Gang / koridor antar gedung' },
-  { key: 'C-bolak-balik', label: 'C. Bolak-balik ×7', hint: 'Lintasan lurus ±400 m, 7 kali' },
-];
+  { key: 'A-lapangan-terbuka', label: 'account.gps_scn_a_label', hint: 'account.gps_scn_a_hint' },
+  { key: 'B-padat-bangunan', label: 'account.gps_scn_b_label', hint: 'account.gps_scn_b_hint' },
+  { key: 'C-bolak-balik', label: 'account.gps_scn_c_label', hint: 'account.gps_scn_c_hint' },
+] as const;
 
 function fmtDur(ms: number): string {
   const s = Math.floor(ms / 1000);
@@ -26,7 +28,9 @@ function fmtDur(ms: number): string {
 
 export default function GpsRecorderScreen() {
   const router = useRouter();
-  const [scenario, setScenario] = useState(SCENARIOS[0].key);
+  const t = useI18n((st) => st.t);
+  const lang = useI18n((st) => st.lang);
+  const [scenario, setScenario] = useState<string>(SCENARIOS[0].key);
   const [recording, setRecording] = useState(isRecording());
   const [startedAt, setStartedAt] = useState<number | null>(null);
   const [count, setCount] = useState(0);
@@ -51,7 +55,7 @@ export default function GpsRecorderScreen() {
 
   const onStart = async () => {
     const ok = await requestPermission();
-    if (!ok) { Alert.alert('Izin lokasi ditolak', 'Perekaman membutuhkan izin lokasi.'); return; }
+    if (!ok) { Alert.alert(t('account.gps_perm_denied_title'), t('account.gps_perm_denied_msg')); return; }
     setCount(0); setLast(null);
     await startRecording(scenario, (p, c) => { setLast(p); setCount(c); });
     setStartedAt(Date.now());
@@ -66,15 +70,15 @@ export default function GpsRecorderScreen() {
   };
 
   const onDelete = (s: TraceSession) => {
-    Alert.alert('Hapus sesi?', `${s.label} (${s.point_count} titik) akan dihapus permanen.`, [
-      { text: 'Batal', style: 'cancel' },
-      { text: 'Hapus', style: 'destructive', onPress: () => deleteSession(s.id).then(refresh) },
+    Alert.alert(t('account.gps_delete_title'), t('account.gps_delete_msg', { label: s.label, count: s.point_count }), [
+      { text: t('common.cancel'), style: 'cancel' },
+      { text: t('account.gps_delete'), style: 'destructive', onPress: () => deleteSession(s.id).then(refresh) },
     ]);
   };
 
   const onExport = async (s: TraceSession) => {
     try { await exportSession(s.id); }
-    catch (e) { Alert.alert('Gagal ekspor', e instanceof Error ? e.message : 'Kesalahan tidak dikenal'); }
+    catch (e) { Alert.alert(t('account.gps_export_failed'), e instanceof Error ? e.message : t('account.gps_unknown_error')); }
   };
 
   const [uploading, setUploading] = useState<number | null>(null);
@@ -82,10 +86,10 @@ export default function GpsRecorderScreen() {
     setUploading(s.id);
     try {
       await uploadSession(s.id);
-      Alert.alert('Terunggah', 'Sesi terkirim ke server — bisa dianalisis dari panel admin (menu Validasi GPS).');
+      Alert.alert(t('account.gps_uploaded_title'), t('account.gps_uploaded_msg'));
       refresh();
     } catch (e) {
-      Alert.alert('Gagal unggah', e instanceof Error ? e.message : 'Kesalahan tidak dikenal');
+      Alert.alert(t('account.gps_upload_failed'), e instanceof Error ? e.message : t('account.gps_unknown_error'));
     } finally { setUploading(null); }
   };
 
@@ -95,18 +99,14 @@ export default function GpsRecorderScreen() {
         <TouchableOpacity onPress={() => router.back()} style={{ padding: 6 }}>
           <Ionicons name="arrow-back" size={22} color={colors.text} />
         </TouchableOpacity>
-        <Text style={st.headerTitle}>Perekam GPS (Riset)</Text>
+        <Text style={st.headerTitle}>{t('account.gps_title')}</Text>
         <View style={{ width: 34 }} />
       </View>
 
       <ScrollView contentContainerStyle={{ padding: 16, paddingBottom: 40 }}>
         <View style={st.infoBox}>
           <Ionicons name="flask" size={16} color={colors.textMuted} />
-          <Text style={st.infoText}>
-            Merekam trace GPS 1 titik/detik (BestForNavigation — stack yang sama dengan
-            deteksi ritual) untuk validasi lapangan naskah. Ekspor GPX → taruh di
-            field_logs/ → npm run replay.
-          </Text>
+          <Text style={st.infoText}>{t('account.gps_info')}</Text>
         </View>
 
         {/* pilih skenario */}
@@ -124,8 +124,8 @@ export default function GpsRecorderScreen() {
                   size={20} color={scenario === s.key ? colors.primary : colors.textFaint}
                 />
                 <View style={{ flex: 1 }}>
-                  <Text style={st.scenarioLabel}>{s.label}</Text>
-                  <Text style={st.scenarioHint}>{s.hint}</Text>
+                  <Text style={st.scenarioLabel}>{t(s.label)}</Text>
+                  <Text style={st.scenarioHint}>{t(s.hint)}</Text>
                 </View>
               </TouchableOpacity>
             ))}
@@ -137,15 +137,15 @@ export default function GpsRecorderScreen() {
           <View style={st.liveBox}>
             <View style={st.liveDotRow}>
               <View style={st.liveDot} />
-              <Text style={st.liveLabel}>MEREKAM — {scenario}</Text>
+              <Text style={st.liveLabel}>{t('account.gps_recording', { scenario })}</Text>
             </View>
             <View style={st.statRow}>
-              <View style={st.stat}><Text style={st.statNum}>{count}</Text><Text style={st.statLabel}>titik</Text></View>
-              <View style={st.stat}><Text style={st.statNum}>{startedAt ? fmtDur(now - startedAt) : '0:00'}</Text><Text style={st.statLabel}>durasi</Text></View>
-              <View style={st.stat}><Text style={st.statNum}>{last?.acc != null ? `${last.acc.toFixed(0)} m` : '—'}</Text><Text style={st.statLabel}>akurasi</Text></View>
+              <View style={st.stat}><Text style={st.statNum}>{count}</Text><Text style={st.statLabel}>{t('account.gps_stat_points')}</Text></View>
+              <View style={st.stat}><Text style={st.statNum}>{startedAt ? fmtDur(now - startedAt) : '0:00'}</Text><Text style={st.statLabel}>{t('account.gps_stat_duration')}</Text></View>
+              <View style={st.stat}><Text style={st.statNum}>{last?.acc != null ? `${last.acc.toFixed(0)} m` : '—'}</Text><Text style={st.statLabel}>{t('account.gps_stat_accuracy')}</Text></View>
             </View>
             <Text style={st.liveCoord}>
-              {last ? `${last.lat.toFixed(6)}, ${last.lon.toFixed(6)}` : 'menunggu fix GPS…'}
+              {last ? `${last.lat.toFixed(6)}, ${last.lon.toFixed(6)}` : t('account.gps_waiting_fix')}
             </Text>
           </View>
         )}
@@ -157,26 +157,23 @@ export default function GpsRecorderScreen() {
           activeOpacity={0.8}
         >
           <Ionicons name={recording ? 'stop-circle' : 'play-circle'} size={22} color="#fff" />
-          <Text style={st.mainBtnText}>{recording ? 'Berhenti & Simpan' : 'Mulai Merekam'}</Text>
+          <Text style={st.mainBtnText}>{recording ? t('account.gps_stop') : t('account.gps_start')}</Text>
         </TouchableOpacity>
         {!recording && (
-          <Text style={st.tip}>
-            Tunggu 1–2 menit setelah GPS mendapat fix sebelum mulai berjalan. Layar dijaga
-            tetap menyala selama perekaman.
-          </Text>
+          <Text style={st.tip}>{t('account.gps_tip')}</Text>
         )}
 
         {/* daftar sesi */}
-        <Text style={st.sectionTitle}>Sesi tersimpan</Text>
-        {sessions.length === 0 && <Text style={st.empty}>Belum ada rekaman.</Text>}
+        <Text style={st.sectionTitle}>{t('account.gps_saved_sessions')}</Text>
+        {sessions.length === 0 && <Text style={st.empty}>{t('account.gps_no_sessions')}</Text>}
         {sessions.map((s) => (
           <View key={s.id} style={st.session}>
             <View style={{ flex: 1 }}>
               <Text style={st.sessionLabel}>{s.label}</Text>
               <Text style={st.sessionMeta}>
-                {new Date(s.started_at).toLocaleString('id-ID')} · {s.point_count} titik
-                {s.ended_at ? ` · ${fmtDur(s.ended_at - s.started_at)}` : ' · (terputus)'}
-                {s.uploaded_at ? ' · terunggah' : ''}
+                {new Date(s.started_at).toLocaleString(lang === 'id' ? 'id-ID' : 'en-US')} · {t('account.gps_points_count', { count: s.point_count })}
+                {s.ended_at ? ` · ${fmtDur(s.ended_at - s.started_at)}` : ` · ${t('account.gps_interrupted')}`}
+                {s.uploaded_at ? ` · ${t('account.gps_uploaded_tag')}` : ''}
               </Text>
             </View>
             <TouchableOpacity onPress={() => onUpload(s)} style={st.iconBtn} disabled={uploading === s.id}>

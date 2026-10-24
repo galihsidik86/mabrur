@@ -15,6 +15,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { api } from '../src/services/api';
 import { useAuthStore } from '../src/stores/auth';
 import { colors, radius } from '../src/theme';
+import { useI18n } from '../src/services/i18n';
 
 /**
  * Wajib ganti password saat login pertama — utk akun yang password awalnya
@@ -30,14 +31,15 @@ export default function ChangePasswordScreen() {
   const [loading, setLoading] = useState(false);
   const user = useAuthStore((s) => s.user);
   const logout = useAuthStore((s) => s.logout);
+  const t = useI18n((st) => st.t);
 
   const handleSubmit = async () => {
     if (password.length < 6) {
-      setError('Password baru minimal 6 karakter');
+      setError(t('account.cp_min_length'));
       return;
     }
     if (password !== confirm) {
-      setError('Konfirmasi password tidak sama');
+      setError(t('account.cp_mismatch'));
       return;
     }
     setError('');
@@ -45,13 +47,13 @@ export default function ChangePasswordScreen() {
     try {
       await api.updateProfile({ password });
       Alert.alert(
-        'Password berhasil diubah',
-        'Demi keamanan, silakan masuk kembali dengan password baru Anda.',
-        [{ text: 'Login Ulang', onPress: () => logout() }],
+        t('account.cp_success_title'),
+        t('account.cp_success_msg'),
+        [{ text: t('account.cp_relogin'), onPress: () => logout() }],
         { cancelable: false },
       );
     } catch (err: any) {
-      setError(err.message || 'Gagal mengubah password');
+      setError(err.message || t('account.cp_failed'));
     } finally {
       setLoading(false);
     }
@@ -66,18 +68,16 @@ export default function ChangePasswordScreen() {
         <View style={s.iconWrap}>
           <Ionicons name="key" size={34} color={colors.primary} />
         </View>
-        <Text style={s.title}>Buat Password Baru</Text>
+        <Text style={s.title}>{t('account.cp_title')}</Text>
         <Text style={s.subtitle}>
-          Assalamu'alaikum{user?.name ? `, ${user.name}` : ''}. Akun Anda dibuat
-          dengan password awal dari travel — demi keamanan, buat password baru
-          sebelum melanjutkan.
+          {t('account.cp_subtitle', { name: user?.name ? `, ${user.name}` : '' })}
         </Text>
 
         <View style={s.inputWrap}>
           <Ionicons name="lock-closed-outline" size={18} color={colors.textMuted} />
           <TextInput
             style={s.input}
-            placeholder="Password baru (min. 6 karakter)"
+            placeholder={t('account.cp_new_placeholder')}
             placeholderTextColor={colors.textMuted}
             secureTextEntry={!show}
             value={password}
@@ -97,7 +97,7 @@ export default function ChangePasswordScreen() {
           <Ionicons name="lock-closed" size={18} color={colors.textMuted} />
           <TextInput
             style={s.input}
-            placeholder="Ulangi password baru"
+            placeholder={t('account.cp_confirm_placeholder')}
             placeholderTextColor={colors.textMuted}
             secureTextEntry={!show}
             value={confirm}
@@ -115,14 +115,11 @@ export default function ChangePasswordScreen() {
           {loading ? (
             <ActivityIndicator color="#fff" />
           ) : (
-            <Text style={s.buttonText}>Simpan Password Baru</Text>
+            <Text style={s.buttonText}>{t('account.cp_submit')}</Text>
           )}
         </TouchableOpacity>
 
-        <Text style={s.hint}>
-          Setelah tersimpan, Anda akan diminta masuk kembali dengan password
-          baru. Password lama dari travel tidak berlaku lagi.
-        </Text>
+        <Text style={s.hint}>{t('account.cp_hint')}</Text>
       </KeyboardAvoidingView>
     </SafeAreaView>
   );

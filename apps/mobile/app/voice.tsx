@@ -7,9 +7,11 @@ import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { colors } from '../src/theme';
 import { useVoice } from '../src/stores/voice';
+import { useI18n } from '../src/services/i18n';
 
 export default function VoiceScreen() {
   const router = useRouter();
+  const t = useI18n((st) => st.t);
   const { active, connecting, error, role, start, stop } = useVoice();
 
   return (
@@ -19,28 +21,23 @@ export default function VoiceScreen() {
           <View style={[s.circle, { backgroundColor: colors.green }]}>
             <Ionicons name={role === 'speaker' ? 'mic' : 'volume-high'} size={44} color="#fff" />
           </View>
-          <Text style={s.title}>{role === 'speaker' ? 'Siap menyiarkan' : 'Tersambung — mendengarkan'}</Text>
+          <Text style={s.title}>{role === 'speaker' ? t('account.voice_ready_speaker') : t('account.voice_connected_listener')}</Text>
           <Text style={s.msg}>
-            {role === 'speaker'
-              ? 'Tekan "Bicara" di bilah bawah untuk memandu doa. Anda bisa membuka Tawaf/Sa\'i — hitungan GPS tetap berjalan dan suara tetap tersiar.'
-              : 'Suara muthawwif terdengar otomatis. Silakan buka Tawaf/Sa\'i — hitungan GPS berjalan sambil Anda mendengar.'}
+            {role === 'speaker' ? t('account.voice_speaker_msg') : t('account.voice_listener_msg')}
           </Text>
           <TouchableOpacity style={s.outlineBtn} onPress={stop}>
             <Ionicons name="close" size={18} color="#fff" />
-            <Text style={s.outlineText}>Putuskan</Text>
+            <Text style={s.outlineText}>{t('account.voice_disconnect')}</Text>
           </TouchableOpacity>
         </>
       ) : (
         <>
           <View style={s.circle}><Ionicons name="megaphone-outline" size={44} color="#fff" /></View>
-          <Text style={s.title}>Suara Rombongan</Text>
-          <Text style={s.msg}>
-            Sambungkan untuk memandu/mendengar doa. Setelah tersambung, koneksi tetap hidup
-            meski Anda pindah layar — Tawaf/Sa'i tetap menghitung otomatis.
-          </Text>
+          <Text style={s.title}>{t('account.voice_title')}</Text>
+          <Text style={s.msg}>{t('account.voice_intro')}</Text>
           <TouchableOpacity style={s.connectBtn} onPress={start} disabled={connecting}>
             {connecting ? <ActivityIndicator color="#fff" /> : (
-              <><Ionicons name="wifi" size={22} color="#fff" /><Text style={s.connectText}>Sambungkan</Text></>
+              <><Ionicons name="wifi" size={22} color="#fff" /><Text style={s.connectText}>{t('account.voice_connect')}</Text></>
             )}
           </TouchableOpacity>
           {error ? <Text style={[s.msg, { color: '#FFD9D2' }]}>{error}</Text> : null}
@@ -51,12 +48,13 @@ export default function VoiceScreen() {
 }
 
 function Shell({ children, onClose }: { children: React.ReactNode; onClose: () => void }) {
+  const t = useI18n((st) => st.t);
   return (
     <SafeAreaView style={s.safe}>
       <View style={s.header}>
         <View>
-          <Text style={s.hLabel}>SUARA ROMBONGAN</Text>
-          <Text style={s.hTitle}>Prototipe</Text>
+          <Text style={s.hLabel}>{t('account.voice_header')}</Text>
+          <Text style={s.hTitle}>{t('account.voice_prototype')}</Text>
         </View>
         <TouchableOpacity style={s.closeBtn} onPress={onClose}>
           <Ionicons name="close" size={18} color="#fff" />

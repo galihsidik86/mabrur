@@ -1,4 +1,5 @@
 import { db } from '../db';
+import { tokensByLang, type PushLang } from './push-messages';
 
 interface PushMessage {
   to: string;
@@ -39,13 +40,13 @@ export async function sendPush(
   }
 }
 
+/** Push SOS ke muthawwif rombongan, masing-masing dalam bahasa pilihannya. */
 export async function notifyGroupMuthawwif(
   groupId: string,
-  title: string,
-  body: string,
+  build: (lang: PushLang) => { title: string; body: string },
   data?: Record<string, unknown>,
 ): Promise<void> {
-  const members = await db('group_members')
+  const members: Array<{ push_token: string; language: string | null }> = await db('group_members')
     .join('users', 'users.id', 'group_members.user_id')
     .where({
       'group_members.group_id': groupId,
@@ -53,10 +54,12 @@ export async function notifyGroupMuthawwif(
       'group_members.is_active': true,
     })
     .whereNotNull('users.push_token')
-    .select('users.push_token');
+    .select('users.push_token', 'users.language');
 
-  const tokens = members.map((m: any) => m.push_token);
-  await sendPush(tokens, title, body, data, 'sos');
+  for (const [lang, tokens] of tokensByLang(members)) {
+    const { title, body } = build(lang);
+    await sendPush(tokens, title, body, data, 'sos');
+  }
 }
 
 const CHAT_SNIPPET_MAX = 100;

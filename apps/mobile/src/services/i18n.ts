@@ -3,6 +3,7 @@ import * as SecureStore from 'expo-secure-store';
 import { resolveInitialLang, interpolate, type Lang, type TranslateParams } from '../i18n/core';
 import { id, type TranslationKey } from '../i18n/locales/id';
 import { en } from '../i18n/locales/en';
+import { api } from './api';
 
 export type { Lang, TranslationKey };
 
@@ -42,6 +43,8 @@ export const useI18n = create<I18nState>((set) => ({
     initialized = true;
     set({ lang, t: makeT(lang) });
     await SecureStore.setItemAsync(LANG_KEY, lang).catch(() => {});
+    // Gagal saat belum login/offline tidak masalah: disinkronkan lagi setelah login (_layout).
+    api.setLanguage(lang).catch(() => {});
   },
 }));
 

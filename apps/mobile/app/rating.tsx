@@ -5,19 +5,30 @@ import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { colors, radius } from '../src/theme';
 import { api } from '../src/services/api';
+import { useI18n } from '../src/services/i18n';
+
+const RATING_LABELS = [
+  'account.rating_tap',
+  'account.rating_1',
+  'account.rating_2',
+  'account.rating_3',
+  'account.rating_4',
+  'account.rating_5',
+] as const;
 
 export default function RatingScreen() {
   const router = useRouter();
+  const t = useI18n((st) => st.t);
   const [rating, setRating] = useState(0);
   const [feedback, setFeedback] = useState('');
   const [submitted, setSubmitted] = useState(false);
 
   const submit = async () => {
-    if (rating === 0) { Alert.alert('', 'Pilih rating bintang dulu'); return; }
+    if (rating === 0) { Alert.alert('', t('account.rating_pick_first')); return; }
     try {
       await api.submitRating(rating, feedback);
       setSubmitted(true);
-    } catch (err: any) { Alert.alert('Gagal', err.message); }
+    } catch (err: any) { Alert.alert(t('account.failed'), err.message); }
   };
 
   if (submitted) {
@@ -25,10 +36,10 @@ export default function RatingScreen() {
       <SafeAreaView style={s.safe}>
         <View style={s.center}>
           <Ionicons name="checkmark-circle" size={64} color={colors.green} />
-          <Text style={s.thankTitle}>Terima kasih!</Text>
-          <Text style={s.thankSub}>Feedback Anda membantu kami menjadi lebih baik.</Text>
+          <Text style={s.thankTitle}>{t('account.rating_thanks')}</Text>
+          <Text style={s.thankSub}>{t('account.rating_thanks_sub')}</Text>
           <TouchableOpacity style={s.btn} onPress={() => router.back()}>
-            <Text style={s.btnText}>Kembali</Text>
+            <Text style={s.btnText}>{t('account.back')}</Text>
           </TouchableOpacity>
         </View>
       </SafeAreaView>
@@ -41,11 +52,11 @@ export default function RatingScreen() {
         <TouchableOpacity onPress={() => router.back()} style={{ padding: 6 }}>
           <Ionicons name="arrow-back" size={22} color={colors.text} />
         </TouchableOpacity>
-        <Text style={s.headerTitle}>Rating & Feedback</Text>
+        <Text style={s.headerTitle}>{t('account.rating_title')}</Text>
         <View style={{ width: 34 }} />
       </View>
       <View style={s.content}>
-        <Text style={s.question}>Bagaimana pengalaman perjalanan Anda?</Text>
+        <Text style={s.question}>{t('account.rating_question')}</Text>
         <View style={s.stars}>
           {[1, 2, 3, 4, 5].map((i) => (
             <TouchableOpacity key={i} onPress={() => setRating(i)}>
@@ -54,19 +65,19 @@ export default function RatingScreen() {
           ))}
         </View>
         <Text style={s.ratingLabel}>
-          {rating === 0 ? 'Ketuk bintang' : ['', 'Kurang', 'Cukup', 'Baik', 'Sangat Baik', 'Luar Biasa'][rating]}
+          {t(RATING_LABELS[rating])}
         </Text>
         <TextInput
           style={s.textarea}
           value={feedback}
           onChangeText={setFeedback}
-          placeholder="Tulis saran atau masukan (opsional)"
+          placeholder={t('account.rating_placeholder')}
           placeholderTextColor={colors.textFaint}
           multiline
           numberOfLines={4}
         />
         <TouchableOpacity style={s.btn} onPress={submit}>
-          <Text style={s.btnText}>Kirim Feedback</Text>
+          <Text style={s.btnText}>{t('account.rating_submit')}</Text>
         </TouchableOpacity>
       </View>
     </SafeAreaView>

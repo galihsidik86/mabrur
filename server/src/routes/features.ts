@@ -56,6 +56,16 @@ router.patch('/profile', validate(profileUpdateSchema), async (req: Request, res
   } catch (err) { next(err); }
 });
 
+// Bahasa pilihan pengguna — dipakai server untuk push notification (SOS, pengingat lokasi).
+const languageSchema = z.object({ language: z.enum(['id', 'en']) });
+
+router.put('/profile/language', validate(languageSchema), async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    await db('users').where('id', req.auth!.sub).update({ language: req.body.language });
+    res.json({ data: { language: req.body.language } });
+  } catch (err) { next(err); }
+});
+
 // ==================== SOS HISTORY ====================
 
 router.get('/sos/history', async (req: Request, res: Response, next: NextFunction) => {

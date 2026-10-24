@@ -38,6 +38,12 @@ import { ARAFAH_BOUNDARY, ARAFAH_CENTER, KAABAH, NAMIRAH_MOSQUE_CENTER } from '.
 
 const MAP_HEIGHT = 300;
 const screenW = Dimensions.get('window').width;
+// Kunci (bukan teks) agar terjemahan dipanggil saat render.
+const HARAM_RULE_KEYS = [
+  'monitor.haram_rule_hunt',
+  'monitor.haram_rule_plants',
+  'monitor.haram_rule_ihram',
+] as const;
 
 export default function PetaScreen() {
   const user = useAuthStore((s) => s.user);
@@ -85,7 +91,7 @@ export default function PetaScreen() {
   const startTracking = useCallback(async (z: MiqatZone[]) => {
     const granted = await requestPermission();
     if (!granted) {
-      Alert.alert('Izin Lokasi', 'Mabrur memerlukan akses lokasi untuk fitur geofence miqat.');
+      Alert.alert(t('monitor.perm_title'), t('monitor.perm_body'));
       return;
     }
 
@@ -108,7 +114,7 @@ export default function PetaScreen() {
       if (n) saveIhramLocal({ is_ihram: isIhram, distance_meters: n.distance, nearest_miqat: n.zone.name });
       api.sendLocation(lat, lng, acc ?? undefined).catch(() => {});
     });
-  }, [isIhram]);
+  }, [isIhram, t]);
 
   useEffect(() => {
     (async () => {
@@ -157,10 +163,10 @@ export default function PetaScreen() {
   const my = 44 - (r * Math.sin(angle)) / 3;
 
   const mapTabs: Array<{ id: typeof mapTab; label: string }> = [
-    { id: 'miqat', label: 'Miqat' },
-    { id: 'realmap', label: 'Peta' },
-    { id: 'arafah', label: 'Arafah' },
-    ...(isMuthawwif ? [{ id: 'monitor' as const, label: 'Monitor' }] : []),
+    { id: 'miqat', label: t('monitor.tab_miqat') },
+    { id: 'realmap', label: t('monitor.tab_map') },
+    { id: 'arafah', label: t('monitor.tab_arafah') },
+    ...(isMuthawwif ? [{ id: 'monitor' as const, label: t('monitor.tab_monitor') }] : []),
   ];
 
   return (
@@ -174,10 +180,10 @@ export default function PetaScreen() {
       }}>
         <ScrollView horizontal showsHorizontalScrollIndicator={false}
           contentContainerStyle={{ paddingHorizontal: 12, paddingVertical: 10, gap: 6 }}>
-          {mapTabs.map((t) => (
-            <TouchableOpacity key={t.id} onPress={() => setMapTab(t.id)}
-              style={{ paddingHorizontal: 16, paddingVertical: 8, borderRadius: 999, backgroundColor: mapTab === t.id ? colors.primary : colors.card, borderWidth: 1, borderColor: mapTab === t.id ? colors.primary : colors.border }}>
-              <Text style={{ fontSize: 13, fontFamily: 'PlusJakartaSans_700Bold', color: mapTab === t.id ? '#fff' : colors.textMuted }}>{t.label}</Text>
+          {mapTabs.map((tab) => (
+            <TouchableOpacity key={tab.id} onPress={() => setMapTab(tab.id)}
+              style={{ paddingHorizontal: 16, paddingVertical: 8, borderRadius: 999, backgroundColor: mapTab === tab.id ? colors.primary : colors.card, borderWidth: 1, borderColor: mapTab === tab.id ? colors.primary : colors.border }}>
+              <Text style={{ fontSize: 13, fontFamily: 'PlusJakartaSans_700Bold', color: mapTab === tab.id ? '#fff' : colors.textMuted }}>{tab.label}</Text>
             </TouchableOpacity>
           ))}
         </ScrollView>
@@ -195,7 +201,7 @@ export default function PetaScreen() {
               { lat: KAABAH.lat, lng: KAABAH.lng, icon: '🕋', name: "Ka'bah" },
               ...zones.filter((z) => z.zone_type === 'miqat').map((z) => ({
                 lat: z.center_lat, lng: z.center_lng, name: z.name, color: '#8B2E2E',
-                popup: `<b>${escapeHtml(z.name)}</b><br/>Radius: ${z.radius_meters}m`,
+                popup: `<b>${escapeHtml(z.name)}</b><br/>${escapeHtml(t('monitor.popup_radius', { meters: z.radius_meters }))}`,
               })),
             ]}
             circles={zones.map((z) => ({
@@ -207,7 +213,7 @@ export default function PetaScreen() {
           />
           {nearest && (
             <View style={{ padding: 16 }}>
-              <Text style={{ fontSize: 14, fontFamily: 'PlusJakartaSans_700Bold', color: colors.text }}>Miqat terdekat: {nearest.zone.name}</Text>
+              <Text style={{ fontSize: 14, fontFamily: 'PlusJakartaSans_700Bold', color: colors.text }}>{t('monitor.nearest_miqat', { name: nearest.zone.name })}</Text>
               <Text style={{ fontSize: 22, fontFamily: 'PlusJakartaSans_800ExtraBold', color: colors.primary, marginTop: 4 }}>{formatDistance(nearest.distance)}</Text>
             </View>
           )}
@@ -224,20 +230,20 @@ export default function PetaScreen() {
             userLocation={userPos}
             markers={[
               { lat: ARAFAH_CENTER.lat, lng: ARAFAH_CENTER.lng, icon: '⛰️', name: 'Jabal Rahmah' },
-              { lat: NAMIRAH_MOSQUE_CENTER.lat, lng: NAMIRAH_MOSQUE_CENTER.lng, icon: '🕌', name: 'Masjid Namirah (batas rawan!)' },
+              { lat: NAMIRAH_MOSQUE_CENTER.lat, lng: NAMIRAH_MOSQUE_CENTER.lng, icon: '🕌', name: t('monitor.namirah_marker') },
             ]}
             polygons={[{
               coords: ARAFAH_BOUNDARY,
               color: '#4A7C3A', fillColor: '#4A7C3A', fillOpacity: 0.12,
-              label: 'Batas Padang Arafah — wukuf sah di dalam area ini',
+              label: t('monitor.arafah_polygon'),
             }]}
           />
           <View style={{ padding: 16 }}>
-            <Text style={{ fontSize: 15, fontFamily: 'PlusJakartaSans_700Bold', color: colors.text }}>Area Wukuf Arafah</Text>
+            <Text style={{ fontSize: 15, fontFamily: 'PlusJakartaSans_700Bold', color: colors.text }}>{t('monitor.arafah_title')}</Text>
             <Text style={{ fontSize: 13, fontFamily: 'PlusJakartaSans_500Medium', color: colors.textMuted, marginTop: 4, lineHeight: 20 }}>
-              Area hijau = batas Padang Arafah. Wukuf HANYA sah di dalam area ini.{'\n'}
-              🕌 Masjid Namirah: sebagian di luar Arafah — hati-hati!{'\n'}
-              Gunakan fitur Wukuf di Alat Ibadah untuk monitoring posisi real-time.
+              {t('monitor.arafah_line_area')}{'\n'}
+              {t('monitor.arafah_line_namirah')}{'\n'}
+              {t('monitor.arafah_line_tool')}
             </Text>
           </View>
         </ScrollView>
@@ -265,23 +271,26 @@ export default function PetaScreen() {
               name: m.name,
               color: markerColor(m),
               pulse: m.id === focused?.id || (m.tracking === 'tracked' && m.status === 'attention'),
-              popup: `<b>${escapeHtml(m.name)}</b><br/>${escapeHtml(trackingLabel(m.tracking, m.last_seen_at, now))}`
-                + (m.far_from_group && m.distance_to_leader != null ? `<br/>⚠️ ${formatDistance(m.distance_to_leader)} dari muthawwif` : '')
+              popup: `<b>${escapeHtml(m.name)}</b><br/>${escapeHtml(trackingLabel(m.tracking, m.last_seen_at, now, t))}`
+                + (m.far_from_group && m.distance_to_leader != null
+                  ? `<br/>⚠️ ${escapeHtml(t('monitor.from_muthawwif', { distance: formatDistance(m.distance_to_leader) }))}`
+                  : '')
                 + (m.nearest_miqat ? `<br/>${escapeHtml(m.nearest_miqat.name)}: ${formatDistance(m.nearest_miqat.distance)}` : ''),
             }))}
           />
           <View style={{ padding: 16 }}>
             <Text style={s.monitorTitle}>
-              {jamaah.filter((m) => m.tracking === 'tracked').length} dari {jamaah.length} jamaah terpantau
+              {t('monitor.tracked_count', {
+                tracked: jamaah.filter((m) => m.tracking === 'tracked').length,
+                total: jamaah.length,
+              })}
             </Text>
-            <Text style={s.monitorLegend}>
-              🟢 Aman · 🔴 Perlu perhatian · 🟤 Lokasi lama (posisi terakhir) · Diperbarui tiap 15 detik
-            </Text>
+            <Text style={s.monitorLegend}>{t('monitor.map_legend')}</Text>
             {noLocation.length > 0 && (
               <View style={s.noLocBox}>
-                <Text style={s.noLocTitle}>Belum ada lokasi ({noLocation.length})</Text>
+                <Text style={s.noLocTitle}>{t('monitor.no_location_count', { count: noLocation.length })}</Text>
                 <Text style={s.noLocNames}>{noLocation.map((m) => m.name).join(', ')}</Text>
-                <Text style={s.noLocHint}>Kirim pengingat dari daftar Status rombongan di Beranda.</Text>
+                <Text style={s.noLocHint}>{t('monitor.no_location_hint')}</Text>
               </View>
             )}
           </View>
@@ -297,7 +306,7 @@ export default function PetaScreen() {
           {/* Miqat ring */}
           <View style={s.miqatRing} />
           <View style={s.miqatLabel}>
-            <Text style={s.miqatLabelText}>BATAS MIQAT</Text>
+            <Text style={s.miqatLabelText}>{t('monitor.miqat_boundary_caps')}</Text>
           </View>
           {/* Haram ring */}
           <View style={s.haramRing} />
@@ -317,11 +326,11 @@ export default function PetaScreen() {
           <View style={s.legend}>
             <View style={s.legendRow}>
               <View style={[s.legendBox, { borderColor: colors.primary, borderWidth: 2, backgroundColor: 'rgba(139,46,46,0.1)' }]} />
-              <Text style={s.legendText}>Batas miqat</Text>
+              <Text style={s.legendText}>{t('monitor.legend_miqat')}</Text>
             </View>
             <View style={s.legendRow}>
               <View style={[s.legendBox, { borderColor: colors.green, borderWidth: 2, borderStyle: 'dashed', backgroundColor: 'rgba(74,124,58,0.12)' }]} />
-              <Text style={s.legendText}>Tanah Haram</Text>
+              <Text style={s.legendText}>{t('monitor.legend_haram')}</Text>
             </View>
           </View>
         </View>
@@ -374,12 +383,12 @@ export default function PetaScreen() {
             }]} />
           </View>
           <View style={s.progressLabels}>
-            <Text style={s.progressLabel}>Miqat</Text>
-            <Text style={s.progressLabel}>Perjalanan menuju batas</Text>
+            <Text style={s.progressLabel}>{t('monitor.progress_miqat')}</Text>
+            <Text style={s.progressLabel}>{t('monitor.progress_journey')}</Text>
           </View>
           {nearest && (
             <Text style={s.nearestInfo}>
-              Miqat terdekat: {nearest.zone.name}
+              {t('monitor.nearest_miqat', { name: nearest.zone.name })}
             </Text>
           )}
         </View>
@@ -396,21 +405,17 @@ export default function PetaScreen() {
             color={isIhram ? colors.primary : colors.textOnPrimary}
           />
           <Text style={[s.ihramBtnText, isIhram && s.ihramBtnTextActive]}>
-            {isIhram ? 'Batalkan status ihram' : 'Saya sudah berihram & berniat'}
+            {isIhram ? t('monitor.ihram_cancel') : t('monitor.ihram_confirm')}
           </Text>
         </TouchableOpacity>
 
         {/* Info */}
-        <Text style={s.infoTitle}>Batas & larangan Tanah Haram</Text>
+        <Text style={s.infoTitle}>{t('monitor.haram_rules_title')}</Text>
         <View style={s.infoCard}>
-          {[
-            'Di dalam Tanah Haram dilarang berburu & membunuh binatang liar.',
-            'Dilarang menebang pohon atau mencabut tanaman yang tumbuh sendiri.',
-            'Selama ihram: tidak memakai wangi-wangian, memotong rambut/kuku, atau menikah.',
-          ].map((text, i) => (
-            <View key={i} style={[s.infoRow, i > 0 && s.infoRowBorder]}>
+          {HARAM_RULE_KEYS.map((key, i) => (
+            <View key={key} style={[s.infoRow, i > 0 && s.infoRowBorder]}>
               <Ionicons name="checkmark" size={18} color={colors.green} style={{ marginTop: 1 }} />
-              <Text style={s.infoText}>{text}</Text>
+              <Text style={s.infoText}>{t(key)}</Text>
             </View>
           ))}
         </View>
