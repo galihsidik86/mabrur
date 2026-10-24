@@ -56,10 +56,10 @@ export const en: Record<TranslationKey, string> = {
   'home.muthawwif': 'Muthawwif: {name}',
 
   // Quick menu
-  'quick.guide': 'Guide',
-  'quick.doa': "Du'a",
-  'quick.schedule': 'Schedule',
   'quick.tools': 'Worship Tools',
+  'quick.prayer': 'Prayer & Qibla',
+  'quick.taxi': 'Taxi Card',
+  'quick.phrases': 'Arabic Phrases',
 
   // Dates — short month names, comma separated
   'date.months_short': 'JAN,FEB,MAR,APR,MAY,JUN,JUL,AUG,SEP,OCT,NOV,DEC',

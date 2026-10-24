@@ -28,7 +28,7 @@ export const id = {
   // Menu bawah
   'nav.home': 'Beranda',
   'nav.map': 'Peta',
-  'nav.guide': 'Ibadah',
+  'nav.guide': 'Tuntunan',
   'nav.doa': 'Doa',
   'nav.schedule': 'Jadwal',
 
@@ -56,10 +56,10 @@ export const id = {
   'home.muthawwif': 'Muthawwif: {name}',
 
   // Menu cepat
-  'quick.guide': 'Tuntunan',
-  'quick.doa': 'Doa',
-  'quick.schedule': 'Jadwal',
   'quick.tools': 'Alat Ibadah',
+  'quick.prayer': 'Salat & Kiblat',
+  'quick.taxi': 'Kartu Taksi',
+  'quick.phrases': 'Frasa Arab',
 
   // Tanggal — singkatan bulan, dipisah koma (Jan..Des)
   'date.months_short': 'JAN,FEB,MAR,APR,MEI,JUN,JUL,AGU,SEP,OKT,NOV,DES',

@@ -113,10 +113,12 @@ export default function BerandaScreen() {
     route: string;
     color: string;
   }> = [
-    { label: t('quick.guide'), icon: 'book-outline', route: '/ibadah', color: colors.primary },
-    { label: t('quick.doa'), icon: 'reader-outline', route: '/doa', color: colors.green },
-    { label: t('quick.schedule'), icon: 'calendar-outline', route: '/jadwal', color: colors.gold },
+    // Hanya fitur yang TIDAK ada di menu bawah (Tuntunan/Doa/Jadwal sudah di sana). Maks. 5 pintasan.
+    // Kartu Taksi & Frasa Arab = cadangan dari dokumen revisi; nanti diganti Al-Qur'an & Dokumentasi.
     { label: t('quick.tools'), icon: 'grid-outline', route: '/tools', color: colors.primary },
+    { label: t('quick.prayer'), icon: 'compass-outline', route: '/prayer', color: colors.green },
+    { label: t('quick.taxi'), icon: 'car-outline', route: '/taxi-card', color: colors.gold },
+    { label: t('quick.phrases'), icon: 'language-outline', route: '/tools?tab=frasa', color: colors.primaryDark },
   ];
 
   return (

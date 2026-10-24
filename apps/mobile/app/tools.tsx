@@ -4,7 +4,7 @@ import {
   StyleSheet, Vibration, Dimensions, Platform, Alert,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useRouter } from 'expo-router';
+import { useRouter, useLocalSearchParams } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { activateKeepAwakeAsync, deactivateKeepAwake } from 'expo-keep-awake';
 import { colors, radius } from '../src/theme';
@@ -23,7 +23,13 @@ import { isBarometerAvailable, watchFloor } from '../src/services/floor';
 import { startRecording, stopRecording, uploadSession, isRecording } from '../src/services/trace-recorder';
 import { useI18n, type TranslationKey } from '../src/services/i18n';
 
-type Tab = 'hub' | 'tawaf' | 'sai' | 'tasbih' | 'jumrah' | 'wukuf' | 'checklist' | 'kurs' | 'frasa' | 'kesehatan';
+const TABS = ['hub', 'tawaf', 'sai', 'tasbih', 'jumrah', 'wukuf', 'checklist', 'kurs', 'frasa', 'kesehatan'] as const;
+type Tab = typeof TABS[number];
+
+// ?tab=frasa dari pintasan beranda; nilai tak dikenal → hub.
+function initialTab(param: unknown): Tab {
+  return TABS.find((x) => x === param) ?? 'hub';
+}
 
 const { width: W } = Dimensions.get('window');
 
@@ -692,7 +698,11 @@ const hub = StyleSheet.create({
 export default function ToolsScreen() {
   const router = useRouter();
   const t = useI18n((st) => st.t);
-  const [tab, setTab] = useState<Tab>('hub');
+  const params = useLocalSearchParams<{ tab?: string }>();
+  const [entryTab] = useState<Tab>(() => initialTab(params.tab));
+  const [tab, setTab] = useState<Tab>(entryTab);
+  // Dibuka langsung ke satu alat (pintasan beranda) → tombol kembali pulang ke layar sebelumnya.
+  const backLeavesScreen = tab === 'hub' || tab === entryTab;
   const [healthTips, setHealthTips] = useState<any[]>([]);
 
   useEffect(() => {
@@ -702,8 +712,8 @@ export default function ToolsScreen() {
   return (
     <SafeAreaView style={tc.safe}>
       <View style={tc.header}>
-        <TouchableOpacity onPress={() => tab === 'hub' ? router.back() : setTab('hub')} style={{ padding: 6 }}>
-          <Ionicons name={tab === 'hub' ? 'arrow-back' : 'grid'} size={22} color={colors.text} />
+        <TouchableOpacity onPress={() => backLeavesScreen ? router.back() : setTab('hub')} style={{ padding: 6 }}>
+          <Ionicons name={backLeavesScreen ? 'arrow-back' : 'grid'} size={22} color={colors.text} />
         </TouchableOpacity>
         <Text style={tc.headerTitle}>{tab === 'hub' ? t('tools.title') : t(`tools.tab.${tab}`)}</Text>
         <View style={{ width: 34 }} />
