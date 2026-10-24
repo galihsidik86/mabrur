@@ -6,6 +6,7 @@ import { monitorEn } from './parts/monitor';
 import { accountEn } from './parts/account';
 import { contentEn } from './parts/content';
 import { prayerEn } from './parts/prayer';
+import { quranEn } from './parts/quran';
 
 export const en: Record<TranslationKey, string> = {
   // Language
@@ -58,7 +59,7 @@ export const en: Record<TranslationKey, string> = {
   // Quick menu
   'quick.tools': 'Worship Tools',
   'quick.prayer': 'Prayer & Qibla',
-  'quick.taxi': 'Taxi Card',
+  'quick.quran': "Qur'an",
   'quick.phrases': 'Arabic Phrases',
 
   // Dates — short month names, comma separated
@@ -203,4 +204,5 @@ export const en: Record<TranslationKey, string> = {
   ...accountEn,
   ...contentEn,
   ...prayerEn,
+  ...quranEn,
 };

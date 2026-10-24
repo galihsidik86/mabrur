@@ -204,6 +204,8 @@ export default function RootLayout() {
         <Stack.Screen name="rating" />
         <Stack.Screen name="tools" />
         <Stack.Screen name="prayer" />
+        <Stack.Screen name="quran" />
+        <Stack.Screen name="quran-read" />
       </Stack>
     </VoiceHost>
   );

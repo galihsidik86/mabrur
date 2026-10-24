@@ -6,6 +6,7 @@ import { monitorId } from './parts/monitor';
 import { accountId } from './parts/account';
 import { contentId } from './parts/content';
 import { prayerId } from './parts/prayer';
+import { quranId } from './parts/quran';
 
 export const id = {
   // Bahasa
@@ -58,7 +59,7 @@ export const id = {
   // Menu cepat
   'quick.tools': 'Alat Ibadah',
   'quick.prayer': 'Salat & Kiblat',
-  'quick.taxi': 'Kartu Taksi',
+  'quick.quran': "Al-Qur'an",
   'quick.phrases': 'Frasa Arab',
 
   // Tanggal — singkatan bulan, dipisah koma (Jan..Des)
@@ -203,6 +204,7 @@ export const id = {
   ...accountId,
   ...contentId,
   ...prayerId,
+  ...quranId,
 } as const;
 
 export type TranslationKey = keyof typeof id;

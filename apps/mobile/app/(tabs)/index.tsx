@@ -114,10 +114,10 @@ export default function BerandaScreen() {
     color: string;
   }> = [
     // Hanya fitur yang TIDAK ada di menu bawah (Tuntunan/Doa/Jadwal sudah di sana). Maks. 5 pintasan.
-    // Kartu Taksi & Frasa Arab = cadangan dari dokumen revisi; nanti diganti Al-Qur'an & Dokumentasi.
+    // Frasa Arab = cadangan dari dokumen revisi; nanti diganti Dokumentasi.
     { label: t('quick.tools'), icon: 'grid-outline', route: '/tools', color: colors.primary },
     { label: t('quick.prayer'), icon: 'compass-outline', route: '/prayer', color: colors.green },
-    { label: t('quick.taxi'), icon: 'car-outline', route: '/taxi-card', color: colors.gold },
+    { label: t('quick.quran'), icon: 'book-outline', route: '/quran', color: colors.gold },
     { label: t('quick.phrases'), icon: 'language-outline', route: '/tools?tab=frasa', color: colors.primaryDark },
   ];
 
