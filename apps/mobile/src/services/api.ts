@@ -15,7 +15,18 @@ async function getToken(): Promise<string | null> {
   return SecureStore.getItemAsync('access_token');
 }
 
-async function tryRefresh(): Promise<string | null> {
+// Single-flight: refresh token dirotasi server (token lama langsung tidak berlaku), jadi
+// refresh paralel (mis. task lokasi latar belakang + layar aktif) harus berbagi satu request.
+let refreshInFlight: Promise<string | null> | null = null;
+
+function tryRefresh(): Promise<string | null> {
+  if (!refreshInFlight) {
+    refreshInFlight = doRefresh().finally(() => { refreshInFlight = null; });
+  }
+  return refreshInFlight;
+}
+
+async function doRefresh(): Promise<string | null> {
   const refreshToken = await SecureStore.getItemAsync('refresh_token');
   if (!refreshToken) return null;
   try {
@@ -26,6 +37,8 @@ async function tryRefresh(): Promise<string | null> {
     });
     if (!res.ok) return null;
     const json = await res.json();
+    // Logout (atau ganti akun) selama request berjalan: jangan hidupkan lagi sesi lama.
+    if ((await SecureStore.getItemAsync('refresh_token')) !== refreshToken) return null;
     await SecureStore.setItemAsync('access_token', json.data.access_token);
     await SecureStore.setItemAsync('refresh_token', json.data.refresh_token);
     return json.data.access_token;
@@ -48,8 +61,10 @@ async function request<T = any>(
   let res = await fetch(`${BASE_URL}${path}`, { ...options, headers });
 
   if (res.status === 401 && token) {
-    const newToken = await tryRefresh();
-    if (newToken) {
+    // Refresh gagal bisa berarti proses lain (task latar belakang headless) sudah merotasi
+    // token lebih dulu — pakai access token terbaru di SecureStore bila sudah berganti.
+    const newToken = (await tryRefresh()) ?? (await getToken());
+    if (newToken && newToken !== token) {
       headers['Authorization'] = `Bearer ${newToken}`;
       res = await fetch(`${BASE_URL}${path}`, { ...options, headers });
     }
@@ -58,6 +73,18 @@ async function request<T = any>(
   const json = await res.json();
   if (!res.ok) throw new Error(json.error?.message || 'Permintaan gagal');
   return json.data;
+}
+
+export interface MemberStatus {
+  id: string; name: string; phone: string; role_in_group: 'jamaah' | 'muthawwif';
+  location: { lat: number; lng: number; updated_at: string } | null; // null juga bila lewat masa simpan
+  last_seen_at: string | null;
+  tracking: 'tracked' | 'stale' | 'none';
+  ihram: { is_ihram: boolean; niat_type: string | null };
+  nearest_miqat: { name: string; distance: number } | null;
+  distance_to_leader: number | null;
+  far_from_group: boolean;
+  status: 'safe' | 'attention';
 }
 
 export const api = {
@@ -214,15 +241,19 @@ export const api = {
 
   getMemberStatuses: (groupId: string) =>
     request<{
-      stats: { total: number; safe: number; attention: number };
-      members: Array<{
-        id: string; name: string; phone: string; role_in_group: string;
-        location: { lat: number; lng: number; updated_at: string } | null;
-        ihram: { is_ihram: boolean; niat_type: string | null };
-        nearest_miqat: { name: string; distance: number } | null;
-        status: 'safe' | 'attention';
-      }>;
+      stats: {
+        total: number; safe: number; attention: number;
+        jamaah_total: number; tracked: number; stale: number; no_location: number; far_from_group: number;
+      };
+      members: MemberStatus[];
     }>(`/groups/${groupId}/members/status`),
+
+  // Push "aktifkan lokasi"; tanpa userIds = semua jamaah yang tidak terpantau
+  sendLocationReminders: (groupId: string, userIds?: string[]) =>
+    request<{ sent: number; skipped_cooldown: number; no_push_token: number }>(
+      `/groups/${groupId}/location-reminders`,
+      { method: 'POST', body: JSON.stringify(userIds ? { user_ids: userIds } : {}) },
+    ),
 
   // Perekam GPS (riset): unggah sesi trace ke server untuk dianalisis dari admin
   uploadGpsTrace: (payload: {

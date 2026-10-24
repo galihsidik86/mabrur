@@ -9,8 +9,10 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import { useRouter } from 'expo-router';
+import { useRouter, useFocusEffect } from 'expo-router';
 import { useAuthStore } from '../../src/stores/auth';
+import { useChatUnread } from '../../src/services/chat-unread';
+import { useI18n } from '../../src/services/i18n';
 import { colors, radius } from '../../src/theme';
 import { api } from '../../src/services/api';
 import { formatDistance } from '../../src/services/location';
@@ -47,6 +49,10 @@ export default function BerandaScreen() {
   const [refreshing, setRefreshing] = useState(false);
 
   const isMuthawwif = user?.role === 'muthawwif' || user?.role === 'admin';
+  const t = useI18n((st) => st.t);
+  const chatUnread = useChatUnread((st) => st.count);
+  // Segarkan hitungan setiap kembali ke beranda (mis. setelah keluar dari layar chat).
+  useFocusEffect(useCallback(() => { useChatUnread.getState().refresh(); }, []));
 
   const firstName = user?.name?.split(' ').pop() || user?.name || '';
 
@@ -107,10 +113,10 @@ export default function BerandaScreen() {
     route: string;
     color: string;
   }> = [
-    { label: 'Tuntunan', icon: 'book-outline', route: '/ibadah', color: colors.primary },
-    { label: 'Doa', icon: 'reader-outline', route: '/doa', color: colors.green },
-    { label: 'Jadwal', icon: 'calendar-outline', route: '/jadwal', color: colors.gold },
-    { label: 'Alat Ibadah', icon: 'grid-outline', route: '/tools', color: colors.primary },
+    { label: t('quick.guide'), icon: 'book-outline', route: '/ibadah', color: colors.primary },
+    { label: t('quick.doa'), icon: 'reader-outline', route: '/doa', color: colors.green },
+    { label: t('quick.schedule'), icon: 'calendar-outline', route: '/jadwal', color: colors.gold },
+    { label: t('quick.tools'), icon: 'grid-outline', route: '/tools', color: colors.primary },
   ];
 
   return (
@@ -126,6 +132,11 @@ export default function BerandaScreen() {
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
           <TouchableOpacity onPress={() => router.push('/chat')} style={s.logoutBtn}>
             <Ionicons name="chatbubbles-outline" size={20} color={colors.textMuted} />
+            {chatUnread > 0 && (
+              <View style={s.unreadBadge}>
+                <Text style={s.unreadBadgeText}>{chatUnread > 9 ? '9+' : chatUnread}</Text>
+              </View>
+            )}
           </TouchableOpacity>
           <TouchableOpacity onPress={() => router.push('/profile')} style={s.logoutBtn}>
             <Ionicons name="person-circle-outline" size={22} color={colors.textMuted} />
@@ -136,13 +147,13 @@ export default function BerandaScreen() {
                 style={[s.modeBtn, mode === 'jamaah' && s.modeBtnActive]}
                 onPress={() => setMode('jamaah')}
               >
-                <Text style={[s.modeBtnText, mode === 'jamaah' && s.modeBtnTextActive]}>Jamaah</Text>
+                <Text style={[s.modeBtnText, mode === 'jamaah' && s.modeBtnTextActive]}>{t('mode.jamaah')}</Text>
               </TouchableOpacity>
               <TouchableOpacity
                 style={[s.modeBtn, mode === 'muthawwif' && s.modeBtnActive]}
                 onPress={() => setMode('muthawwif')}
               >
-                <Text style={[s.modeBtnText, mode === 'muthawwif' && s.modeBtnTextActive]}>Muthawwif</Text>
+                <Text style={[s.modeBtnText, mode === 'muthawwif' && s.modeBtnTextActive]}>{t('mode.muthawwif')}</Text>
               </TouchableOpacity>
             </View>
           )}
@@ -160,19 +171,19 @@ export default function BerandaScreen() {
         }
       >
         {/* Greeting */}
-        <Text style={s.greeting}>Assalamu'alaikum,</Text>
-        <Text style={s.name}>Hai, {firstName}</Text>
+        <Text style={s.greeting}>{t('home.greeting')}</Text>
+        <Text style={s.name}>{t('home.hi', { name: firstName })}</Text>
 
         {/* Ihram Hero Card */}
         <View style={s.heroCard}>
           <View style={s.heroTop}>
             <View>
-              <Text style={s.heroLabel}>STATUS IHRAM</Text>
-              <Text style={s.heroTitle}>{ihram.is_ihram ? 'Sudah berihram' : 'Belum berihram'}</Text>
+              <Text style={s.heroLabel}>{t('home.ihram_status')}</Text>
+              <Text style={s.heroTitle}>{ihram.is_ihram ? t('home.in_ihram') : t('home.not_ihram')}</Text>
             </View>
             <View style={[s.heroBadge, ihram.is_ihram && { backgroundColor: colors.greenLight }]}>
               <Text style={[s.heroBadgeText, ihram.is_ihram && { color: colors.greenDark }]}>
-                {ihram.is_ihram ? 'AKTIF' : 'SIAPKAN'}
+                {ihram.is_ihram ? t('home.badge_active') : t('home.badge_prepare')}
               </Text>
             </View>
           </View>
@@ -181,12 +192,12 @@ export default function BerandaScreen() {
 
           <View style={s.heroStats}>
             <View style={{ flex: 1 }}>
-              <Text style={s.heroStatLabel}>MIQAT TERDEKAT</Text>
-              <Text style={s.heroStatValue}>{ihram.nearest_miqat || 'Menunggu GPS'}</Text>
+              <Text style={s.heroStatLabel}>{t('home.nearest_miqat')}</Text>
+              <Text style={s.heroStatValue}>{ihram.nearest_miqat || t('home.waiting_gps')}</Text>
             </View>
             <View style={s.heroStatDivider} />
             <View style={{ flex: 1 }}>
-              <Text style={s.heroStatLabel}>JARAK KE BATAS</Text>
+              <Text style={s.heroStatLabel}>{t('home.distance')}</Text>
               <Text style={s.heroDistValue}>
                 {ihram.distance_meters != null ? formatDistance(ihram.distance_meters) : '— —'}
               </Text>
@@ -199,7 +210,7 @@ export default function BerandaScreen() {
             activeOpacity={0.7}
           >
             <Ionicons name="location-outline" size={16} color={colors.textOnPrimary} />
-            <Text style={s.heroBtnText}>Buka peta batas miqat</Text>
+            <Text style={s.heroBtnText}>{t('home.open_miqat_map')}</Text>
           </TouchableOpacity>
         </View>
 
@@ -223,7 +234,7 @@ export default function BerandaScreen() {
         {/* Next Agenda */}
         {nextAgenda && (() => {
           const d = new Date(nextAgenda.start_time);
-          const months = ['JAN','FEB','MAR','APR','MEI','JUN','JUL','AGU','SEP','OKT','NOV','DES'];
+          const months = t('date.months_short').split(',');
           const day = d.getDate().toString();
           const mon = months[d.getMonth()];
           const h = d.getHours().toString().padStart(2, '0');
@@ -231,9 +242,9 @@ export default function BerandaScreen() {
           return (
             <>
               <View style={s.sectionHeader}>
-                <Text style={s.sectionTitle}>Agenda berikutnya</Text>
+                <Text style={s.sectionTitle}>{t('home.next_agenda')}</Text>
                 <TouchableOpacity onPress={() => router.push('/jadwal')}>
-                  <Text style={s.sectionLink}>Lihat semua ›</Text>
+                  <Text style={s.sectionLink}>{t('home.see_all')}</Text>
                 </TouchableOpacity>
               </View>
               <View style={s.card}>
@@ -257,10 +268,10 @@ export default function BerandaScreen() {
         {group && (
           <>
             <View style={s.sectionHeader}>
-              <Text style={s.sectionTitle}>Rombongan kamu</Text>
+              <Text style={s.sectionTitle}>{t('home.your_group')}</Text>
               <View style={s.safeChip}>
                 <Text style={s.safeChipText}>
-                  {group.member_count} anggota
+                  {t('home.members', { count: group.member_count })}
                 </Text>
               </View>
             </View>
@@ -294,7 +305,7 @@ export default function BerandaScreen() {
                     {group.name} · {group.kloter_code}
                   </Text>
                   {muthawwif && (
-                    <Text style={s.groupSub}>Muthawwif: {muthawwif}</Text>
+                    <Text style={s.groupSub}>{t('home.muthawwif', { name: muthawwif })}</Text>
                   )}
                 </View>
               </View>
@@ -342,6 +353,8 @@ const s = StyleSheet.create({
     letterSpacing: -0.2,
   },
   logoutBtn: { padding: 6 },
+  unreadBadge: { position: 'absolute', top: 0, right: 0, minWidth: 16, height: 16, borderRadius: 999, paddingHorizontal: 3, backgroundColor: colors.danger, alignItems: 'center', justifyContent: 'center' },
+  unreadBadgeText: { fontSize: 9, fontFamily: 'PlusJakartaSans_700Bold', color: '#fff' },
 
   modeToggle: {
     flexDirection: 'row',

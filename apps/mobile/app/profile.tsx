@@ -6,7 +6,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useAuthStore } from '../src/stores/auth';
 import { colors, radius } from '../src/theme';
 import { api } from '../src/services/api';
-import { useI18n } from '../src/services/i18n';
+import { useI18n, type Lang } from '../src/services/i18n';
 import { useTheme } from '../src/services/darkmode';
 
 export default function ProfileScreen() {
@@ -52,10 +52,9 @@ export default function ProfileScreen() {
     } finally { setSaving(false); }
   };
 
-  const langs: Array<{ code: 'id' | 'en' | 'ar'; label: string }> = [
-    { code: 'id', label: 'Indonesia' },
-    { code: 'en', label: 'English' },
-    { code: 'ar', label: 'العربية' },
+  const langs: Array<{ code: Lang; label: string }> = [
+    { code: 'id', label: t('lang.id') },
+    { code: 'en', label: t('lang.en') },
   ];
 
   return (
@@ -79,7 +78,7 @@ export default function ProfileScreen() {
         </View>
 
         {/* Language */}
-        <Text style={s.sectionTitle}>Bahasa / Language</Text>
+        <Text style={s.sectionTitle}>{t('lang.label')}</Text>
         <View style={s.langRow}>
           {langs.map((l) => (
             <TouchableOpacity key={l.code} onPress={() => setLang(l.code)}

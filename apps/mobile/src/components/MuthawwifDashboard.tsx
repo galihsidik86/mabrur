@@ -12,24 +12,18 @@ import {
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { colors, radius } from '../theme';
-import { api } from '../services/api';
+import { api, type MemberStatus } from '../services/api';
 import { getGroups } from '../services/db';
+import { trackingLabel } from '../services/tracking-label';
+import { useI18n } from '../services/i18n';
+import { formatDistance } from '../services/location';
 
-interface MemberData {
-  id: string;
-  name: string;
-  phone: string;
-  role_in_group: string;
-  location: { lat: number; lng: number; updated_at: string } | null;
-  ihram: { is_ihram: boolean; niat_type: string | null };
-  nearest_miqat: { name: string; distance: number } | null;
-  status: 'safe' | 'attention';
-}
+type MemberData = MemberStatus;
 
 interface Stats {
-  total: number;
-  safe: number;
-  attention: number;
+  jamaah_total: number;
+  tracked: number;
+  untracked: number;
 }
 
 interface SosAlert {
@@ -57,13 +51,33 @@ function initials(name: string): string {
     .join('');
 }
 
-function locationText(m: MemberData): string {
-  if (!m.location) return 'Belum ada lokasi';
-  if (m.nearest_miqat) {
-    const km = (m.nearest_miqat.distance / 1000).toFixed(1).replace('.', ',');
-    return `${km} km dari ${m.nearest_miqat.name}`;
+// Catatan jarak miqat hanya ditampilkan bila relevan (sedang dalam perjalanan ke miqat).
+const MIQAT_NOTE_M = 20000;
+
+function locationText(m: MemberData, now: number): string {
+  const parts = [trackingLabel(m.tracking, m.last_seen_at, now)];
+  if (m.far_from_group && m.distance_to_leader != null) {
+    parts.push(`${formatDistance(m.distance_to_leader)} dari muthawwif`);
+  } else if (m.nearest_miqat && m.nearest_miqat.distance <= MIQAT_NOTE_M) {
+    parts.push(`${formatDistance(m.nearest_miqat.distance)} dari ${m.nearest_miqat.name}`);
   }
-  return 'Lokasi tersedia';
+  return parts.join(' · ');
+}
+
+// Urutan daftar: tidak terpantau dulu, lalu perlu perhatian, lalu aman, muthawwif terakhir.
+function memberRank(m: MemberData): number {
+  if (m.role_in_group === 'muthawwif') return 3;
+  if (m.tracking !== 'tracked') return 0;
+  return m.status === 'attention' ? 1 : 2;
+}
+
+function reminderResultText(r: { sent: number; skipped_cooldown: number; no_push_token: number }): string {
+  const lines = [`${r.sent} pengingat terkirim.`];
+  if (r.skipped_cooldown > 0) lines.push(`${r.skipped_cooldown} jamaah baru saja diingatkan (tunggu 5 menit).`);
+  if (r.no_push_token > 0) {
+    lines.push(`${r.no_push_token} jamaah tidak bisa menerima notifikasi (belum login di aplikasi atau notifikasi dimatikan). Hubungi lewat telepon/WhatsApp.`);
+  }
+  return lines.join('\n');
 }
 
 const avatarColors = [colors.primary, colors.green, colors.gold, colors.textSecondary, colors.danger];
@@ -81,7 +95,9 @@ function openWhatsApp(phone: string, name: string, category: string) {
 
 export default function MuthawwifDashboard({ userName }: { userName: string }) {
   const router = useRouter();
-  const [stats, setStats] = useState<Stats>({ total: 0, safe: 0, attention: 0 });
+  const t = useI18n((st) => st.t);
+  const [stats, setStats] = useState<Stats>({ jamaah_total: 0, tracked: 0, untracked: 0 });
+  const [reminding, setReminding] = useState(false);
   const [members, setMembers] = useState<MemberData[]>([]);
   const [sosAlerts, setSosAlerts] = useState<SosAlert[]>([]);
   const [expandedSos, setExpandedSos] = useState<string | null>(null);
@@ -102,13 +118,12 @@ export default function MuthawwifDashboard({ userName }: { userName: string }) {
 
     try {
       const data = await api.getMemberStatuses(id);
-      setStats(data.stats);
-      // Sort: attention first, then by name
-      const sorted = data.members.sort((a: MemberData, b: MemberData) => {
-        if (a.status !== b.status) return a.status === 'attention' ? -1 : 1;
-        return a.name.localeCompare(b.name);
+      setStats({
+        jamaah_total: data.stats.jamaah_total,
+        tracked: data.stats.tracked,
+        untracked: data.stats.stale + data.stats.no_location,
       });
-      setMembers(sorted);
+      setMembers([...data.members].sort((a, b) => memberRank(a) - memberRank(b) || a.name.localeCompare(b.name)));
 
       // Fetch SOS
       try {
@@ -127,6 +142,32 @@ export default function MuthawwifDashboard({ userName }: { userName: string }) {
     };
   }, [load]);
 
+  const remind = useCallback(async (userIds?: string[]) => {
+    if (!groupId || reminding) return;
+    setReminding(true);
+    try {
+      const result = await api.sendLocationReminders(groupId, userIds);
+      Alert.alert('Pengingat lokasi', reminderResultText(result));
+    } catch {
+      Alert.alert('Gagal mengirim', 'Pengingat tidak terkirim. Periksa koneksi internet lalu coba lagi.');
+    } finally {
+      setReminding(false);
+    }
+  }, [groupId, reminding]);
+
+  const openMember = (m: MemberData) => {
+    if (m.location) {
+      router.push({ pathname: '/peta', params: { focus: m.id } });
+      return;
+    }
+    Alert.alert(m.name, 'Belum ada lokasi dari jamaah ini. Kirim pengingat untuk mengaktifkan GPS & izin lokasi?', [
+      { text: 'Batal', style: 'cancel' },
+      { text: 'Kirim pengingat', onPress: () => remind([m.id]) },
+    ]);
+  };
+
+  const now = Date.now();
+
   const onRefresh = useCallback(async () => {
     setRefreshing(true);
     await load();
@@ -141,7 +182,7 @@ export default function MuthawwifDashboard({ userName }: { userName: string }) {
         <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.primary} />
       }
     >
-      <Text style={s.modeLabel}>Mode Muthawwif</Text>
+      <Text style={s.modeLabel}>{t('mode.muthawwif_title')}</Text>
       <Text style={s.name}>{userName}</Text>
 
       {/* SOS Alerts — besar dan jelas untuk kondisi darurat */}
@@ -212,26 +253,37 @@ export default function MuthawwifDashboard({ userName }: { userName: string }) {
       {/* Stats */}
       <View style={s.statsRow}>
         <View style={s.statCard}>
-          <Text style={s.statNum}>{stats.total}</Text>
+          <Text style={s.statNum}>{stats.jamaah_total}</Text>
           <Text style={s.statLabel}>Total jamaah</Text>
         </View>
         <View style={s.statCard}>
-          <Text style={[s.statNum, { color: colors.green }]}>{stats.safe}</Text>
-          <Text style={s.statLabel}>Aman</Text>
+          <Text style={[s.statNum, { color: colors.green }]}>{stats.tracked}</Text>
+          <Text style={s.statLabel}>Terpantau</Text>
         </View>
         <View style={s.statCard}>
-          <Text style={[s.statNum, { color: colors.danger }]}>{stats.attention}</Text>
-          <Text style={s.statLabel}>Perlu perhatian</Text>
+          <Text style={[s.statNum, { color: colors.danger }]}>{stats.untracked}</Text>
+          <Text style={s.statLabel}>Tidak terpantau</Text>
         </View>
       </View>
+
+      {stats.untracked > 0 && (
+        <TouchableOpacity style={s.remindAllBtn} onPress={() => remind()} disabled={reminding}>
+          <Ionicons name="notifications-outline" size={18} color={colors.textOnPrimary} />
+          <Text style={s.remindAllText}>
+            {reminding ? 'Mengirim…' : `Ingatkan ${stats.untracked} jamaah untuk aktifkan lokasi`}
+          </Text>
+        </TouchableOpacity>
+      )}
 
       {/* Member List */}
       <Text style={s.sectionTitle}>Status rombongan</Text>
       <View style={s.listCard}>
         {members.map((m, idx) => (
-          <View
+          <TouchableOpacity
             key={m.id}
             style={[s.memberRow, idx > 0 && s.memberRowBorder]}
+            onPress={() => openMember(m)}
+            accessibilityHint="Buka posisi di peta"
           >
             <View
               style={[
@@ -244,8 +296,20 @@ export default function MuthawwifDashboard({ userName }: { userName: string }) {
             </View>
             <View style={{ flex: 1 }}>
               <Text style={s.memberName}>{m.name}</Text>
-              <Text style={s.memberPlace}>{locationText(m)}</Text>
+              <Text style={[s.memberPlace, m.tracking !== 'tracked' && { color: colors.danger }]}>
+                {locationText(m, now)}
+              </Text>
             </View>
+            {m.role_in_group === 'jamaah' && m.tracking !== 'tracked' && (
+              <TouchableOpacity
+                style={s.bellBtn}
+                onPress={() => remind([m.id])}
+                disabled={reminding}
+                accessibilityLabel={`Kirim pengingat lokasi ke ${m.name}`}
+              >
+                <Ionicons name="notifications-outline" size={18} color={colors.primary} />
+              </TouchableOpacity>
+            )}
             <View
               style={[
                 s.chip,
@@ -265,7 +329,7 @@ export default function MuthawwifDashboard({ userName }: { userName: string }) {
                 {m.status === 'attention' ? 'Perhatian' : 'Aman'}
               </Text>
             </View>
-          </View>
+          </TouchableOpacity>
         ))}
         {members.length === 0 && (
           <View style={s.empty}>
@@ -390,6 +454,16 @@ const s = StyleSheet.create({
   chipText: {
     fontSize: 10,
     fontFamily: 'PlusJakartaSans_700Bold',
+  },
+
+  remindAllBtn: {
+    marginTop: 12, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8,
+    backgroundColor: colors.primary, borderRadius: radius.md, paddingVertical: 12, paddingHorizontal: 14,
+  },
+  remindAllText: { fontSize: 13, fontFamily: 'PlusJakartaSans_700Bold', color: colors.textOnPrimary },
+  bellBtn: {
+    width: 34, height: 34, borderRadius: 999, alignItems: 'center', justifyContent: 'center',
+    backgroundColor: colors.primaryLight,
   },
 
   empty: {

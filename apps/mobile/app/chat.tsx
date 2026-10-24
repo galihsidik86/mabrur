@@ -7,6 +7,8 @@ import { useAuthStore } from '../src/stores/auth';
 import { colors } from '../src/theme';
 import { api } from '../src/services/api';
 import { getGroups, queueMessage, getQueuedMessages, clearQueuedMessage } from '../src/services/db';
+import { setChatScreenOpen } from '../src/services/notification';
+import { useChatUnread } from '../src/services/chat-unread';
 
 interface Message {
   id: string;
@@ -30,7 +32,13 @@ export default function ChatScreen() {
     try {
       const msgs = await api.getMessages(gid);
       setMessages(msgs);
+      useChatUnread.getState().markRead(msgs).catch(() => {});
     } catch {}
+  }, []);
+
+  useEffect(() => {
+    setChatScreenOpen(true);
+    return () => setChatScreenOpen(false);
   }, []);
 
   useEffect(() => {

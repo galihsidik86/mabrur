@@ -9,6 +9,7 @@ import { audit } from '../services/audit.service';
 import bcrypt from 'bcryptjs';
 import { encrypt, decrypt } from '../services/crypto.service';
 import { revokeAllTokens } from '../services/auth.service';
+import { notifyGroupMessage } from '../services/push.service';
 
 const router = Router();
 router.use(authenticate);
@@ -143,6 +144,8 @@ router.post('/groups/:groupId/messages', validate(messageSchema), async (req: Re
     const [msg] = await db('messages').insert({ group_id: groupId, user_id: req.auth!.sub, text: req.body.text }).returning('*');
     const user = await db('users').where('id', req.auth!.sub).select('name').first();
     res.status(201).json({ data: { ...msg, user_name: user?.name } });
+    // Sengaja tidak di-await: respons ke pengirim tidak menunggu Expo push.
+    void notifyGroupMessage(groupId, req.auth!.sub, user?.name || 'Pesan baru', req.body.text);
   } catch (err) { next(err); }
 });
 

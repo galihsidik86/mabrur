@@ -358,6 +358,20 @@ export async function getDuas(): Promise<Dua[]> {
   return d.getAllAsync('SELECT * FROM duas ORDER BY sort_order');
 }
 
+// ==================== Meta (key-value) ====================
+
+export async function getMeta(key: string): Promise<string | null> {
+  const row = await getDB().getFirstAsync<{ value: string }>('SELECT value FROM sync_meta WHERE key = ?', [key]);
+  return row?.value ?? null;
+}
+
+export async function setMeta(key: string, value: string): Promise<void> {
+  await getDB().runAsync(
+    "INSERT INTO sync_meta (key, value, updated_at) VALUES (?, ?, datetime('now')) ON CONFLICT(key) DO UPDATE SET value = excluded.value, updated_at = excluded.updated_at",
+    [key, value],
+  );
+}
+
 // ==================== Cleanup ====================
 
 export async function clearAll(): Promise<void> {

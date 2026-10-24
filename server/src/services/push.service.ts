@@ -25,7 +25,7 @@ export async function sendPush(
   if (messages.length === 0) return;
 
   try {
-    await fetch('https://exp.host/--/api/v2/push/send', {
+    const res = await fetch('https://exp.host/--/api/v2/push/send', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -33,6 +33,7 @@ export async function sendPush(
       },
       body: JSON.stringify(messages),
     });
+    if (!res.ok) console.error(`[PUSH] Expo menolak permintaan push: HTTP ${res.status}`);
   } catch (err) {
     console.error('[PUSH] Gagal mengirim push notification:', err);
   }
@@ -58,9 +59,41 @@ export async function notifyGroupMuthawwif(
   await sendPush(tokens, title, body, data, 'sos');
 }
 
+const CHAT_SNIPPET_MAX = 100;
+
+export function chatSnippet(text: string): string {
+  const flat = text.replace(/\s+/g, ' ').trim();
+  return flat.length <= CHAT_SNIPPET_MAX ? flat : `${flat.slice(0, CHAT_SNIPPET_MAX - 1)}…`;
+}
+
+// Push chat ke semua anggota aktif rombongan kecuali pengirim. Tidak pernah
+// melempar: kegagalan push tidak boleh menggagalkan pengiriman pesan.
+export async function notifyGroupMessage(
+  groupId: string,
+  senderId: string,
+  senderName: string,
+  text: string,
+): Promise<void> {
+  try {
+    const members: Array<{ user_id: string; push_token: string }> = await db('group_members')
+      .join('users', 'users.id', 'group_members.user_id')
+      .where({ 'group_members.group_id': groupId, 'group_members.is_active': true, 'users.is_active': true })
+      .whereNotNull('users.push_token')
+      .select('group_members.user_id', 'users.push_token');
+
+    const tokens = [...new Set(members.filter((m) => m.user_id !== senderId).map((m) => m.push_token))];
+    await sendPush(tokens, senderName, chatSnippet(text), { type: 'chat', groupId }, 'chat');
+  } catch (err) {
+    console.error('[PUSH] Gagal mengirim notifikasi chat:', err);
+  }
+}
+
 export async function savePushToken(
   userId: string,
   token: string,
 ): Promise<void> {
+  // Satu token = satu perangkat. Lepas dari akun lain lebih dulu agar push akun lama
+  // (chat/SOS rombongannya) tidak nyasar ke HP yang kini dipakai orang lain.
+  await db('users').where({ push_token: token }).whereNot('id', userId).update({ push_token: null });
   await db('users').where('id', userId).update({ push_token: token });
 }

@@ -131,5 +131,9 @@ export async function logout(userId: string, refreshToken: string) {
   await db('refresh_tokens')
     .where({ user_id: userId, token_hash: tokenHash })
     .delete();
+  // Perangkat ini tidak boleh lagi menerima push (chat/SOS) akun yang sudah logout,
+  // dan lokasi terakhirnya tidak lagi bisa dibaca muthawwif.
+  await db('users').where('id', userId).update({ push_token: null });
+  await db('user_locations').where('user_id', userId).delete();
   await audit(userId, 'auth.logout', 'users', userId);
 }

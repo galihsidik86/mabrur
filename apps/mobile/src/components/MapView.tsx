@@ -1,5 +1,6 @@
 import { View, StyleSheet } from 'react-native';
 import { WebView } from 'react-native-webview';
+import { escapeHtml } from '../services/html-escape';
 
 export interface MapMarker {
   lat: number;
@@ -40,6 +41,11 @@ interface Props {
   height?: number;
 }
 
+// Literal string JS yang aman disisipkan ke <script> inline (tidak bisa keluar dari string/tag).
+function jsString(text: string): string {
+  return JSON.stringify(text).replace(/</g, '\\u003c');
+}
+
 export default function MapViewComponent({
   markers = [], polygons = [], circles = [],
   userLocation, center, zoom = 15, height = 350,
@@ -49,28 +55,29 @@ export default function MapViewComponent({
     : userLocation || { lat: 21.4225, lng: 39.8262 });
 
   const markersJs = markers.map((m) => {
-    const popup = m.popup || m.name;
+    // popup = HTML dari pemanggil (wajib sudah di-escape); name selalu di-escape di sini.
+    const popup = jsString(m.popup || escapeHtml(m.name));
     if (m.icon) {
-      return `L.marker([${m.lat},${m.lng}],{icon:L.divIcon({html:'<div style="font-size:24px;text-align:center">${m.icon}</div>',iconSize:[30,30],iconAnchor:[15,15],className:''})}).addTo(map).bindPopup('${popup.replace(/'/g, "\\'")}');`;
+      return `L.marker([${m.lat},${m.lng}],{icon:L.divIcon({html:'<div style="font-size:24px;text-align:center">${m.icon}</div>',iconSize:[30,30],iconAnchor:[15,15],className:''})}).addTo(map).bindPopup(${popup});`;
     }
     if (m.pulse) {
-      return `(function(){var el=L.circleMarker([${m.lat},${m.lng}],{radius:8,color:'${m.color||'#8B2E2E'}',fillColor:'${m.color||'#8B2E2E'}',fillOpacity:1,className:'pulse-marker'}).addTo(map).bindPopup('${popup.replace(/'/g, "\\'")}');L.circleMarker([${m.lat},${m.lng}],{radius:18,color:'${m.color||'#8B2E2E'}',fillColor:'${m.color||'#8B2E2E'}',fillOpacity:0.2,weight:0}).addTo(map)})();`;
+      return `(function(){var el=L.circleMarker([${m.lat},${m.lng}],{radius:8,color:'${m.color||'#8B2E2E'}',fillColor:'${m.color||'#8B2E2E'}',fillOpacity:1,className:'pulse-marker'}).addTo(map).bindPopup(${popup});L.circleMarker([${m.lat},${m.lng}],{radius:18,color:'${m.color||'#8B2E2E'}',fillColor:'${m.color||'#8B2E2E'}',fillOpacity:0.2,weight:0}).addTo(map)})();`;
     }
-    return `L.circleMarker([${m.lat},${m.lng}],{radius:7,color:'${m.color||'#8B2E2E'}',fillColor:'${m.color||'#8B2E2E'}',fillOpacity:0.85,weight:2}).addTo(map).bindPopup('${popup.replace(/'/g, "\\'")}');`;
+    return `L.circleMarker([${m.lat},${m.lng}],{radius:7,color:'${m.color||'#8B2E2E'}',fillColor:'${m.color||'#8B2E2E'}',fillOpacity:0.85,weight:2}).addTo(map).bindPopup(${popup});`;
   }).join('\n');
 
   const polygonsJs = polygons.map((p) => {
     const coords = p.coords.map((c) => `[${c.lat},${c.lng}]`).join(',');
     const opts = `{color:'${p.color||'#8B2E2E'}',fillColor:'${p.fillColor||p.color||'#8B2E2E'}',fillOpacity:${p.fillOpacity??0.15},weight:2${p.dashArray?`,dashArray:'${p.dashArray}'`:''}}`;
     let js = `L.polygon([${coords}],${opts}).addTo(map)`;
-    if (p.label) js += `.bindPopup('${p.label.replace(/'/g, "\\'")}')`;
+    if (p.label) js += `.bindPopup(${jsString(escapeHtml(p.label))})`; // label = teks biasa
     return js + ';';
   }).join('\n');
 
   const circlesJs = circles.map((ci) => {
     const opts = `{radius:${ci.radius},color:'${ci.color||'#4A7C3A'}',fillColor:'${ci.fillColor||ci.color||'#4A7C3A'}',fillOpacity:${ci.fillOpacity??0.1},weight:2}`;
     let js = `L.circle([${ci.lat},${ci.lng}],${opts}).addTo(map)`;
-    if (ci.label) js += `.bindPopup('${ci.label.replace(/'/g, "\\'")}')`;
+    if (ci.label) js += `.bindPopup(${jsString(escapeHtml(ci.label))})`;
     return js + ';';
   }).join('\n');
 
