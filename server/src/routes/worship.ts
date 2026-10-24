@@ -4,6 +4,8 @@ import { z } from 'zod';
 import { validate } from '../middleware/validate';
 import { authenticate } from '../middleware/auth';
 import { db } from '../db';
+import { logger } from '../logger';
+import { parseRatesResponse } from '../services/currency-core';
 
 const router = Router();
 router.use(authenticate);
@@ -329,59 +331,86 @@ router.get('/prayer-times', async (req: Request, res: Response) => {
 
 // ==================== CURRENCY CONVERTER ====================
 
-// Cache kurs: ambil dari API resmi, simpan 1 jam
-// Sumber: open.er-api.com (data dari bank sentral / ECB)
-let currencyCache: { sar_to_idr: number; idr_to_sar: number; updated: string } | null = null;
+// Kurs semua mata uang (basis SAR) dari open.er-api.com — gratis, tanpa API key,
+// diperbarui sekali sehari; atribusi ditampilkan di aplikasi. Cache 1 jam di proses.
+interface CurrencyPayload {
+  base: string;
+  rates: Record<string, number>;
+  updated: string;
+  updated_at: string | null;
+  is_fallback: boolean;
+  // Field lama — tetap dikirim untuk APK versi sebelumnya (hanya SAR <-> IDR).
+  sar_to_idr: number;
+  idr_to_sar: number;
+}
+
+let currencyCache: CurrencyPayload | null = null;
 let currencyCacheTime = 0;
 const CURRENCY_CACHE_TTL = 60 * 60 * 1000; // 1 jam
-const FALLBACK_RATE = 4250; // fallback jika API gagal
+// Saat sumber gagal & belum ada cache: jangan coba ulang ke sumber di setiap request.
+const CURRENCY_FALLBACK_TTL = 60 * 1000;
+let fallbackCache: CurrencyPayload | null = null;
+let fallbackCacheTime = 0;
+// Request bersamaan saat cache kedaluwarsa berbagi satu fetch (hindari stampede/rate limit).
+let currencyInFlight: Promise<CurrencyPayload> | null = null;
+const CURRENCY_FETCH_TIMEOUT_MS = 5000;
+// Dipakai hanya bila sumber belum pernah berhasil diambil sejak server start (kurs 24 Okt 2026).
+const FALLBACK_SAR_TO_IDR = 4824;
 
-async function fetchCurrencyRate() {
+function toPayload(
+  base: string, rates: Record<string, number>, updated: string, updatedAt: string | null, isFallback: boolean,
+): CurrencyPayload {
+  return {
+    base,
+    rates,
+    updated,
+    updated_at: updatedAt,
+    is_fallback: isFallback,
+    sar_to_idr: Math.round(rates.IDR * 100) / 100,
+    idr_to_sar: Math.round((1 / rates.IDR) * 1e8) / 1e8,
+  };
+}
+
+function fetchCurrencyRates(): Promise<CurrencyPayload> {
   const now = Date.now();
-  if (currencyCache && now - currencyCacheTime < CURRENCY_CACHE_TTL) {
-    return currencyCache;
+  if (currencyCache && now - currencyCacheTime < CURRENCY_CACHE_TTL) return Promise.resolve(currencyCache);
+  if (!currencyCache && fallbackCache && now - fallbackCacheTime < CURRENCY_FALLBACK_TTL) {
+    return Promise.resolve(fallbackCache);
   }
+  if (!currencyInFlight) {
+    currencyInFlight = refreshCurrencyRates(now).finally(() => { currencyInFlight = null; });
+  }
+  return currencyInFlight;
+}
 
+async function refreshCurrencyRates(now: number): Promise<CurrencyPayload> {
   try {
     const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), 5000);
-    const res = await fetch('https://open.er-api.com/v6/latest/SAR', {
-      signal: controller.signal,
-    });
+    const timeout = setTimeout(() => controller.abort(), CURRENCY_FETCH_TIMEOUT_MS);
+    const res = await fetch('https://open.er-api.com/v6/latest/SAR', { signal: controller.signal });
     clearTimeout(timeout);
-
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
-    const json = await res.json() as {
-      result: string;
-      rates: Record<string, number>;
-      time_last_update_utc: string;
-    };
 
-    if (json.result !== 'success' || !json.rates?.IDR) {
-      throw new Error('Format respons tidak sesuai');
-    }
-
-    currencyCache = {
-      sar_to_idr: Math.round(json.rates.IDR * 100) / 100,
-      idr_to_sar: Math.round((1 / json.rates.IDR) * 1e8) / 1e8,
-      updated: json.time_last_update_utc,
-    };
+    const snapshot = parseRatesResponse(await res.json());
+    currencyCache = toPayload(snapshot.base, snapshot.rates, snapshot.updated, snapshot.updated_at, false);
     currencyCacheTime = now;
     return currencyCache;
-  } catch {
-    // Jika API gagal, gunakan cache lama atau fallback
-    if (currencyCache) return currencyCache;
-    return {
-      sar_to_idr: FALLBACK_RATE,
-      idr_to_sar: 1 / FALLBACK_RATE,
-      updated: 'fallback',
-    };
+  } catch (err) {
+    logger.warn({ err }, '[CURRENCY] Gagal mengambil kurs, memakai cache/fallback');
+    // Cache lama (walau kedaluwarsa) lebih baik daripada angka tetap; coba sumber lagi
+    // setelah CURRENCY_FALLBACK_TTL, bukan di setiap request berikutnya.
+    if (currencyCache) {
+      currencyCacheTime = now - CURRENCY_CACHE_TTL + CURRENCY_FALLBACK_TTL;
+      return currencyCache;
+    }
+    fallbackCache = toPayload('SAR', { SAR: 1, IDR: FALLBACK_SAR_TO_IDR }, 'fallback', null, true);
+    fallbackCacheTime = now;
+    return fallbackCache;
   }
 }
 
 router.get('/currency', async (_req: Request, res: Response) => {
-  const rate = await fetchCurrencyRate();
-  res.json({ data: rate });
+  res.json({ data: await fetchCurrencyRates() });
 });
 
 export default router;

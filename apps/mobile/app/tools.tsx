@@ -10,6 +10,7 @@ import * as Location from 'expo-location';
 import { activateKeepAwakeAsync, deactivateKeepAwake } from 'expo-keep-awake';
 import { colors, radius } from '../src/theme';
 import { api } from '../src/services/api';
+import CurrencyConverter from '../src/components/CurrencyConverter';
 import { getPosition, requestPermission } from '../src/services/location';
 import {
   TawafTracker, SaiTracker, detectNearestJamarat,
@@ -830,13 +831,10 @@ export default function ToolsScreen() {
   const [tab, setTab] = useState<Tab>('hub');
   const [phrases, setPhrases] = useState<any[]>([]);
   const [healthTips, setHealthTips] = useState<any[]>([]);
-  const [currency, setCurrency] = useState<any>(null);
-  const [amount, setAmount] = useState('');
 
   useEffect(() => {
     if (tab === 'frasa') api.getPhrases().then(setPhrases).catch(() => {});
     if (tab === 'kesehatan') api.getHealthTips().then(setHealthTips).catch(() => {});
-    if (tab === 'kurs') api.getCurrency().then(setCurrency).catch(() => {});
   }, [tab]);
 
   return (
@@ -860,19 +858,7 @@ export default function ToolsScreen() {
         {tab === 'shalat' && <ShalatTab />}
         {tab === 'checklist' && <ChecklistTab />}
 
-        {tab === 'kurs' && currency && (
-          <View style={tc.wrap}>
-            <Text style={{ fontSize: 20, fontFamily: 'PlusJakartaSans_800ExtraBold', color: colors.primary, textAlign: 'center' }}>1 SAR = Rp {currency.sar_to_idr.toLocaleString('id')}</Text>
-            <TextInput style={[tc.input, { marginTop: 20, textAlign: 'center', fontSize: 18 }]} value={amount} onChangeText={setAmount} placeholder="Jumlah SAR" keyboardType="numeric" placeholderTextColor={colors.textFaint} />
-            {(() => {
-              // Toleran koma desimal ala Indonesia ("12,5") + cegah tampil "Rp NaN".
-              const n = Number(amount.replace(',', '.'));
-              return amount.trim() && isFinite(n) && n >= 0
-                ? <Text style={{ fontSize: 24, fontFamily: 'PlusJakartaSans_800ExtraBold', color: colors.green, textAlign: 'center', marginTop: 16 }}>= Rp {Math.round(n * currency.sar_to_idr).toLocaleString('id')}</Text>
-                : null;
-            })()}
-          </View>
-        )}
+        {tab === 'kurs' && <CurrencyConverter />}
 
         {tab === 'frasa' && (
           <View style={tc.wrap}>

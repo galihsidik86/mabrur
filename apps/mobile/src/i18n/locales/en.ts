@@ -123,6 +123,21 @@ export const en: Record<TranslationKey, string> = {
   'sos.err.no_number': 'Muthawwif contact has not synced yet. Open the group menu while online.',
   'sos.err.phone': 'Could not open the phone app.',
 
+  // Currency
+  'kurs.from': 'From',
+  'kurs.to': 'To',
+  'kurs.swap': 'Swap conversion direction',
+  'kurs.amount_placeholder': 'Amount in {code}',
+  'kurs.rate_line': '1 {from} = {rate} {to}',
+  'kurs.updated': 'Rates updated {time}',
+  'kurs.offline': 'Offline — using the last saved rates',
+  'kurs.fallback': 'Estimated rate: the rate source cannot be reached yet',
+  'kurs.no_data': 'Rates are not available yet. Connect to the internet once to download them.',
+  'kurs.disclaimer': 'Rates are indicative. Money changers may use different rates.',
+  'kurs.attribution': 'Rates by Exchange Rate API (open.er-api.com)',
+  'kurs.select_title': 'Choose currency',
+  'kurs.search': 'Search name or code (e.g. USD, Ringgit)',
+
   // Profile
   'profile.title': 'Profile',
   'profile.edit': 'Edit Profile',

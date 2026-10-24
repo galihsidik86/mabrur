@@ -75,6 +75,15 @@ async function request<T = any>(
   return json.data;
 }
 
+/** Kurs semua mata uang; rates[KODE] = nilai 1 unit `base` dalam KODE. */
+export interface CurrencyRates {
+  base: string;
+  rates: Record<string, number>;
+  updated: string;
+  updated_at?: string | null; // ISO; tidak ada pada respons server versi lama
+  is_fallback: boolean;
+}
+
 export interface MemberStatus {
   id: string; name: string; phone: string; role_in_group: 'jamaah' | 'muthawwif';
   location: { lat: number; lng: number; updated_at: string } | null; // null juga bila lewat masa simpan
@@ -218,7 +227,7 @@ export const api = {
   getHealthTips: () => request<any[]>('/health-tips'),
   getPrayerTimes: (lat?: number, lng?: number) =>
     request<any>(`/prayer-times${lat ? `?lat=${lat}&lng=${lng}` : ''}`),
-  getCurrency: () => request<any>('/currency'),
+  getCurrency: () => request<CurrencyRates>('/currency'),
   saveLocation: (name: string, lat: number, lng: number) =>
     request<any>('/saved-locations', { method: 'POST', body: JSON.stringify({ name, lat, lng }) }),
   saveLogbook: (date: string, content: string, mood?: string) =>

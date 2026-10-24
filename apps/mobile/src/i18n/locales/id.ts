@@ -123,6 +123,21 @@ export const id = {
   'sos.err.no_number': 'Kontak muthawwif belum tersinkron. Coba buka menu grup saat online.',
   'sos.err.phone': 'Tidak dapat membuka aplikasi telepon.',
 
+  // Kurs
+  'kurs.from': 'Dari',
+  'kurs.to': 'Ke',
+  'kurs.swap': 'Tukar arah konversi',
+  'kurs.amount_placeholder': 'Jumlah {code}',
+  'kurs.rate_line': '1 {from} = {rate} {to}',
+  'kurs.updated': 'Kurs diperbarui {time}',
+  'kurs.offline': 'Offline — memakai kurs tersimpan terakhir',
+  'kurs.fallback': 'Kurs perkiraan: sumber kurs belum dapat dihubungi',
+  'kurs.no_data': 'Kurs belum tersedia. Sambungkan internet sekali untuk mengunduh kurs.',
+  'kurs.disclaimer': 'Kurs bersifat indikatif. Kurs di tempat penukaran uang bisa berbeda.',
+  'kurs.attribution': 'Sumber kurs: Exchange Rate API (open.er-api.com)',
+  'kurs.select_title': 'Pilih mata uang',
+  'kurs.search': 'Cari nama atau kode (mis. USD, Ringgit)',
+
   // Profil
   'profile.title': 'Profil',
   'profile.edit': 'Edit Profil',
