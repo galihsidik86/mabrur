@@ -5,6 +5,7 @@ import { toolsId } from './parts/tools';
 import { monitorId } from './parts/monitor';
 import { accountId } from './parts/account';
 import { contentId } from './parts/content';
+import { prayerId } from './parts/prayer';
 
 export const id = {
   // Bahasa
@@ -194,12 +195,14 @@ export const id = {
   'common.save': 'Simpan',
   'common.cancel': 'Batal',
   'common.loading': 'Memuat...',
+  'common.back': 'Kembali',
 
   // Bagian per fitur (locales/parts/*)
   ...toolsId,
   ...monitorId,
   ...accountId,
   ...contentId,
+  ...prayerId,
 } as const;
 
 export type TranslationKey = keyof typeof id;

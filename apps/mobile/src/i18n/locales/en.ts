@@ -5,6 +5,7 @@ import { toolsEn } from './parts/tools';
 import { monitorEn } from './parts/monitor';
 import { accountEn } from './parts/account';
 import { contentEn } from './parts/content';
+import { prayerEn } from './parts/prayer';
 
 export const en: Record<TranslationKey, string> = {
   // Language
@@ -194,10 +195,12 @@ export const en: Record<TranslationKey, string> = {
   'common.save': 'Save',
   'common.cancel': 'Cancel',
   'common.loading': 'Loading...',
+  'common.back': 'Back',
 
   // Per-feature parts (locales/parts/*)
   ...toolsEn,
   ...monitorEn,
   ...accountEn,
   ...contentEn,
+  ...prayerEn,
 };

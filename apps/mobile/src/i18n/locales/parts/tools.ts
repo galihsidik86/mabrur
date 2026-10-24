@@ -10,8 +10,6 @@ export const toolsId = {
   'tools.tab.tasbih': 'Tasbih',
   'tools.tab.jumrah': 'Jumrah',
   'tools.tab.wukuf': 'Wukuf',
-  'tools.tab.qiblat': 'Qiblat',
-  'tools.tab.shalat': 'Shalat',
   'tools.tab.checklist': 'Checklist',
   'tools.tab.kurs': 'Kurs',
   'tools.tab.frasa': 'Frasa',
@@ -23,8 +21,7 @@ export const toolsId = {
   'tools.hub.tasbih': 'Tasbih',
   'tools.hub.jumrah': 'Jumrah',
   'tools.hub.wukuf': 'Wukuf',
-  'tools.hub.qiblat': 'Kiblat',
-  'tools.hub.shalat': 'Shalat',
+  'tools.hub.prayer': 'Salat & Kiblat',
   'tools.hub.checklist': 'Checklist',
   'tools.hub.kurs': 'Kurs',
   'tools.hub.frasa': 'Frasa Arab',
@@ -109,20 +106,6 @@ export const toolsId = {
   'tools.wukuf.sub_active': 'Perbanyak doa & dzikir',
   'tools.wukuf.sub_done': 'Alhamdulillah, wukuf sempurna',
 
-  // Kiblat
-  'tools.qiblat.hint': 'Arah kiblat · Putar HP hingga 🕋 di atas',
-
-  // Shalat
-  'tools.prayer.fajr': 'Subuh',
-  'tools.prayer.sunrise': 'Syuruq',
-  'tools.prayer.dhuhr': 'Dzuhur',
-  'tools.prayer.asr': 'Ashar',
-  'tools.prayer.maghrib': 'Maghrib',
-  'tools.prayer.isha': 'Isya',
-  'tools.prayer.next_label': 'SHALAT BERIKUTNYA',
-  'tools.prayer.mins_left': '{mins} menit lagi',
-  'tools.prayer.loading': 'Menghitung waktu shalat...',
-
   // Checklist
   'tools.checklist.progress': '{done}/{total} disiapkan',
   'tools.checklist.add_placeholder': 'Tambah item...',
@@ -142,8 +125,6 @@ export const toolsEn: Record<keyof typeof toolsId, string> = {
   'tools.tab.tasbih': 'Tasbih',
   'tools.tab.jumrah': 'Jamarat',
   'tools.tab.wukuf': 'Wukuf',
-  'tools.tab.qiblat': 'Qibla',
-  'tools.tab.shalat': 'Prayer Times',
   'tools.tab.checklist': 'Checklist',
   'tools.tab.kurs': 'Currency',
   'tools.tab.frasa': 'Phrases',
@@ -154,8 +135,7 @@ export const toolsEn: Record<keyof typeof toolsId, string> = {
   'tools.hub.tasbih': 'Tasbih',
   'tools.hub.jumrah': 'Jamarat',
   'tools.hub.wukuf': 'Wukuf',
-  'tools.hub.qiblat': 'Qibla',
-  'tools.hub.shalat': 'Prayer',
+  'tools.hub.prayer': 'Prayer & Qibla',
   'tools.hub.checklist': 'Checklist',
   'tools.hub.kurs': 'Currency',
   'tools.hub.frasa': 'Arabic Phrases',
@@ -235,18 +215,7 @@ export const toolsEn: Record<keyof typeof toolsId, string> = {
   'tools.wukuf.sub_active': "Increase your du'a & dhikr",
   'tools.wukuf.sub_done': 'Alhamdulillah, wukuf complete',
 
-  'tools.qiblat.hint': 'Qibla direction · Rotate your phone until 🕋 is at the top',
-
-  'tools.prayer.fajr': 'Fajr',
-  'tools.prayer.sunrise': 'Sunrise',
-  'tools.prayer.dhuhr': 'Dhuhr',
-  'tools.prayer.asr': 'Asr',
-  'tools.prayer.maghrib': 'Maghrib',
-  'tools.prayer.isha': 'Isha',
-  'tools.prayer.next_label': 'NEXT PRAYER',
-  'tools.prayer.mins_left': 'in {mins} min',
-  'tools.prayer.loading': 'Calculating prayer times...',
-
+  // Checklist
   'tools.checklist.progress': '{done}/{total} prepared',
   'tools.checklist.add_placeholder': 'Add item...',
   'tools.checklist.save_fail_title': 'Failed to save',

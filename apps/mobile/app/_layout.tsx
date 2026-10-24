@@ -203,6 +203,7 @@ export default function RootLayout() {
         <Stack.Screen name="onboarding" options={{ presentation: 'fullScreenModal' }} />
         <Stack.Screen name="rating" />
         <Stack.Screen name="tools" />
+        <Stack.Screen name="prayer" />
       </Stack>
     </VoiceHost>
   );

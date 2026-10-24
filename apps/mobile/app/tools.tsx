@@ -6,13 +6,12 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import * as Location from 'expo-location';
 import { activateKeepAwakeAsync, deactivateKeepAwake } from 'expo-keep-awake';
 import { colors, radius } from '../src/theme';
 import { api } from '../src/services/api';
 import CurrencyConverter from '../src/components/CurrencyConverter';
 import PhrasesList from '../src/components/PhrasesList';
-import { getPosition, requestPermission } from '../src/services/location';
+import { requestPermission } from '../src/services/location';
 import {
   TawafTracker, SaiTracker, detectNearestJamarat,
   watchSacredLocation, checkArafahPosition, distanceMetersExport,
@@ -24,7 +23,7 @@ import { isBarometerAvailable, watchFloor } from '../src/services/floor';
 import { startRecording, stopRecording, uploadSession, isRecording } from '../src/services/trace-recorder';
 import { useI18n, type TranslationKey } from '../src/services/i18n';
 
-type Tab = 'hub' | 'tawaf' | 'sai' | 'tasbih' | 'jumrah' | 'wukuf' | 'qiblat' | 'shalat' | 'checklist' | 'kurs' | 'frasa' | 'kesehatan';
+type Tab = 'hub' | 'tawaf' | 'sai' | 'tasbih' | 'jumrah' | 'wukuf' | 'checklist' | 'kurs' | 'frasa' | 'kesehatan';
 
 const { width: W } = Dimensions.get('window');
 
@@ -597,156 +596,6 @@ const wk = StyleSheet.create({
   infoText: { fontSize: 12, fontFamily: 'PlusJakartaSans_500Medium', color: colors.textSecondary, lineHeight: 20 },
 });
 
-// ==================== QIBLAT (REAL COMPASS) ====================
-function QiblatTab() {
-  const t = useI18n((st) => st.t);
-  const [bearing, setBearing] = useState<number | null>(null);
-  const [heading, setHeading] = useState(0);
-
-  useEffect(() => {
-    let headingSub: Location.LocationSubscription | null = null;
-    let cancelled = false;
-
-    (async () => {
-      const pos = await getPosition();
-      if (pos) {
-        // Azimuth awal great-circle ke Ka'bah, relatif UTARA SEJATI (true north).
-        const kLat = KAABAH.lat * Math.PI / 180, kLng = KAABAH.lng * Math.PI / 180;
-        const lat = pos.lat * Math.PI / 180, lng = pos.lng * Math.PI / 180;
-        const y = Math.sin(kLng - lng) * Math.cos(kLat);
-        const x = Math.cos(lat) * Math.sin(kLat) - Math.sin(lat) * Math.cos(kLat) * Math.cos(kLng - lng);
-        setBearing(((Math.atan2(y, x) * 180 / Math.PI) + 360) % 360);
-      }
-
-      // Heading terkompensasi kemiringan + deklinasi dari expo-location
-      // (fusi akselerometer+magnetometer). trueHeading & bearing sama-sama
-      // mengacu utara sejati sehingga konsisten.
-      try {
-        const sub = await Location.watchHeadingAsync((h) => {
-          // trueHeading = -1 bila deklinasi belum tersedia → pakai magHeading.
-          const hd = h.trueHeading != null && h.trueHeading >= 0 ? h.trueHeading : h.magHeading;
-          setHeading((hd + 360) % 360);
-        });
-        if (cancelled) sub.remove(); else headingSub = sub;
-      } catch { /* sensor/izin tak tersedia */ }
-    })();
-
-    return () => { cancelled = true; headingSub?.remove(); };
-  }, []);
-
-  // Panah kiblat = arah kiblat relatif arah hadap HP. Saat HP menghadap kiblat
-  // (heading = bearing) → rotasi 0 (panah lurus ke atas).
-  const rotation = bearing != null ? bearing - heading : 0;
-  const dirs = ['N', 'NE', 'E', 'SE', 'S', 'SW', 'W', 'NW'];
-
-  return (
-    <View style={[tc.wrap, { alignItems: 'center' }]}>
-      <View style={qb.compassOuter}>
-        {/* Cardinal directions */}
-        {dirs.map((d, i) => {
-          const a = (i * 45 - heading) * Math.PI / 180;
-          const r = 115;
-          return (
-            <Text key={d} style={[qb.cardinal, {
-              left: 125 + r * Math.sin(a) - 10,
-              top: 125 - r * Math.cos(a) - 8,
-            }]}>{d}</Text>
-          );
-        })}
-        {/* Qibla arrow */}
-        <View style={[qb.arrow, { transform: [{ rotate: `${rotation}deg` }] }]}>
-          <View style={qb.arrowHead} />
-          <Text style={qb.kaaba}>🕋</Text>
-        </View>
-        <View style={qb.center}><Text style={qb.centerDot}>●</Text></View>
-      </View>
-      <Text style={qb.deg}>{bearing != null ? `${Math.round(bearing)}°` : 'GPS...'}</Text>
-      <Text style={qb.hint}>{t('tools.qiblat.hint')}</Text>
-    </View>
-  );
-}
-
-const qb = StyleSheet.create({
-  compassOuter: { width: 260, height: 260, borderRadius: 999, borderWidth: 3, borderColor: colors.border, position: 'relative', marginTop: 16, backgroundColor: colors.card },
-  cardinal: { position: 'absolute', fontSize: 12, fontFamily: 'PlusJakartaSans_700Bold', color: colors.textMuted, width: 20, textAlign: 'center' },
-  arrow: { position: 'absolute', left: 120, top: 20, width: 20, height: 210, alignItems: 'center' },
-  arrowHead: { width: 0, height: 0, borderLeftWidth: 10, borderRightWidth: 10, borderBottomWidth: 20, borderLeftColor: 'transparent', borderRightColor: 'transparent', borderBottomColor: colors.green },
-  kaaba: { fontSize: 24, marginTop: -8 },
-  center: { position: 'absolute', left: 123, top: 123, width: 14, height: 14, borderRadius: 999, backgroundColor: colors.primary },
-  centerDot: { color: '#fff', fontSize: 8, textAlign: 'center', lineHeight: 14 },
-  deg: { fontSize: 28, fontFamily: 'PlusJakartaSans_800ExtraBold', color: colors.primary, marginTop: 16 },
-  hint: { fontSize: 13, fontFamily: 'PlusJakartaSans_500Medium', color: colors.textMuted, marginTop: 4 },
-});
-
-// ==================== PRAYER TIMES (ENHANCED) ====================
-function ShalatTab() {
-  const t = useI18n((st) => st.t);
-  const [times, setTimes] = useState<any>(null);
-  const [nextPrayer, setNextPrayer] = useState<{ key: string; time: string; mins: number } | null>(null);
-
-  useEffect(() => {
-    (async () => {
-      const pos = await getPosition();
-      try {
-        const pt = await api.getPrayerTimes(pos?.lat, pos?.lng);
-        setTimes(pt);
-
-        // Find next prayer
-        const now = new Date();
-        const nowMins = now.getHours() * 60 + now.getMinutes();
-        const order = ['fajr', 'dhuhr', 'asr', 'maghrib', 'isha'];
-        for (const key of order) {
-          const [h, m] = (pt.times[key] as string).split(':').map(Number);
-          const prayerMins = h * 60 + m;
-          if (prayerMins > nowMins) {
-            setNextPrayer({ key, time: pt.times[key], mins: prayerMins - nowMins });
-            break;
-          }
-        }
-      } catch {}
-    })();
-  }, []);
-
-  const names: Record<string, string> = {
-    fajr: t('tools.prayer.fajr'), sunrise: t('tools.prayer.sunrise'), dhuhr: t('tools.prayer.dhuhr'),
-    asr: t('tools.prayer.asr'), maghrib: t('tools.prayer.maghrib'), isha: t('tools.prayer.isha'),
-  };
-  const icons: Record<string, string> = { fajr: '🌅', sunrise: '☀️', dhuhr: '🌤', asr: '⛅', maghrib: '🌇', isha: '🌙' };
-
-  return (
-    <View style={tc.wrap}>
-      {nextPrayer && (
-        <View style={sh.nextCard}>
-          <Text style={sh.nextLabel}>{t('tools.prayer.next_label')}</Text>
-          <Text style={sh.nextName}>{names[nextPrayer.key]}</Text>
-          <Text style={sh.nextTime}>{nextPrayer.time}</Text>
-          <Text style={sh.nextMins}>{t('tools.prayer.mins_left', { mins: nextPrayer.mins })}</Text>
-        </View>
-      )}
-      {times && Object.entries(times.times).map(([key, time]) => (
-        <View key={key} style={sh.row}>
-          <Text style={sh.icon}>{icons[key] || '🕌'}</Text>
-          <Text style={sh.name}>{names[key] || key}</Text>
-          <Text style={sh.time}>{time as string}</Text>
-        </View>
-      ))}
-      {!times && <Text style={tc.loadingText}>{t('tools.prayer.loading')}</Text>}
-    </View>
-  );
-}
-
-const sh = StyleSheet.create({
-  nextCard: { backgroundColor: colors.primary, borderRadius: 16, padding: 20, alignItems: 'center', marginBottom: 16 },
-  nextLabel: { fontSize: 10, fontFamily: 'PlusJakartaSans_700Bold', letterSpacing: 1.5, color: 'rgba(255,255,255,0.7)' },
-  nextName: { fontSize: 28, fontFamily: 'PlusJakartaSans_800ExtraBold', color: '#fff', marginTop: 4 },
-  nextTime: { fontSize: 20, fontFamily: 'PlusJakartaSans_700Bold', color: '#F5D98A', marginTop: 2 },
-  nextMins: { fontSize: 13, fontFamily: 'PlusJakartaSans_600SemiBold', color: 'rgba(255,255,255,0.8)', marginTop: 4 },
-  row: { flexDirection: 'row', alignItems: 'center', paddingVertical: 14, borderBottomWidth: 1, borderBottomColor: colors.borderLight },
-  icon: { fontSize: 20, width: 32 },
-  name: { flex: 1, fontSize: 16, fontFamily: 'PlusJakartaSans_600SemiBold', color: colors.text },
-  time: { fontSize: 16, fontFamily: 'PlusJakartaSans_700Bold', color: colors.primary },
-});
-
 // ==================== CHECKLIST / KURS / FRASA / HEALTH (same as before, condensed) ====================
 function ChecklistTab() {
   const t = useI18n((st) => st.t);
@@ -788,14 +637,13 @@ function ChecklistTab() {
 function HubMenu({ onSelect }: { onSelect: (t: Tab) => void }) {
   const router = useRouter();
   const t = useI18n((st) => st.t);
-  const items: Array<{ id: Tab; icon: React.ComponentProps<typeof Ionicons>['name']; label: string; arabic: string; color: string }> = [
+  const items: Array<{ id: Tab | 'prayer'; icon: React.ComponentProps<typeof Ionicons>['name']; label: string; arabic: string; color: string }> = [
     { id: 'tawaf', icon: 'refresh-circle', label: t('tools.hub.tawaf'), arabic: 'طَوَاف', color: colors.primary },
     { id: 'sai', icon: 'swap-horizontal', label: t('tools.hub.sai'), arabic: 'سَعْي', color: colors.green },
     { id: 'tasbih', icon: 'ellipsis-horizontal-circle', label: t('tools.hub.tasbih'), arabic: 'تَسْبِيح', color: colors.gold },
     { id: 'jumrah', icon: 'radio-button-on', label: t('tools.hub.jumrah'), arabic: 'جَمَرَات', color: colors.danger },
     { id: 'wukuf', icon: 'timer', label: t('tools.hub.wukuf'), arabic: 'وُقُوف', color: colors.primaryDark },
-    { id: 'qiblat', icon: 'compass', label: t('tools.hub.qiblat'), arabic: 'قِبْلَة', color: colors.green },
-    { id: 'shalat', icon: 'time', label: t('tools.hub.shalat'), arabic: 'صَلَاة', color: colors.primary },
+    { id: 'prayer', icon: 'compass', label: t('tools.hub.prayer'), arabic: 'صَلَاة', color: colors.green },
     { id: 'checklist', icon: 'checkbox', label: t('tools.hub.checklist'), arabic: 'قائمة', color: colors.gold },
     { id: 'kurs', icon: 'cash', label: t('tools.hub.kurs'), arabic: 'عملة', color: colors.green },
     { id: 'frasa', icon: 'language', label: t('tools.hub.frasa'), arabic: 'عربي', color: colors.primaryDark },
@@ -804,7 +652,7 @@ function HubMenu({ onSelect }: { onSelect: (t: Tab) => void }) {
   return (
     <View style={hub.grid}>
       {items.map((item) => (
-        <TouchableOpacity key={item.id} style={hub.card} onPress={() => onSelect(item.id)} activeOpacity={0.7}>
+        <TouchableOpacity key={item.id} style={hub.card} onPress={() => (item.id === 'prayer' ? router.push('/prayer') : onSelect(item.id))} activeOpacity={0.7}>
           <View style={[hub.iconBox, { backgroundColor: item.color }]}>
             <Ionicons name={item.icon} size={24} color="#fff" />
           </View>
@@ -868,8 +716,6 @@ export default function ToolsScreen() {
         {tab === 'tasbih' && <TasbihTab />}
         {tab === 'jumrah' && <JumrahTab />}
         {tab === 'wukuf' && <WukufTab />}
-        {tab === 'qiblat' && <QiblatTab />}
-        {tab === 'shalat' && <ShalatTab />}
         {tab === 'checklist' && <ChecklistTab />}
 
         {tab === 'kurs' && <CurrencyConverter />}

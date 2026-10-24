@@ -244,8 +244,14 @@ export const api = {
   // Kartu Taksi milik pengguna (hotel rombongan, kamar, kontak muthawwif)
   getTaxiCard: (groupId: string) => request<unknown>(`/groups/${groupId}/taxi-card`),
   getHealthTips: () => request<any[]>('/health-tips'),
-  getPrayerTimes: (lat?: number, lng?: number) =>
-    request<any>(`/prayer-times${lat ? `?lat=${lat}&lng=${lng}` : ''}`),
+  // tz = zona waktu jam HP (jam), agar waktu salat sebanding dengan jam yang dipakai layar.
+  getPrayerTimes: (lat?: number, lng?: number, tz?: number) => {
+    // Disusun manual: URLSearchParams di React Native tidak lengkap (set() bisa melempar error).
+    const params: string[] = [];
+    if (lat != null && lng != null) params.push(`lat=${lat}`, `lng=${lng}`);
+    if (tz != null && Number.isFinite(tz)) params.push(`tz=${tz}`);
+    return request<any>(`/prayer-times${params.length ? `?${params.join('&')}` : ''}`);
+  },
   getCurrency: () => request<CurrencyRates>('/currency'),
   saveLocation: (name: string, lat: number, lng: number) =>
     request<any>('/saved-locations', { method: 'POST', body: JSON.stringify({ name, lat, lng }) }),
