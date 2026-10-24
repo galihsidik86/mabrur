@@ -4,6 +4,8 @@ import { validate } from '../middleware/validate';
 import { authenticate } from '../middleware/auth';
 import { authorize } from '../middleware/rbac';
 import * as groupService from '../services/group.service';
+import * as taxiCardService from '../services/taxi-card.service';
+import { citySchema, hotelInputSchema, roomInputSchema, memberListForViewer, type City } from '../services/taxi-card-core';
 
 const router = Router();
 
@@ -129,11 +131,13 @@ router.get(
   '/:id/members',
   async (req: Request, res: Response, next: NextFunction) => {
     try {
-      if (req.auth!.role !== 'admin') {
-        await groupService.assertMember(param(req.params.id), req.auth!.sub);
+      let canSeeRooms = req.auth!.role === 'admin';
+      if (!canSeeRooms) {
+        const membership = await groupService.assertMember(param(req.params.id), req.auth!.sub);
+        canSeeRooms = membership.role_in_group === 'muthawwif';
       }
       const members = await groupService.listMembers(param(req.params.id));
-      res.json({ data: members });
+      res.json({ data: memberListForViewer(members, canSeeRooms) });
     } catch (err) {
       next(err);
     }
@@ -152,6 +156,87 @@ router.post(
         req.auth!.sub,
       );
       res.status(201).json({ data: member });
+    } catch (err) {
+      next(err);
+    }
+  },
+);
+
+// === Kartu Taksi (hotel per kota + nomor kamar) ===
+
+const groupParams = z.object({ id: z.string().uuid() });
+const hotelParams = z.object({ id: z.string().uuid(), city: citySchema });
+const memberParams = z.object({ id: z.string().uuid(), userId: z.string().uuid() });
+
+// Kartu taksi milik pengguna sendiri — hanya anggota aktif rombongan.
+router.get(
+  '/:id/taxi-card',
+  validate(groupParams, 'params'),
+  async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      res.json({ data: await taxiCardService.getTaxiCard(param(req.params.id), req.auth!.sub) });
+    } catch (err) {
+      next(err);
+    }
+  },
+);
+
+router.get(
+  '/:id/hotels',
+  validate(groupParams, 'params'),
+  async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      await taxiCardService.assertGroupLeader(param(req.params.id), req.auth!.sub, req.auth!.role);
+      res.json({ data: await taxiCardService.listHotels(param(req.params.id)) });
+    } catch (err) {
+      next(err);
+    }
+  },
+);
+
+router.put(
+  '/:id/hotels/:city',
+  validate(hotelParams, 'params'),
+  validate(hotelInputSchema),
+  async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const groupId = param(req.params.id);
+      await taxiCardService.assertGroupLeader(groupId, req.auth!.sub, req.auth!.role);
+      const hotel = await taxiCardService.upsertHotel(groupId, param(req.params.city) as City, req.body, req.auth!.sub);
+      res.json({ data: hotel });
+    } catch (err) {
+      next(err);
+    }
+  },
+);
+
+router.delete(
+  '/:id/hotels/:city',
+  validate(hotelParams, 'params'),
+  async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const groupId = param(req.params.id);
+      await taxiCardService.assertGroupLeader(groupId, req.auth!.sub, req.auth!.role);
+      await taxiCardService.deleteHotel(groupId, param(req.params.city) as City, req.auth!.sub);
+      res.status(204).send();
+    } catch (err) {
+      next(err);
+    }
+  },
+);
+
+router.patch(
+  '/:id/members/:userId/room',
+  validate(memberParams, 'params'),
+  validate(roomInputSchema),
+  async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const groupId = param(req.params.id);
+      await taxiCardService.assertGroupLeader(groupId, req.auth!.sub, req.auth!.role);
+      await taxiCardService.setMemberRoom(
+        groupId, param(req.params.userId), req.body.city, req.body.room_number, req.auth!.sub,
+      );
+      res.status(204).send();
     } catch (err) {
       next(err);
     }

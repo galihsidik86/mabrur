@@ -136,6 +136,16 @@ export default function SosScreen() {
           </TouchableOpacity>
         </View>
 
+        {/* Kartu Taksi — tunjukkan alamat hotel (Arab) ke sopir/polisi */}
+        <TouchableOpacity style={s.taxiBtn} onPress={() => router.push('/taxi-card')} activeOpacity={0.8}>
+          <Ionicons name="car" size={24} color={colors.dangerDark} />
+          <View style={{ flex: 1 }}>
+            <Text style={s.taxiBtnText}>{t('sos.taxi_card')}</Text>
+            <Text style={s.taxiBtnSub}>{t('sos.taxi_card_sub')}</Text>
+          </View>
+          <Ionicons name="chevron-forward" size={20} color={colors.dangerDark} />
+        </TouchableOpacity>
+
         {sent ? (
           /* ===== SENT STATE ===== */
           <View style={s.sentCard}>
@@ -285,6 +295,12 @@ export default function SosScreen() {
 }
 
 const s = StyleSheet.create({
+  taxiBtn: {
+    flexDirection: 'row', alignItems: 'center', gap: 12, backgroundColor: '#fff', borderRadius: 14,
+    paddingVertical: 14, paddingHorizontal: 16, marginBottom: 14,
+  },
+  taxiBtnText: { fontSize: 16, fontFamily: 'PlusJakartaSans_800ExtraBold', color: colors.dangerDark },
+  taxiBtnSub: { fontSize: 12, fontFamily: 'PlusJakartaSans_500Medium', color: colors.textMuted, marginTop: 1 },
   safe: { flex: 1, backgroundColor: '#7A1F1F' },
   scroll: { flex: 1 },
   content: { padding: 18, paddingBottom: 40 },

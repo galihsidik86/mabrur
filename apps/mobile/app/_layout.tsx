@@ -194,6 +194,7 @@ export default function RootLayout() {
         <Stack.Screen name="change-password" options={{ presentation: 'fullScreenModal', gestureEnabled: false }} />
         <Stack.Screen name="(tabs)" />
         <Stack.Screen name="sos" options={{ presentation: 'fullScreenModal' }} />
+        <Stack.Screen name="taxi-card" options={{ presentation: 'fullScreenModal' }} />
         <Stack.Screen name="profile" />
         <Stack.Screen name="chat" />
         <Stack.Screen name="onboarding" options={{ presentation: 'fullScreenModal' }} />

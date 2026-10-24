@@ -1,8 +1,12 @@
 import { useEffect, useState, FormEvent } from 'react';
 import { api } from '../api';
+import GroupHotels from '../components/GroupHotels';
 
 interface Group { id: string; name: string; kloter_code: string; year: number; member_count: number; }
-interface Member { id: string; name: string; phone: string; role_in_group: string; membership_id: string; }
+interface Member {
+  id: string; name: string; phone: string; role_in_group: string; membership_id: string;
+  room_makkah?: string | null; room_madinah?: string | null;
+}
 
 export default function Groups() {
   const [groups, setGroups] = useState<Group[]>([]);
@@ -173,6 +177,8 @@ export default function Groups() {
                     </tbody>
                   </table>
                 )}
+
+                <GroupHotels groupId={g.id} members={members} onRoomsChanged={() => loadMembers(g.id)} />
               </div>
             )}
           </div>

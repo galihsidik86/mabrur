@@ -166,6 +166,8 @@ export async function listMembers(groupId: string) {
       'users.role',
       'group_members.role_in_group',
       'group_members.joined_at',
+      'group_members.room_makkah',
+      'group_members.room_madinah',
     )
     .orderBy('group_members.joined_at');
 

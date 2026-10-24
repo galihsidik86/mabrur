@@ -236,6 +236,9 @@ export const api = {
   getVoiceToken: () =>
     request<{ url: string; token: string; room: string; role: 'speaker' | 'listener' }>('/voice/token'),
   getPhrases: () => request<Phrase[]>('/phrases'),
+
+  // Kartu Taksi milik pengguna (hotel rombongan, kamar, kontak muthawwif)
+  getTaxiCard: (groupId: string) => request<unknown>(`/groups/${groupId}/taxi-card`),
   getHealthTips: () => request<any[]>('/health-tips'),
   getPrayerTimes: (lat?: number, lng?: number) =>
     request<any>(`/prayer-times${lat ? `?lat=${lat}&lng=${lng}` : ''}`),
