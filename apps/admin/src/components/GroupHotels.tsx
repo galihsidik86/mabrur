@@ -1,5 +1,7 @@
 import { useEffect, useState } from 'react';
 import { api } from '../api';
+import { C, R } from '../theme';
+import { label, input, btnPrimary, actionBtn, chip, th, td } from '../ui';
 
 // Kartu Taksi (permintaan revisi v2 #6): hotel Makkah/Madinah per rombongan + nomor kamar
 // per anggota. Data ini tampil di aplikasi jamaah (SOS -> Kartu Taksi), juga saat offline.
@@ -97,7 +99,7 @@ export default function GroupHotels({ groupId, members, onRoomsChanged }: Props)
   const jamaah = members.filter((m) => m.role_in_group === 'jamaah');
 
   return (
-    <div style={{ marginTop: 20, borderTop: '1px solid #ECE5D8', paddingTop: 16 }}>
+    <div style={{ marginTop: 20, borderTop: `1px solid ${C.border}`, paddingTop: 16 }}>
       <h3 style={title}>Kartu Taksi — hotel rombongan</h3>
       <p style={hint}>Diisi sekali per rombongan; otomatis tampil di aplikasi semua jamaah. Tulis nama & alamat dalam bahasa Arab.</p>
 
@@ -105,20 +107,20 @@ export default function GroupHotels({ groupId, members, onRoomsChanged }: Props)
         {CITIES.map(({ id, label }) => (
           <div key={id} style={hotelBox}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <strong style={{ fontSize: 14, color: '#5C3A1E' }}>{label}</strong>
+              <strong style={{ fontSize: 14, color: C.textSecondary }}>{label}</strong>
               {saved[id] && <span style={savedChip}>Tersimpan</span>}
             </div>
-            <label style={labelStyle}>Nama hotel (Arab) *</label>
-            <input style={{ ...input, ...rtl }} dir="rtl" value={forms[id].name_ar}
+            <label style={labelStyle} htmlFor={`hotel-${id}-nama-hotel-arab`}>Nama hotel (Arab) *</label>
+            <input id={`hotel-${id}-nama-hotel-arab`} style={{ ...input, ...rtl }} dir="rtl" value={forms[id].name_ar}
               onChange={(e) => update(id, 'name_ar', e.target.value)} placeholder="فندق ..." />
-            <label style={labelStyle}>Nama hotel (Latin)</label>
-            <input style={input} value={forms[id].name_latin}
-              onChange={(e) => update(id, 'name_latin', e.target.value)} placeholder="Safwa Zamzam Hotel" />
-            <label style={labelStyle}>Alamat lengkap (Arab) * — jalan, patokan, kota</label>
-            <textarea style={{ ...input, ...rtl, minHeight: 64, resize: 'vertical' }} dir="rtl" value={forms[id].address_ar}
+            <label style={labelStyle} htmlFor={`hotel-${id}-nama-hotel-latin`}>Nama hotel (Latin)</label>
+            <input id={`hotel-${id}-nama-hotel-latin`} style={input} value={forms[id].name_latin}
+              onChange={(e) => update(id, 'name_latin', e.target.value)} placeholder="Nama hotel (huruf Latin)" />
+            <label style={labelStyle} htmlFor={`hotel-${id}-alamat-lengkap-arab`}>Alamat lengkap (Arab) * — jalan, patokan, kota</label>
+            <textarea id={`hotel-${id}-alamat-lengkap-arab`} style={{ ...input, ...rtl, minHeight: 64, resize: 'vertical' }} dir="rtl" value={forms[id].address_ar}
               onChange={(e) => update(id, 'address_ar', e.target.value)} placeholder="بجوار المسجد الحرام، مكة المكرمة" />
-            <label style={labelStyle}>Telepon hotel</label>
-            <input style={input} value={forms[id].phone}
+            <label style={labelStyle} htmlFor={`hotel-${id}-telepon-hotel`}>Telepon hotel</label>
+            <input id={`hotel-${id}-telepon-hotel`} style={input} value={forms[id].phone}
               onChange={(e) => update(id, 'phone', e.target.value)} placeholder="+966 12 ..." />
             <div style={{ display: 'flex', gap: 8, marginTop: 10 }}>
               <button type="button" style={btnPrimary} onClick={() => saveHotel(id)}>Simpan</button>
@@ -139,11 +141,11 @@ export default function GroupHotels({ groupId, members, onRoomsChanged }: Props)
             <tbody>
               {jamaah.map((m) => (
                 <tr key={m.id}>
-                  <td style={td}>{m.name}</td>
+                  <td style={roomTd}>{m.name}</td>
                   {(['makkah', 'madinah'] as City[]).map((city) => {
                     const current = (city === 'makkah' ? m.room_makkah : m.room_madinah) ?? '';
                     return (
-                      <td key={city} style={td}>
+                      <td key={city} style={roomTd}>
                         <input
                           key={`${m.id}-${city}-${current}`}
                           style={{ ...input, maxWidth: 120 }}
@@ -162,19 +164,17 @@ export default function GroupHotels({ groupId, members, onRoomsChanged }: Props)
         </>
       )}
 
-      {message && <p style={{ fontSize: 13, color: '#5C3A1E', marginTop: 10 }}>{message}</p>}
+      {message && <p style={{ fontSize: 13, color: C.textSecondary, marginTop: 10 }}>{message}</p>}
     </div>
   );
 }
 
-const title: React.CSSProperties = { fontSize: 15, fontWeight: 700, color: '#5C3A1E', margin: 0 };
-const hint: React.CSSProperties = { fontSize: 12, color: '#8C6B4A', margin: '4px 0 12px' };
-const hotelBox: React.CSSProperties = { flex: '1 1 320px', border: '1px solid #ECE5D8', borderRadius: 12, padding: 14, background: '#FFFDF8' };
-const labelStyle: React.CSSProperties = { display: 'block', fontSize: 12, fontWeight: 600, color: '#8C6B4A', margin: '10px 0 4px' };
-const input: React.CSSProperties = { width: '100%', padding: '9px 12px', border: '1px solid #ECE5D8', borderRadius: 8, fontSize: 13, boxSizing: 'border-box' };
+const title: React.CSSProperties = { fontSize: 15, fontWeight: 700, color: C.textSecondary, margin: 0 };
+const hint: React.CSSProperties = { fontSize: 12, color: C.muted, margin: '4px 0 12px' };
+const hotelBox: React.CSSProperties = { flex: '1 1 320px', border: `1px solid ${C.border}`, borderRadius: R.lg, padding: 14, background: C.card };
+const labelStyle: React.CSSProperties = { ...label, margin: '10px 0 4px' };
 const rtl: React.CSSProperties = { fontSize: 16, textAlign: 'right' };
-const btnPrimary: React.CSSProperties = { padding: '8px 18px', background: '#0B5D47', color: '#F5F1E8', border: 'none', borderRadius: 9, fontSize: 13, fontWeight: 700, cursor: 'pointer' };
-const btnText: React.CSSProperties = { background: 'none', border: 'none', color: '#C44536', fontSize: 13, fontWeight: 600, cursor: 'pointer' };
-const savedChip: React.CSSProperties = { fontSize: 11, fontWeight: 700, color: '#2F5A22', background: '#DCEBD3', padding: '2px 8px', borderRadius: 999 };
-const th: React.CSSProperties = { textAlign: 'left', padding: '8px 12px', fontSize: 12, fontWeight: 700, color: '#8C6B4A', borderBottom: '1px solid #ECE5D8', background: '#FAFAF6' };
-const td: React.CSSProperties = { padding: '6px 12px', fontSize: 13, borderBottom: '1px solid #F0E9DC' };
+const btnText: React.CSSProperties = { ...actionBtn, color: C.danger };
+// Status (tersimpan) — zaitun memang untuk status.
+const savedChip: React.CSSProperties = { ...chip, color: C.statusText, background: C.statusLight, padding: '2px 8px' };
+const roomTd: React.CSSProperties = { ...td, padding: '6px 12px' };

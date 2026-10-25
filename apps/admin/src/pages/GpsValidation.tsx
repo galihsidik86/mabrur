@@ -13,16 +13,11 @@ import {
 import { characterize, NoiseCharacterization } from '../../../../docs/accuracy-test/gps-replay/characterize';
 import { replayAll, TraceReplayResults } from '../../../../docs/accuracy-test/gps-replay/replay';
 import mc from '../../../../docs/accuracy-test/results/monte_carlo_results.json';
+import { C, R } from '../theme';
+import { card, th, td } from '../ui';
 
-// ==================== token desain ====================
-const C = {
-  primary: '#0B5D47', bg: '#F5F1E8', card: '#FFFFFF', border: '#ECE5D8',
-  text: '#1F1B16', muted: '#8C6B4A', faint: '#B89A7A',
-  green: '#4A7C3A', greenLight: '#DCEBD3', gold: '#D4A437', goldLight: '#FAEFC9',
-  danger: '#C44536',
-};
 // token grafik (palet tervalidasi — sama dengan charts.js riset)
-const V = { ink: '#0b0b0b', ink2: '#52514e', muted: '#898781', grid: '#e1e0d9', base: '#c3c2b7', s1: '#2a78d6', s2: '#1baf7a' };
+const V = { ink: '#0b0b0b', ink2: '#52514e', muted: '#6F6E69', grid: '#e1e0d9', base: '#c3c2b7', s1: '#2a78d6', s2: '#1baf7a' };
 
 const idn = (v: number, d = 2) => v.toFixed(d).replace('.', ',');
 
@@ -110,7 +105,7 @@ function TrackChart({ a }: { a: TraceAnalysis }) {
   const path = (pts: EnuPoint[]) => pts.map((p, i) => `${i ? 'L' : 'M'} ${px(p.e)} ${py(p.n)}`).join(' ');
   return (
     <svg viewBox={`0 0 ${w} ${h}`} style={{ width: '100%' }}>
-      <Frame w={w} h={h} mL={mL} mT={mT} pw={pw} ph={ph} xDom={[eLo, eHi]} yDom={[nLo, nHi]} xTitle="East (m)" yTitle="North (m)" />
+      <Frame w={w} h={h} mL={mL} mT={mT} pw={pw} ph={ph} xDom={[eLo, eHi]} yDom={[nLo, nHi]} xTitle="Timur (m)" yTitle="Utara (m)" />
       <path d={path(a.enu)} fill="none" stroke={V.s1} strokeWidth={1.4} strokeLinejoin="round" opacity={0.85} />
       <path d={path(a.smooth)} fill="none" stroke={V.s2} strokeWidth={2.4} strokeLinejoin="round" />
     </svg>
@@ -156,8 +151,8 @@ function AcfChart({ a }: { a: TraceAnalysis }) {
   const px = (v: number) => mL + (v / (lags + 1)) * pw;
   const py = (v: number) => mT + (1 - (v + 0.3) / 1.3) * ph;
   const series = [
-    { xs: a.chr.east.acf, color: V.s1, label: 'East' },
-    { xs: a.chr.north.acf, color: V.s2, label: 'North' },
+    { xs: a.chr.east.acf, color: V.s1, label: 'Timur' },
+    { xs: a.chr.north.acf, color: V.s2, label: 'Utara' },
   ];
   return (
     <svg viewBox={`0 0 ${w} ${h}`} style={{ width: '100%' }}>
@@ -171,7 +166,7 @@ function AcfChart({ a }: { a: TraceAnalysis }) {
             fill="none" stroke={s.color} strokeWidth={2} strokeLinejoin="round"
           />
           {s.xs.map((v, i) => (
-            <circle key={i} cx={px(i + 1)} cy={py(v)} r={3.2} fill={s.color} stroke="#fff" strokeWidth={1.6} />
+            <circle key={i} cx={px(i + 1)} cy={py(v)} r={3.2} fill={s.color} stroke={C.card} strokeWidth={1.6} />
           ))}
         </g>
       ))}
@@ -199,8 +194,6 @@ function nearest(rows: McRow[], s: number): McRow {
   return rows.reduce((a, b) => (Math.abs(b.sigma - s) < Math.abs(a.sigma - s) ? b : a));
 }
 
-const th: React.CSSProperties = { textAlign: 'left', padding: '7px 10px', fontSize: 11, color: C.muted, fontWeight: 700, textTransform: 'uppercase', letterSpacing: 0.4, borderBottom: `1px solid ${C.border}` };
-const td: React.CSSProperties = { padding: '7px 10px', fontSize: 13, color: C.text, borderBottom: `1px solid ${C.border}` };
 
 function ReplayTable({ a }: { a: TraceAnalysis }) {
   const s = a.chr.sigmaEffective;
@@ -226,7 +219,7 @@ function ReplayTable({ a }: { a: TraceAnalysis }) {
       <thead><tr>
         <th style={th}>Algoritma</th><th style={th}>Metrik</th>
         <th style={th}>Lapangan (replay)</th>
-        <th style={{ ...th, textTransform: 'none' }}>SIMULASI MC (σ = {n.miqat.sigma} m)</th>
+        <th style={th}>Simulasi MC (σ = {n.miqat.sigma} m)</th>
       </tr></thead>
       <tbody>{rows.map((row, i) => (
         <tr key={i}>{row.map((cell, j) => <td key={j} style={{ ...td, fontWeight: j === 0 ? 600 : 400 }}>{cell}</td>)}</tr>
@@ -246,7 +239,7 @@ function CharTable({ chr }: { chr: NoiseCharacterization }) {
   ];
   return (
     <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-      <thead><tr><th style={th}>Besaran</th><th style={th}>East</th><th style={th}>North</th></tr></thead>
+      <thead><tr><th style={th}>Besaran</th><th style={th}>Timur</th><th style={th}>Utara</th></tr></thead>
       <tbody>{rows.map((r, i) => (
         <tr key={i}>{r.map((c, j) => <td key={j} style={{ ...td, fontWeight: j === 0 ? 600 : 400 }}>{c}</td>)}</tr>
       ))}</tbody>
@@ -256,8 +249,7 @@ function CharTable({ chr }: { chr: NoiseCharacterization }) {
 
 // ==================== komponen halaman ====================
 
-const card: React.CSSProperties = { background: C.card, border: `1px solid ${C.border}`, borderRadius: 14, padding: 20 };
-const h3: React.CSSProperties = { fontSize: 13, fontWeight: 800, color: C.text, margin: '0 0 10px', textTransform: 'uppercase', letterSpacing: 0.5 };
+const h3: React.CSSProperties = { fontSize: 14, fontWeight: 700, color: C.text, margin: '0 0 10px' };
 
 function TraceCard({ a }: { a: TraceAnalysis }) {
   const badVerdict = !a.chr.verdict.startsWith('Konsisten');
@@ -269,7 +261,7 @@ function TraceCard({ a }: { a: TraceAnalysis }) {
           {a.parse.points.length} titik · {a.parse.dropped.invalid} tak valid · {a.parse.dropped.duplicate} duplikat · {a.parse.gaps.length} loncatan &gt;10 dtk
         </span>
       </div>
-      {a.segInfo && <div style={{ fontSize: 12, color: C.gold, marginTop: 4 }}>{a.segInfo}</div>}
+      {a.segInfo && <div style={{ fontSize: 12, color: C.goldText, marginTop: 4 }}>{a.segInfo}</div>}
 
       {/* sorotan angka */}
       <div style={{ display: 'flex', gap: 12, marginTop: 14, flexWrap: 'wrap' }}>
@@ -279,7 +271,7 @@ function TraceCard({ a }: { a: TraceAnalysis }) {
           ['Isotropi σE/σN', idn(a.chr.isotropyRatio)],
           ['ρ lag-1 (maks)', idn(Math.max(a.chr.east.lag1, a.chr.north.lag1), 2)],
         ].map(([label, val]) => (
-          <div key={label} style={{ background: C.bg, borderRadius: 10, padding: '10px 16px', minWidth: 130 }}>
+          <div key={label} style={{ background: C.bg, borderRadius: R.md, padding: '10px 16px', minWidth: 130 }}>
             <div style={{ fontSize: 11, color: C.muted, fontWeight: 600 }}>{label}</div>
             <div style={{ fontSize: 20, fontWeight: 800, color: C.text, marginTop: 2 }}>{val}</div>
           </div>
@@ -287,9 +279,9 @@ function TraceCard({ a }: { a: TraceAnalysis }) {
       </div>
 
       <div style={{
-        marginTop: 12, padding: '10px 14px', borderRadius: 10, fontSize: 12.5, lineHeight: 1.5,
-        background: badVerdict ? C.goldLight : C.greenLight,
-        color: badVerdict ? '#7A5A10' : '#2E5424',
+        marginTop: 12, padding: '10px 14px', borderRadius: R.md, fontSize: 12.5, lineHeight: 1.5,
+        background: badVerdict ? C.goldLight : C.statusLight,
+        color: badVerdict ? C.goldText : C.statusText,
       }}>
         <b>Vonis vs asumsi simulasi (Gaussian isotropik i.i.d.):</b> {a.chr.verdict}
       </div>
@@ -317,7 +309,7 @@ function TraceCard({ a }: { a: TraceAnalysis }) {
         </div>
         <div>
           <h3 style={h3}>Autokorelasi residual</h3>
-          <Legend items={[{ color: V.s1, label: 'East' }, { color: V.s2, label: 'North' }]} />
+          <Legend items={[{ color: V.s1, label: 'Timur' }, { color: V.s2, label: 'Utara' }]} />
           <AcfChart a={a} />
         </div>
       </div>
@@ -335,12 +327,15 @@ interface ServerPoint { t: number; lat: number; lon: number; acc: number | null;
 
 /** Susun GPX dari titik server → lewat parser yang sama dengan berkas unggahan
  *  (satu jalur kode untuk validasi/dedup/segmen). */
+const XML_ESCAPES: Record<string, string> = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&apos;' };
+const escapeXml = (text: string): string => text.replace(/[&<>"']/g, (ch) => XML_ESCAPES[ch]);
+
 function pointsToGpx(label: string, points: ServerPoint[]): string {
   const pts = points.map((p) => {
     const acc = p.acc != null ? `<extensions><accuracy>${p.acc}</accuracy></extensions>` : '';
     return `<trkpt lat="${p.lat}" lon="${p.lon}"><time>${new Date(p.t).toISOString()}</time>${acc}</trkpt>`;
   });
-  return `<gpx version="1.1"><trk><name>${label}</name><trkseg>${pts.join('')}</trkseg></trk></gpx>`;
+  return `<gpx version="1.1"><trk><name>${escapeXml(label)}</name><trkseg>${pts.join('')}</trkseg></trk></gpx>`;
 }
 
 export default function GpsValidation() {
@@ -371,19 +366,29 @@ export default function GpsValidation() {
 
   const deleteServerTrace = async (t: ServerTrace) => {
     if (!window.confirm(`Hapus sesi "${t.label}" dari server?`)) return;
-    await api(`/gps-traces/${t.id}`, { method: 'DELETE' });
-    loadTraces();
+    try {
+      await api(`/gps-traces/${t.id}`, { method: 'DELETE' });
+      loadTraces();
+    } catch (e) {
+      window.alert(`Sesi "${t.label}" gagal dihapus: ${e instanceof Error ? e.message : 'server tidak merespons'}.`);
+    }
   };
 
   const handleFiles = useCallback(async (files: FileList | File[]) => {
     setBusy(true);
     const results: Item[] = [];
-    for (const f of Array.from(files)) {
-      const text = await f.text();
-      results.push(analyze(f.name, text));
+    try {
+      for (const f of Array.from(files)) {
+        try {
+          results.push(analyze(f.name, await f.text()));
+        } catch (e) {
+          results.push({ file: f.name, error: e instanceof Error ? e.message : 'Berkas tidak bisa dibaca' });
+        }
+      }
+    } finally {
+      setItems((prev) => [...results, ...prev]);
+      setBusy(false);
     }
-    setItems((prev) => [...results, ...prev]);
-    setBusy(false);
   }, []);
 
   return (
@@ -397,17 +402,19 @@ export default function GpsValidation() {
       </p>
 
       <label
+        className="dropzone"
         onDragOver={(e) => { e.preventDefault(); setDrag(true); }}
         onDragLeave={() => setDrag(false)}
         onDrop={(e) => { e.preventDefault(); setDrag(false); if (e.dataTransfer.files.length) handleFiles(e.dataTransfer.files); }}
         style={{
-          display: 'block', border: `2px dashed ${drag ? C.primary : C.faint}`, borderRadius: 14,
+          display: 'block', border: `2px dashed ${drag ? C.primary : C.faint}`, borderRadius: R.lg,
           padding: '34px 20px', textAlign: 'center', cursor: 'pointer', marginBottom: 24,
-          background: drag ? '#FBF2EE' : C.card, transition: 'all .15s',
+          background: drag ? C.primaryLight : C.card, transition: 'all .15s',
         }}
       >
         <input
-          type="file" accept=".gpx,.csv" multiple style={{ display: 'none' }}
+          // sr-only, bukan display:none — input tetap bisa difokus & dibuka dengan keyboard (Enter/Spasi).
+          type="file" accept=".gpx,.csv" multiple className="sr-only"
           onChange={(e) => { if (e.target.files?.length) handleFiles(e.target.files); e.target.value = ''; }}
         />
         <div style={{ fontSize: 15, fontWeight: 700, color: C.text }}>
@@ -421,13 +428,16 @@ export default function GpsValidation() {
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
           <h3 style={{ ...h3, margin: 0 }}>Rekaman dari perangkat</h3>
           <button onClick={loadTraces} style={{
-            background: 'transparent', border: `1px solid ${C.border}`, borderRadius: 8,
+            background: 'transparent', border: `1px solid ${C.border}`, borderRadius: R.sm,
             padding: '5px 12px', fontSize: 12, fontWeight: 600, color: C.muted, cursor: 'pointer',
           }}>Muat ulang</button>
         </div>
         {traceErr && <div style={{ fontSize: 12.5, color: C.muted, marginTop: 10 }}>
           Tidak bisa memuat daftar dari server ({traceErr}) — unggah berkas manual tetap bisa dipakai.
         </div>}
+        {!traces && !traceErr && (
+          <div style={{ fontSize: 12.5, color: C.muted, marginTop: 10 }} aria-live="polite">Memuat daftar rekaman…</div>
+        )}
         {traces && traces.length === 0 && (
           <div style={{ fontSize: 12.5, color: C.muted, marginTop: 10 }}>
             Belum ada rekaman terunggah. Di aplikasi: Alat Ibadah → Perekam GPS → ikon awan pada sesi.
@@ -448,13 +458,13 @@ export default function GpsValidation() {
                 <td style={td}>{t.device ?? '—'}</td>
                 <td style={{ ...td, whiteSpace: 'nowrap', textAlign: 'right' }}>
                   <button onClick={() => analyzeServerTrace(t)} disabled={loadingId === t.id} style={{
-                    background: C.primary, color: '#fff', border: 'none', borderRadius: 8,
+                    background: C.primary, color: C.onPrimary, border: 'none', borderRadius: R.sm,
                     padding: '6px 14px', fontSize: 12, fontWeight: 700, cursor: 'pointer',
                     opacity: loadingId === t.id ? 0.6 : 1,
                   }}>{loadingId === t.id ? 'Memuat…' : 'Analisis'}</button>
                   <button onClick={() => deleteServerTrace(t)} style={{
                     background: 'transparent', color: C.danger, border: `1px solid ${C.border}`,
-                    borderRadius: 8, padding: '6px 10px', fontSize: 12, fontWeight: 600,
+                    borderRadius: R.sm, padding: '6px 10px', fontSize: 12, fontWeight: 600,
                     cursor: 'pointer', marginLeft: 6,
                   }}>Hapus</button>
                 </td>

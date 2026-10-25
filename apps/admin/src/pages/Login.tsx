@@ -1,6 +1,7 @@
 import { useState, FormEvent } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { login, getUser } from '../api';
+import { C, R } from '../theme';
 
 export default function Login() {
   const navigate = useNavigate();
@@ -38,45 +39,45 @@ export default function Login() {
   return (
     <div style={{
       minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center',
-      background: '#F5F1E8',
+      background: C.bg,
     }}>
       <form onSubmit={handleSubmit} style={{
-        width: 380, background: '#fff', borderRadius: 16, padding: 32,
-        border: '1px solid #ECE5D8', boxShadow: '0 4px 20px rgba(92,58,30,0.08)',
+        width: 380, background: C.card, borderRadius: R.xl, padding: 32,
+        border: `1px solid ${C.border}`, boxShadow: '0 4px 20px rgba(92,58,30,0.08)',
       }}>
         <div style={{ textAlign: 'center', marginBottom: 28 }}>
           <div style={{
-            width: 48, height: 48, borderRadius: 14, background: '#0B5D47',
+            width: 48, height: 48, borderRadius: R.lg, background: C.primary,
             display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
-            color: '#F5D98A', fontSize: 20, fontWeight: 800,
+            color: C.goldOnPrimary, fontSize: 20, fontWeight: 800,
           }}>M</div>
-          <h1 style={{ fontSize: 22, fontWeight: 800, color: '#5C3A1E', marginTop: 12 }}>
+          <h1 style={{ fontSize: 22, fontWeight: 800, color: C.textSecondary, marginTop: 12 }}>
             Mabrur Admin
           </h1>
-          <p style={{ fontSize: 13, color: '#8C6B4A', marginTop: 4 }}>
+          <p style={{ fontSize: 13, color: C.muted, marginTop: 4 }}>
             Masuk untuk mengelola sistem
           </p>
         </div>
 
         {idle && (
           <p style={{
-            background: '#FAEFC9', color: '#7A5A10', fontSize: 12.5, lineHeight: 1.4,
-            padding: '10px 12px', borderRadius: 10, marginBottom: 16, textAlign: 'center',
+            background: C.goldLight, color: C.goldText, fontSize: 12.5, lineHeight: 1.4,
+            padding: '10px 12px', borderRadius: R.md, marginBottom: 16, textAlign: 'center',
           }}>
             Sesi berakhir otomatis karena tidak ada aktivitas. Silakan masuk kembali.
           </p>
         )}
 
-        <label style={labelStyle}>Nomor HP</label>
-        <input
+        <label style={labelStyle} htmlFor="login-nomor-hp">Nomor HP</label>
+        <input id="login-nomor-hp"
           type="tel" value={phone} onChange={(e) => setPhone(e.target.value)}
           placeholder="08xxxxxxxxxx"
           style={inputStyle} required
         />
 
-        <label style={{ ...labelStyle, marginTop: 14 }}>Password</label>
+        <label style={{ ...labelStyle, marginTop: 14 }} htmlFor="login-password">Password</label>
         <div style={{ position: 'relative' }}>
-          <input
+          <input id="login-password"
             type={showPassword ? 'text' : 'password'}
             value={password} onChange={(e) => setPassword(e.target.value)}
             placeholder="Masukkan password"
@@ -89,21 +90,21 @@ export default function Login() {
             style={{
               position: 'absolute', right: 6, top: '50%', transform: 'translateY(-50%)',
               background: 'none', border: 'none', cursor: 'pointer', padding: '6px 8px',
-              fontSize: 12, fontWeight: 700, color: '#0B5D47',
+              fontSize: 12, fontWeight: 700, color: C.primary,
             }}
           >
             {showPassword ? 'Sembunyikan' : 'Lihat'}
           </button>
         </div>
 
-        {error && <p style={{ color: '#C44536', fontSize: 13, marginTop: 12, textAlign: 'center' }}>{error}</p>}
+        {error && <p style={{ color: C.danger, fontSize: 13, marginTop: 12, textAlign: 'center' }}>{error}</p>}
 
         <button
           type="submit"
           disabled={loading}
           style={{
-            width: '100%', marginTop: 20, padding: '13px 0', background: '#0B5D47',
-            color: '#F5F1E8', border: 'none', borderRadius: 12, fontSize: 15,
+            width: '100%', marginTop: 20, padding: '13px 0', background: C.primary,
+            color: C.onPrimary, border: 'none', borderRadius: R.md, fontSize: 15,
             fontWeight: 700, cursor: 'pointer', opacity: loading ? 0.7 : 1,
           }}
         >
@@ -115,9 +116,9 @@ export default function Login() {
 }
 
 const labelStyle: React.CSSProperties = {
-  display: 'block', fontSize: 13, fontWeight: 600, color: '#5C3A1E', marginBottom: 5,
+  display: 'block', fontSize: 13, fontWeight: 600, color: C.textSecondary, marginBottom: 5,
 };
 const inputStyle: React.CSSProperties = {
-  width: '100%', padding: '12px 14px', border: '1px solid #ECE5D8',
-  borderRadius: 10, fontSize: 14, outline: 'none', background: '#fff',
+  width: '100%', padding: '12px 14px', border: `1px solid ${C.border}`,
+  borderRadius: R.md, fontSize: 14, background: C.card,
 };
