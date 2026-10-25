@@ -3,10 +3,10 @@ import { View, Text, Image, TouchableOpacity, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { colors } from '../theme';
 import { useI18n } from '../services/i18n';
-import { getProgressVersion, subscribeProgress, uploadProgress, type QueuedPhoto } from '../services/documentation';
+import { getProgressVersion, subscribeProgress, uploadProgress, type QueuedMedia } from '../services/documentation';
 
 type Props = {
-  queue: QueuedPhoto[];
+  queue: QueuedMedia[];
   onRetry: (id: number) => void;
   onDiscard: (id: number) => void;
 };
@@ -35,7 +35,13 @@ export default function UploadQueue({ queue, onRetry, onDiscard }: Props) {
 
         return (
           <View key={q.id} style={s.row}>
-            <Image source={{ uri: q.thumb_uri ?? q.file_uri }} style={s.thumb} />
+            {q.thumb_uri || q.kind === 'photo' ? (
+              <Image source={{ uri: q.thumb_uri ?? q.file_uri }} style={s.thumb} />
+            ) : (
+              <View style={[s.thumb, s.thumbIcon]} accessible accessibilityLabel={t('doc.video')}>
+                <Ionicons name="videocam" size={20} color={colors.textMuted} />
+              </View>
+            )}
             <View style={{ flex: 1 }}>
               <Text style={s.caption} numberOfLines={1}>{q.caption ?? '—'}</Text>
               <Text style={[s.status, isFailed && s.statusFailed]} numberOfLines={2}>{status}</Text>
@@ -69,6 +75,7 @@ const s = StyleSheet.create({
   hint: { fontSize: 12, fontFamily: 'PlusJakartaSans_500Medium', color: colors.textMuted, marginTop: 2, marginBottom: 6 },
   row: { flexDirection: 'row', alignItems: 'center', gap: 8, paddingVertical: 6 },
   thumb: { width: 44, height: 44, borderRadius: 8, backgroundColor: colors.surface },
+  thumbIcon: { alignItems: 'center', justifyContent: 'center' },
   caption: { fontSize: 13, fontFamily: 'PlusJakartaSans_600SemiBold', color: colors.text },
   status: { fontSize: 12, fontFamily: 'PlusJakartaSans_500Medium', color: colors.textMuted, marginTop: 1 },
   statusFailed: { color: colors.danger },

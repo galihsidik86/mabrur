@@ -9,6 +9,12 @@ import {
   canDeleteMedia,
   isOfficialUpload,
   normalizeCaption,
+  sniffMedia,
+  sniffVideo,
+  normalizeDurationMs,
+  uploadKindFor,
+  MAX_VIDEO_BYTES,
+  MAX_VIDEO_DURATION_MS,
   MEDIA_QUOTA_BYTES,
   MEDIA_RETENTION_DAYS,
   MAX_CAPTION_LENGTH,
@@ -116,5 +122,71 @@ describe('normalizeCaption', () => {
     expect(normalizeCaption('   ')).toBeNull();
     expect(normalizeCaption(undefined)).toBeNull();
     expect(normalizeCaption('x'.repeat(500))).toHaveLength(MAX_CAPTION_LENGTH);
+  });
+});
+
+// Kotak 'ftyp' MP4/MOV: [ukuran 4 byte]['ftyp'][brand utama 4 byte]...
+function ftyp(brand: string): Buffer {
+  return Buffer.concat([Buffer.from([0, 0, 0, 0x18]), Buffer.from('ftyp'), Buffer.from(brand), Buffer.alloc(8)]);
+}
+
+describe('sniffVideo', () => {
+  it('mengenali MP4 (brand isom/mp42/avc1) dan MOV (qt)', () => {
+    expect(sniffVideo(ftyp('isom'))).toBe('video/mp4');
+    expect(sniffVideo(ftyp('mp42'))).toBe('video/mp4');
+    expect(sniffVideo(ftyp('avc1'))).toBe('video/mp4');
+    expect(sniffVideo(ftyp('qt  '))).toBe('video/quicktime');
+  });
+
+  it('menolak brand ftyp yang bukan video (HEIC, M4A) dan berkas lain', () => {
+    expect(sniffVideo(ftyp('heic'))).toBeNull();
+    expect(sniffVideo(ftyp('M4A '))).toBeNull();
+    expect(sniffVideo(JPEG)).toBeNull();
+    expect(sniffVideo(Buffer.from('ftyp'))).toBeNull();
+  });
+});
+
+describe('sniffMedia', () => {
+  it('membedakan foto dan video dari isi berkas', () => {
+    expect(sniffMedia(JPEG)).toEqual({ kind: 'photo', mime: 'image/jpeg' });
+    expect(sniffMedia(ftyp('mp42'))).toEqual({ kind: 'video', mime: 'video/mp4' });
+    expect(sniffMedia(Buffer.from('bukan media'))).toBeNull();
+  });
+});
+
+describe('ekstensi video', () => {
+  it('mp4/mov bolak-balik dengan MIME', () => {
+    expect(extensionFor('video/mp4')).toBe('mp4');
+    expect(extensionFor('video/quicktime')).toBe('mov');
+    expect(mimeFromFileName('abc.mp4')).toBe('video/mp4');
+    expect(mimeFromFileName('abc.MOV')).toBe('video/quicktime');
+  });
+});
+
+describe('uploadKindFor', () => {
+  it('Content-Type video/* → video (di-stream ke disk), selain itu foto', () => {
+    expect(uploadKindFor('video/mp4')).toBe('video');
+    expect(uploadKindFor('video/quicktime; charset=binary')).toBe('video');
+    expect(uploadKindFor('image/jpeg')).toBe('photo');
+    expect(uploadKindFor(undefined)).toBe('photo');
+  });
+});
+
+describe('normalizeDurationMs', () => {
+  it('durasi wajar dibulatkan; kosong/tidak valid → null', () => {
+    expect(normalizeDurationMs('45230.6')).toBe(45231);
+    expect(normalizeDurationMs(undefined)).toBeNull();
+    expect(normalizeDurationMs('abc')).toBeNull();
+    expect(normalizeDurationMs('0')).toBeNull();
+  });
+
+  it('melebihi batas 60 detik (+toleransi pembulatan HP) → galat', () => {
+    expect(normalizeDurationMs(String(MAX_VIDEO_DURATION_MS + 900))).toBe(MAX_VIDEO_DURATION_MS + 900);
+    expect(() => normalizeDurationMs(String(MAX_VIDEO_DURATION_MS + 5000))).toThrow();
+  });
+
+  it('batas ukuran video lebih besar dari foto tetapi tetap terbatas', () => {
+    expect(MAX_VIDEO_BYTES).toBeGreaterThan(4 * 1024 * 1024);
+    expect(MAX_VIDEO_BYTES).toBeLessThanOrEqual(60 * 1024 * 1024);
   });
 });

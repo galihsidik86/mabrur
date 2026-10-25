@@ -5,7 +5,15 @@ import { validate } from '../middleware/validate';
 import { authenticate } from '../middleware/auth';
 import { AppError } from '../middleware/error-handler';
 import * as mediaService from '../services/media.service';
-import { MAX_CAPTION_LENGTH, MAX_PHOTO_BYTES, MAX_THUMB_BYTES, normalizeCaption, normalizeTakenAt } from '../services/media-core';
+import {
+  MAX_CAPTION_LENGTH,
+  MAX_PHOTO_BYTES,
+  MAX_THUMB_BYTES,
+  normalizeCaption,
+  normalizeDurationMs,
+  normalizeTakenAt,
+  uploadKindFor,
+} from '../services/media-core';
 
 const router = Router();
 router.use(authenticate);
@@ -15,7 +23,8 @@ function param(val: string | string[]): string {
 }
 
 const IMAGE_TYPES = ['image/jpeg', 'image/png', 'image/webp', 'application/octet-stream'];
-// Body unggahan ditampung di RAM → batasi unggahan serentak per akun (antrean HP mengirim satu per satu).
+// Body foto ditampung di RAM, video memakan disk & koneksi lama → batasi unggahan serentak per akun
+// (antrean HP mengirim satu per satu).
 const MAX_CONCURRENT_UPLOADS = 2;
 const IMMUTABLE_CACHE = 'private, max-age=604800, immutable';
 // Thumbnail yang sementara memakai foto asli (thumbnail belum terkirim) jangan di-cache lama.
@@ -85,6 +94,7 @@ const uploadQuery = z.object({
   taken_at: z.string().max(40).optional(),
   width: z.coerce.number().int().min(1).max(20000).optional(),
   height: z.coerce.number().int().min(1).max(20000).optional(),
+  duration_ms: z.string().max(12).optional(),
 });
 
 const captionBody = z.object({ caption: z.string().max(MAX_CAPTION_LENGTH * 2).nullable() });
@@ -111,6 +121,38 @@ function requireUploader(req: Request, _res: Response, next: NextFunction) {
   mediaService.assertUploaderMember(param(req.params.id), req.auth!).then(() => next()).catch(next);
 }
 
+// Metadata diperiksa sebelum body dibaca: keterangan rusak / video > 60 detik ditolak tanpa sempat diunggah.
+function parseUploadMeta(req: Request, res: Response, next: NextFunction) {
+  try {
+    res.locals.caption = captionFromHeader(req);
+  } catch (err) {
+    return next(err);
+  }
+  try {
+    res.locals.durationMs = normalizeDurationMs((req.query as { duration_ms?: string }).duration_ms);
+  } catch (err) {
+    return next(new AppError(400, (err as Error).message, 'VALIDATION_ERROR'));
+  }
+  next();
+}
+
+const photoBody = rawImage(MAX_PHOTO_BYTES);
+
+// Foto (image/*) → buffer di RAM; video (video/*) → stream ke berkas sementara di disk.
+function receiveUpload(req: Request, res: Response, next: NextFunction) {
+  if (uploadKindFor(req.get('content-type')) === 'photo') {
+    return photoBody(req, res, (err?: unknown) => {
+      if (err) return next(err);
+      res.locals.source = { type: 'buffer', buffer: req.body as Buffer } satisfies mediaService.UploadSource;
+      next();
+    });
+  }
+  const declared = Number(req.get('content-length'));
+  mediaService.receiveVideo(req, param(req.params.groupId), Number.isFinite(declared) && declared > 0 ? declared : null)
+    .then((source) => { res.locals.source = source; next(); })
+    .catch(next);
+}
+
 // GET /groups/:groupId/media — album rombongan (terbaru dulu), hanya anggota.
 router.get(
   '/groups/:groupId/media',
@@ -125,29 +167,33 @@ router.get(
   },
 );
 
-// POST /groups/:groupId/media — unggah satu foto (body = berkas JPG/PNG/WebP), metadata di query.
+// POST /groups/:groupId/media — unggah satu foto (body = JPG/PNG/WebP, ≤ 4 MB) atau video
+// (body = MP4/MOV, Content-Type video/*, ≤ 60 detik & 40 MB); metadata di query.
 // client_uuid sama → 200 + baris lama (antrean HP aman mengulang setelah respons hilang).
 router.post(
   '/groups/:groupId/media',
   photoLimiter,
   validate(groupParams, 'params'),
   validate(uploadQuery, 'query'),
+  parseUploadMeta,
   requireGroupMember,
   limitConcurrentUploads,
-  rawImage(MAX_PHOTO_BYTES),
+  receiveUpload,
   async (req: Request, res: Response, next: NextFunction) => {
     try {
       const q = req.query as unknown as z.infer<typeof uploadQuery>;
-      const { row, created } = await mediaService.createPhoto({
+      // createMedia selalu membuang berkas sementara video bila tidak jadi disimpan.
+      const { row, created } = await mediaService.createMedia({
         groupId: param(req.params.groupId),
         actor: res.locals.actor,
-        buffer: req.body as Buffer,
+        source: res.locals.source as mediaService.UploadSource,
         clientUuid: q.client_uuid ?? null,
-        caption: captionFromHeader(req),
+        caption: res.locals.caption ?? null,
         scheduleId: q.schedule_id ?? null,
         takenAt: normalizeTakenAt(q.taken_at, new Date()),
         width: q.width ?? null,
         height: q.height ?? null,
+        durationMs: res.locals.durationMs ?? null,
       });
       res.status(created ? 201 : 200).json({ data: row });
     } catch (err) { next(err); }

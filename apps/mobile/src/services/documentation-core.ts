@@ -16,11 +16,55 @@ export const THUMB_MAX_SIDE = 480;
 export const THUMB_QUALITY = 0.7;
 export const MAX_PICK = 10;
 
+// Video (keputusan 2026-10-25): maks 60 detik, dikompres ke 720p (sisi panjang 1280) ~1,5 Mbps ≈ 12 MB/menit.
+// Batas server: 60 dtk (+1 dtk kelonggaran) & 40 MB — lihat server/src/services/media-core.ts.
+export const VIDEO_MAX_DURATION_MS = 60_000;
+export const VIDEO_MAX_SIDE = 1280;
+export const VIDEO_BITRATE = 1_500_000;
+export const MAX_VIDEO_BYTES = 40 * 1024 * 1024;
+// Kamera sering mencatat 60,3 dtk untuk rekaman berbatas 60 dtk; tetap di bawah kelonggaran server.
+const DURATION_TOLERANCE_MS = 500;
+
 // Setelah sekian kali gagal sementara (5xx/timeout) berturut-turut, tandai gagal agar terlihat di layar.
 export const MAX_UPLOAD_ATTEMPTS = 10;
 
 const RETRY_BASE_MS = 30_000;
 const RETRY_MAX_MS = 30 * 60_000;
+
+// Batas waktu satu unggahan: minimal 3 menit; video besar diberi waktu dengan asumsi sinyal lemah (~32 KB/dtk),
+// dibatasi 14 menit (server memutus permintaan di 15 menit).
+const MIN_UPLOAD_TIMEOUT_MS = 3 * 60_000;
+const MAX_UPLOAD_TIMEOUT_MS = 14 * 60_000;
+const SLOW_LINK_BYTES_PER_SEC = 32 * 1024;
+
+export function uploadTimeoutMs(bytes: number): number {
+  const needed = (bytes / SLOW_LINK_BYTES_PER_SEC) * 1000;
+  return Math.round(Math.min(MAX_UPLOAD_TIMEOUT_MS, Math.max(MIN_UPLOAD_TIMEOUT_MS, needed)));
+}
+
+// Durasi tidak diketahui (null) tidak ditolak di HP: server tetap membatasi ukuran berkas.
+export function isVideoTooLong(durationMs: number | null): boolean {
+  return durationMs != null && durationMs > VIDEO_MAX_DURATION_MS + DURATION_TOLERANCE_MS;
+}
+
+// Label durasi di album: "0:45", "1:00". Tidak diketahui → ''.
+export function formatDuration(durationMs: number | null): string {
+  if (!durationMs || durationMs <= 0) return '';
+  const total = Math.round(durationMs / 1000);
+  return `${Math.floor(total / 60)}:${String(total % 60).padStart(2, '0')}`;
+}
+
+const EXT_BY_MIME: Record<string, string> = {
+  'image/png': 'png',
+  'image/webp': 'webp',
+  'video/mp4': 'mp4',
+  'video/quicktime': 'mov',
+};
+
+// Ekstensi berkas unduhan (galeri HP & aplikasi tujuan berbagi mengenali jenis dari ekstensi).
+export function fileExtensionFor(mime: string): string {
+  return EXT_BY_MIME[mime] ?? 'jpg';
+}
 
 // UUID v4 sebagai kunci idempoten unggahan (client_uuid). Tidak perlu kriptografis: cukup unik per pengguna.
 export function makeUuidV4(random: () => number = Math.random): string {

@@ -44,8 +44,8 @@
         "expo-image-picker",
         {
           "photosPermission": "Mabrur memerlukan akses foto untuk mengunggah dokumentasi kegiatan rombongan.",
-          "cameraPermission": "Mabrur memerlukan kamera untuk memotret dokumentasi kegiatan rombongan dan foto SOS.",
-          "microphonePermission": false
+          "cameraPermission": "Mabrur memerlukan kamera untuk memotret dan merekam dokumentasi kegiatan rombongan serta foto SOS.",
+          "microphonePermission": "Mabrur memerlukan mikrofon untuk siaran suara rombongan (muthawwif memandu doa) dan suara pada video dokumentasi."
         }
       ],
       [
@@ -54,11 +54,15 @@
           "photosPermission": "Mabrur memerlukan akses foto untuk menyimpan dokumentasi rombongan ke galeri.",
           "savePhotosPermission": "Mabrur memerlukan izin menyimpan foto dokumentasi rombongan ke galeri.",
           "isAccessMediaLocationEnabled": false,
-          "granularPermissions": ["photo"]
+          "granularPermissions": [
+            "photo"
+          ]
         }
       ],
       "@livekit/react-native-expo-plugin",
-      "@config-plugins/react-native-webrtc"
+      "@config-plugins/react-native-webrtc",
+      "react-native-compressor",
+      "expo-video"
     ],
     "extra": {
       "apiUrl": "https://mabrur.sosmartpro.com"

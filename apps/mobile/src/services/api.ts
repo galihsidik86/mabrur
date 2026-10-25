@@ -132,6 +132,7 @@ export interface GroupMedia {
   size_bytes: number;
   width: number | null;
   height: number | null;
+  duration_ms: number | null;
   caption: string | null;
   is_official: boolean;
   taken_at: string;

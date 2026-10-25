@@ -5,14 +5,17 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { colors } from '../theme';
 import { useI18n } from '../services/i18n';
-import type { PickedPhoto } from '../services/documentation';
+import type { PickedMedia } from '../services/documentation';
+import { formatDuration } from '../services/documentation-core';
 import type { Schedule } from '../services/db';
 
 type Props = {
-  photos: PickedPhoto[];
+  photos: PickedMedia[];
   schedules: Schedule[];
   defaultScheduleId: string | null;
   isSubmitting: boolean;
+  // Kemajuan kompresi video yang sedang disiapkan (null = tidak sedang mengompres).
+  compressPct: number | null;
   onCancel: () => void;
   onSubmit: (caption: string | null, scheduleId: string | null) => void;
 };
@@ -22,7 +25,9 @@ const MAX_CAPTION = 200;
 const MAX_ACTIVITY_CHIPS = 20;
 
 // Lembar sebelum unggah: pratinjau, keterangan singkat, dan kegiatan (album per kegiatan).
-export default function DocumentationCompose({ photos, schedules, defaultScheduleId, isSubmitting, onCancel, onSubmit }: Props) {
+export default function DocumentationCompose({
+  photos, schedules, defaultScheduleId, isSubmitting, compressPct, onCancel, onSubmit,
+}: Props) {
   const t = useI18n((st) => st.t);
   const [caption, setCaption] = useState('');
   const [scheduleId, setScheduleId] = useState<string | null>(defaultScheduleId);
@@ -55,7 +60,19 @@ export default function DocumentationCompose({ photos, schedules, defaultSchedul
           </View>
 
           <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={s.previews}>
-            {photos.map((p) => <Image key={p.uri} source={{ uri: p.uri }} style={s.preview} />)}
+            {photos.map((p) => (p.kind === 'video' ? (
+              // Komponen Image tidak bisa menampilkan berkas video → kartu ikon + durasi.
+              <View
+                key={p.uri}
+                style={[s.preview, s.videoPreview]}
+                accessible
+                accessibilityLabel={`${t('doc.video')} ${formatDuration(p.durationMs)}`.trim()}>
+                <Ionicons name="videocam" size={26} color={colors.primary} />
+                {p.durationMs ? <Text style={s.videoDuration}>{formatDuration(p.durationMs)}</Text> : null}
+              </View>
+            ) : (
+              <Image key={p.uri} source={{ uri: p.uri }} style={s.preview} />
+            )))}
           </ScrollView>
 
           <TextInput
@@ -98,7 +115,9 @@ export default function DocumentationCompose({ photos, schedules, defaultSchedul
             {isSubmitting ? (
               <>
                 <ActivityIndicator color={colors.textOnPrimary} />
-                <Text style={s.submitText}>{t('doc.preparing')}</Text>
+                <Text style={s.submitText} accessibilityLiveRegion="polite">
+                  {compressPct != null ? t('doc.compressing', { pct: compressPct }) : t('doc.preparing')}
+                </Text>
               </>
             ) : (
               <>
@@ -120,6 +139,8 @@ const s = StyleSheet.create({
   title: { fontSize: 17, fontFamily: 'PlusJakartaSans_700Bold', color: colors.text },
   previews: { gap: 8, paddingBottom: 12 },
   preview: { width: 84, height: 84, borderRadius: 10, backgroundColor: colors.surface },
+  videoPreview: { alignItems: 'center', justifyContent: 'center', gap: 4 },
+  videoDuration: { fontSize: 12, fontFamily: 'PlusJakartaSans_700Bold', color: colors.textSecondary },
   input: {
     minHeight: 48, maxHeight: 110, borderRadius: 12, borderWidth: 1, borderColor: colors.border, backgroundColor: colors.card,
     paddingHorizontal: 12, paddingVertical: 10, fontSize: 14, fontFamily: 'PlusJakartaSans_500Medium', color: colors.text,

@@ -13,6 +13,11 @@ import {
   jwtExpiry,
   parseExifDate,
   makeUuidV4,
+  formatDuration,
+  isVideoTooLong,
+  uploadTimeoutMs,
+  fileExtensionFor,
+  VIDEO_MAX_DURATION_MS,
   type AlbumItem,
 } from '../../apps/mobile/src/services/documentation-core';
 
@@ -153,5 +158,53 @@ describe('jwtExpiry', () => {
     expect(jwtExpiry('bukan-token')).toBeNull();
     expect(jwtExpiry('a.!!!.c')).toBeNull();
     expect(jwtExpiry(`a.${b64url({ sub: 'x' })}.c`)).toBeNull();
+  });
+});
+
+describe('formatDuration', () => {
+  it('menit:detik dengan detik dua digit', () => {
+    expect(formatDuration(45230)).toBe('0:45');
+    expect(formatDuration(60000)).toBe('1:00');
+    expect(formatDuration(5000)).toBe('0:05');
+    expect(formatDuration(59600)).toBe('1:00');
+  });
+
+  it('durasi tidak diketahui → string kosong', () => {
+    expect(formatDuration(null)).toBe('');
+    expect(formatDuration(0)).toBe('');
+  });
+});
+
+describe('isVideoTooLong', () => {
+  it('maks 60 detik dengan sedikit kelonggaran pembulatan kamera', () => {
+    expect(isVideoTooLong(VIDEO_MAX_DURATION_MS)).toBe(false);
+    expect(isVideoTooLong(VIDEO_MAX_DURATION_MS + 400)).toBe(false);
+    expect(isVideoTooLong(VIDEO_MAX_DURATION_MS + 2000)).toBe(true);
+  });
+
+  it('durasi tidak diketahui tidak ditolak di HP (server tetap membatasi ukuran)', () => {
+    expect(isVideoTooLong(null)).toBe(false);
+  });
+});
+
+describe('uploadTimeoutMs', () => {
+  it('foto kecil memakai batas minimal 3 menit', () => {
+    expect(uploadTimeoutMs(500 * 1024)).toBe(3 * 60_000);
+  });
+
+  it('video besar diberi waktu lebih untuk sinyal lemah, tetapi dibatasi di bawah batas server', () => {
+    const t = uploadTimeoutMs(12 * 1024 * 1024);
+    expect(t).toBeGreaterThan(3 * 60_000);
+    expect(uploadTimeoutMs(40 * 1024 * 1024)).toBeLessThan(15 * 60_000);
+  });
+});
+
+describe('fileExtensionFor', () => {
+  it('ekstensi berkas unduhan dari MIME', () => {
+    expect(fileExtensionFor('image/png')).toBe('png');
+    expect(fileExtensionFor('image/webp')).toBe('webp');
+    expect(fileExtensionFor('video/mp4')).toBe('mp4');
+    expect(fileExtensionFor('video/quicktime')).toBe('mov');
+    expect(fileExtensionFor('image/jpeg')).toBe('jpg');
   });
 });

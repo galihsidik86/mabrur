@@ -29,6 +29,8 @@ app.use(helmet());
 app.use(cors());
 app.use(compression());
 app.use(express.json({ limit: '1mb' }));
+// Token bawaan memanggil req.ip yang melempar bila socket sudah lepas (klien memutus unggahan) → crash.
+morgan.token('remote-addr', (req) => req.socket?.remoteAddress ?? '-');
 app.use(morgan('short'));
 
 // Health check

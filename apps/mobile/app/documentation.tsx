@@ -12,17 +12,24 @@ import { useAuthStore } from '../src/stores/auth';
 import { api, getAuthHeaders, type GroupMedia, type GroupMediaMeta } from '../src/services/api';
 import { getGroupMembers, getGroups, getSchedules, type Schedule } from '../src/services/db';
 import {
-  consumeAlbumDirty, discardQueued, enqueuePhotos, getQueue, mediaUrl, processQueue, rememberMedia, retryQueued, subscribeQueue,
-  type PickedPhoto, type QueuedPhoto,
+  consumeAlbumDirty, discardQueued, enqueueMedia, getQueue, mediaUrl, processQueue, rememberMedia, retryQueued, subscribeQueue,
+  VideoTooLargeError, type PickedMedia, type QueuedMedia,
 } from '../src/services/documentation';
 import {
-  chunk, formatBytes, groupByDay, groupBySchedule, parseExifDate, suggestSchedule, MAX_PICK,
+  chunk, formatBytes, formatDuration, groupByDay, groupBySchedule, isVideoTooLong, parseExifDate, suggestSchedule,
+  MAX_PICK, VIDEO_MAX_DURATION_MS,
 } from '../src/services/documentation-core';
 import UploadQueue from '../src/components/UploadQueue';
 import DocumentationCompose from '../src/components/DocumentationCompose';
 
 type Mode = 'day' | 'activity';
-type Source = 'camera' | 'gallery';
+type Source = 'camera' | 'video' | 'gallery';
+
+const SOURCES = [
+  ['camera', 'camera-outline', 'doc.camera'],
+  ['video', 'videocam-outline', 'doc.record_video'],
+  ['gallery', 'images-outline', 'doc.gallery'],
+] as const;
 
 const PAGE_SIZE = 60;
 const COLUMNS = 3;
@@ -32,15 +39,23 @@ const SCREEN_PADDING = 16;
 const QUEUE_POLL_MS = 30_000;
 const RETENTION_DAYS = 180;
 
-function toPicked(result: ImagePicker.ImagePickerResult, source: Source): PickedPhoto[] {
-  if (result.canceled) return [];
-  return result.assets.slice(0, MAX_PICK).map((a) => ({
-    uri: a.uri,
-    width: a.width,
-    height: a.height,
-    // Tanpa EXIF (tangkapan layar, foto WhatsApp) → server memakai waktu unggah.
-    takenAt: parseExifDate(a.exif?.DateTimeOriginal) ?? (source === 'camera' ? new Date().toISOString() : null),
-  }));
+// Video > 60 detik dari galeri dilewati (kamera sudah dibatasi videoMaxDuration) dan dihitung untuk pemberitahuan.
+function toPicked(result: ImagePicker.ImagePickerResult, source: Source): { items: PickedMedia[]; tooLong: number } {
+  if (result.canceled) return { items: [], tooLong: 0 };
+  const all = result.assets.slice(0, MAX_PICK).map((a): PickedMedia => {
+    const isVideo = a.type === 'video';
+    return {
+      kind: isVideo ? 'video' : 'photo',
+      uri: a.uri,
+      width: a.width,
+      height: a.height,
+      durationMs: isVideo ? a.duration ?? null : null,
+      // Tanpa EXIF (tangkapan layar, foto WhatsApp, video galeri) → server memakai waktu unggah.
+      takenAt: parseExifDate(a.exif?.DateTimeOriginal) ?? (source === 'gallery' ? null : new Date().toISOString()),
+    };
+  });
+  const items = all.filter((p) => p.kind === 'photo' || !isVideoTooLong(p.durationMs));
+  return { items, tooLong: all.length - items.length };
 }
 
 // Album Dokumentasi rombongan: per hari atau per kegiatan, unggah dari kamera/galeri lewat antrean.
@@ -61,12 +76,13 @@ export default function DocumentationScreen() {
   const [loadFailed, setLoadFailed] = useState(false);
   const [mode, setMode] = useState<Mode>('day');
   const [officialOnly, setOfficialOnly] = useState(false);
-  const [queue, setQueue] = useState<QueuedPhoto[]>([]);
+  const [queue, setQueue] = useState<QueuedMedia[]>([]);
   const [headers, setHeaders] = useState<Record<string, string>>({});
   const [imageEpoch, setImageEpoch] = useState(0);
   const [isSourceOpen, setIsSourceOpen] = useState(false);
-  const [picked, setPicked] = useState<PickedPhoto[]>([]);
+  const [picked, setPicked] = useState<PickedMedia[]>([]);
   const [isPreparing, setIsPreparing] = useState(false);
+  const [compressPct, setCompressPct] = useState<number | null>(null);
   const loadSeq = useRef(0);
   const hasLoaded = useRef(false);
   const pendingSource = useRef<Source | null>(null);
@@ -100,7 +116,10 @@ export default function DocumentationScreen() {
   useEffect(() => {
     ImagePicker.getPendingResultAsync()
       .then((res) => {
-        if (res && 'assets' in res) setPicked(toPicked(res, 'camera'));
+        if (!res || !('assets' in res)) return;
+        const { items, tooLong } = toPicked(res, 'camera');
+        if (tooLong > 0) Alert.alert(t('doc.title'), t('doc.video_too_long', { count: tooLong }));
+        setPicked(items);
       })
       .catch(() => { /* tidak ada hasil tertunda */ });
   }, []);
@@ -141,7 +160,7 @@ export default function DocumentationScreen() {
   }, [groupId, load]);
 
   const refreshQueue = useCallback(async () => {
-    setQueue(await getQueue().catch(() => [] as QueuedPhoto[]));
+    setQueue(await getQueue().catch(() => [] as QueuedMedia[]));
     // Foto baru sampai di server → muat ulang halaman pertama album.
     if (hasLoaded.current && consumeAlbumDirty()) void loadRef.current(1);
   }, []);
@@ -192,20 +211,34 @@ export default function DocumentationScreen() {
     ]);
   };
 
+  const launch = async (source: Source): Promise<ImagePicker.ImagePickerResult | null> => {
+    if (source === 'gallery') {
+      return ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ['images', 'videos'], allowsMultipleSelection: true, selectionLimit: MAX_PICK, orderedSelection: true,
+        quality: 1, exif: true,
+        // iOS: jangan transkode video saat memilih (lambat); kompresi dilakukan sendiri sebelum unggah.
+        preferredAssetRepresentationMode: ImagePicker.UIImagePickerPreferredAssetRepresentationMode.Current,
+      });
+    }
+    const perm = await ImagePicker.requestCameraPermissionsAsync();
+    if (!perm.granted) { deniedAlert(t('doc.camera_denied'), perm.canAskAgain); return null; }
+    if (source === 'video') {
+      return ImagePicker.launchCameraAsync({
+        mediaTypes: ['videos'],
+        videoMaxDuration: VIDEO_MAX_DURATION_MS / 1000,
+        videoQuality: ImagePicker.UIImagePickerControllerQualityType.IFrame1280x720,
+      });
+    }
+    return ImagePicker.launchCameraAsync({ mediaTypes: ['images'], quality: 1, exif: true });
+  };
+
   const pick = async (source: Source) => {
     try {
-      let result: ImagePicker.ImagePickerResult;
-      if (source === 'camera') {
-        const perm = await ImagePicker.requestCameraPermissionsAsync();
-        if (!perm.granted) { deniedAlert(t('doc.camera_denied'), perm.canAskAgain); return; }
-        result = await ImagePicker.launchCameraAsync({ mediaTypes: ['images'], quality: 1, exif: true });
-      } else {
-        result = await ImagePicker.launchImageLibraryAsync({
-          mediaTypes: ['images'], allowsMultipleSelection: true, selectionLimit: MAX_PICK, orderedSelection: true, quality: 1, exif: true,
-        });
-      }
-      const photos = toPicked(result, source);
-      if (photos.length) setPicked(photos);
+      const result = await launch(source);
+      if (!result) return;
+      const { items, tooLong } = toPicked(result, source);
+      if (tooLong > 0) Alert.alert(t('doc.title'), t('doc.video_too_long', { count: tooLong }));
+      if (items.length) setPicked(items);
     } catch {
       Alert.alert(t('doc.title'), t('doc.prepare_failed'));
     }
@@ -229,12 +262,15 @@ export default function DocumentationScreen() {
     setIsPreparing(true);
     try {
       // Semua-atau-tidak: gagal → tidak ada yang masuk antrean, aman ditekan ulang.
-      await enqueuePhotos(groupId, picked, caption, scheduleId);
+      await enqueueMedia(groupId, picked, caption, scheduleId, (index, ratio) => {
+        setCompressPct(picked[index]?.kind === 'video' && ratio < 1 ? Math.round(ratio * 100) : null);
+      });
       setPicked([]);
-    } catch {
-      Alert.alert(t('doc.title'), t('doc.prepare_failed'));
+    } catch (err) {
+      Alert.alert(t('doc.title'), t(err instanceof VideoTooLargeError ? 'doc.video_too_large' : 'doc.prepare_failed'));
     } finally {
       setIsPreparing(false);
+      setCompressPct(null);
     }
   };
 
@@ -318,25 +354,46 @@ export default function DocumentationScreen() {
         )}
         renderItem={({ item: row }) => (
           <View style={s.row}>
-            {row.map((m) => (
-              <TouchableOpacity
-                key={m.id}
-                activeOpacity={0.8}
-                onPress={() => router.push({ pathname: '/documentation-view', params: { id: m.id, mod: isMuthawwif ? '1' : '0' } })}
-                accessibilityRole="imagebutton"
-                accessibilityLabel={m.caption ?? t('doc.photo_label', { name: m.uploader_name ?? t('doc.unknown_uploader') })}>
-                <Image
-                  key={`${m.id}-${imageEpoch}`}
-                  source={{ uri: mediaUrl(m.id, 'thumb'), headers }}
-                  style={[s.tile, { width: tileSize, height: tileSize }]}
-                  resizeMethod="resize"
-                  onError={handleImageError}
-                />
-                {m.is_official && (
-                  <View style={s.badge}><Ionicons name="ribbon" size={12} color={colors.textOnPrimary} /></View>
-                )}
-              </TouchableOpacity>
-            ))}
+            {row.map((m) => {
+              const isVideo = m.kind === 'video';
+              const name = m.uploader_name ?? t('doc.unknown_uploader');
+              const label = isVideo
+                ? t('doc.video_label', { duration: formatDuration(m.duration_ms), name })
+                : t('doc.photo_label', { name });
+              const tileStyle = [s.tile, { width: tileSize, height: tileSize }];
+              return (
+                <TouchableOpacity
+                  key={m.id}
+                  activeOpacity={0.8}
+                  onPress={() => router.push({ pathname: '/documentation-view', params: { id: m.id, mod: isMuthawwif ? '1' : '0' } })}
+                  accessibilityRole="imagebutton"
+                  accessibilityLabel={m.caption ? `${m.caption}. ${label}` : label}>
+                  {/* Video tanpa thumbnail (gagal dibuat di HP): ikon pengganti, bukan permintaan yang pasti 404. */}
+                  {isVideo && !m.has_thumb ? (
+                    <View style={[tileStyle, s.tilePlaceholder]}>
+                      <Ionicons name="videocam" size={28} color={colors.textMuted} />
+                    </View>
+                  ) : (
+                    <Image
+                      key={`${m.id}-${imageEpoch}`}
+                      source={{ uri: mediaUrl(m.id, 'thumb'), headers }}
+                      style={tileStyle}
+                      resizeMethod="resize"
+                      onError={handleImageError}
+                    />
+                  )}
+                  {isVideo && (
+                    <View style={s.videoTag}>
+                      <Ionicons name="play" size={11} color="#fff" />
+                      {m.duration_ms ? <Text style={s.videoTagText}>{formatDuration(m.duration_ms)}</Text> : null}
+                    </View>
+                  )}
+                  {m.is_official && (
+                    <View style={s.badge}><Ionicons name="ribbon" size={12} color={colors.textOnPrimary} /></View>
+                  )}
+                </TouchableOpacity>
+              );
+            })}
           </View>
         )}
       />
@@ -375,7 +432,7 @@ export default function DocumentationScreen() {
           accessibilityLabel={t('common.cancel')}>
           <View style={s.sourceSheet}>
             <Text style={s.sourceTitle}>{t('doc.add')}</Text>
-            {([['camera', 'camera-outline', 'doc.camera'], ['gallery', 'images-outline', 'doc.gallery']] as const).map(([key, icon, label]) => (
+            {SOURCES.map(([key, icon, label]) => (
               <TouchableOpacity key={key} style={s.sourceBtn} onPress={() => chooseSource(key)} accessibilityRole="button">
                 <Ionicons name={icon} size={22} color={colors.primary} />
                 <Text style={s.sourceText}>{t(label)}</Text>
@@ -390,6 +447,7 @@ export default function DocumentationScreen() {
         schedules={schedules}
         defaultScheduleId={suggestSchedule(schedules, new Date())}
         isSubmitting={isPreparing}
+        compressPct={compressPct}
         onCancel={() => setPicked([])}
         onSubmit={(caption, scheduleId) => { void submit(caption, scheduleId); }}
       />
@@ -428,6 +486,12 @@ const s = StyleSheet.create({
   sectionTitle: { fontSize: 14, fontFamily: 'PlusJakartaSans_700Bold', color: colors.text, marginTop: 10, marginBottom: 8 },
   row: { flexDirection: 'row', gap: GAP, marginBottom: GAP },
   tile: { borderRadius: 6, backgroundColor: colors.surface },
+  tilePlaceholder: { alignItems: 'center', justifyContent: 'center' },
+  videoTag: {
+    position: 'absolute', left: 5, bottom: 5, flexDirection: 'row', alignItems: 'center', gap: 3,
+    paddingHorizontal: 6, paddingVertical: 2, borderRadius: 8, backgroundColor: 'rgba(31,27,22,0.7)',
+  },
+  videoTagText: { fontSize: 11, fontFamily: 'PlusJakartaSans_700Bold', color: '#fff' },
   badge: {
     position: 'absolute', top: 5, right: 5, width: 22, height: 22, borderRadius: 11,
     backgroundColor: colors.primary, alignItems: 'center', justifyContent: 'center',

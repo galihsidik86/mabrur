@@ -1,9 +1,11 @@
-// Dokumentasi rombongan: simpan/baca/hapus foto + metadata. Logika murni ada di media-core.ts.
+// Dokumentasi rombongan: simpan/baca/hapus foto & video + metadata. Logika murni ada di media-core.ts.
 // Berkas di MEDIA_DIR/<group_id>/<uuid>.<ext> — di luar folder publik /uploads, dilayani lewat
 // GET /media/:id/file setelah cek keanggotaan.
 import fs from 'fs';
 import path from 'path';
 import crypto from 'crypto';
+import { Transform, type Readable } from 'stream';
+import { pipeline } from 'stream/promises';
 import type { Knex } from 'knex';
 import { db } from '../db';
 import { config } from '../config';
@@ -17,9 +19,13 @@ import {
   extensionFor,
   isOfficialUpload,
   mimeFromFileName,
+  MAX_PHOTO_BYTES,
+  MAX_VIDEO_BYTES,
   MEDIA_QUOTA_BYTES,
   sniffImage,
+  sniffMedia,
   type MediaActor,
+  type MediaKind,
 } from './media-core';
 
 export const MEDIA_DIR = config.MEDIA_DIR
@@ -37,6 +43,7 @@ type Auth = { sub: string; role: MediaActor['role'] };
 type MediaRow = {
   id: string;
   group_id: string;
+  kind: MediaKind;
   uploader_id: string | null;
   mime: string;
   file_name: string;
@@ -46,8 +53,11 @@ type MediaRow = {
 
 const PUBLIC_FIELDS = [
   'id', 'group_id', 'uploader_id', 'schedule_id', 'kind', 'mime', 'size_bytes',
-  'width', 'height', 'caption', 'is_official', 'taken_at', 'created_at', 'expires_at',
+  'width', 'height', 'duration_ms', 'caption', 'is_official', 'taken_at', 'created_at', 'expires_at',
 ];
+
+// Byte awal berkas yang disimpan untuk deteksi jenis (cukup untuk kotak 'ftyp' MP4/MOV).
+const SNIFF_HEAD_BYTES = 64;
 
 export async function getActor(groupId: string, auth: Auth): Promise<MediaActor> {
   const member = await db('group_members')
@@ -139,78 +149,185 @@ async function findByClientUuid(groupId: string, uploaderId: string, clientUuid:
 
 const isUniqueViolation = (err: unknown) => (err as { code?: string }).code === '23505';
 
-// Kembalikan { row, created }. client_uuid yang sama dari pengunggah yang sama → baris lama (tanpa unggah ulang).
-export async function createPhoto(input: {
+// Isi unggahan: foto ditampung di RAM (≤ 4 MB), video sudah di-stream ke berkas sementara di folder rombongan.
+export type UploadSource =
+  | { type: 'buffer'; buffer: Buffer }
+  | { type: 'file'; path: string; size: number; head: Buffer };
+
+function tooLargeError(limit: number, what: string): AppError {
+  return new AppError(413, `Ukuran ${what} maksimal ${Math.round(limit / 1024 / 1024)} MB`, 'PAYLOAD_TOO_LARGE');
+}
+
+// Stream body video ke MEDIA_DIR/<group>/.incoming-<uuid>.part sambil menghitung ukuran (RAM tetap kecil).
+// Gagal/terputus → berkas sementara dihapus; sisa yang lolos (proses mati) disapu sweepOrphanFiles.
+export async function receiveVideo(
+  body: Readable,
+  groupId: string,
+  declaredLength: number | null,
+): Promise<Extract<UploadSource, { type: 'file' }>> {
+  if (declaredLength !== null && declaredLength > MAX_VIDEO_BYTES) throw tooLargeError(MAX_VIDEO_BYTES, 'video');
+  // Rombongan yang kuotanya jelas tidak cukup ditolak sebelum menulis puluhan MB ke disk.
+  if (declaredLength !== null && exceedsQuota(await usedBytes(groupId), declaredLength)) throw quotaError();
+  const dir = path.join(MEDIA_DIR, groupId);
+  await fs.promises.mkdir(dir, { recursive: true });
+  const tmp = path.join(dir, `.incoming-${crypto.randomUUID()}.part`);
+  let size = 0;
+  const head: Buffer[] = [];
+  let headLen = 0;
+  const meter = new Transform({
+    transform(chunk: Buffer, _enc, cb) {
+      size += chunk.length;
+      if (size > MAX_VIDEO_BYTES) return cb(tooLargeError(MAX_VIDEO_BYTES, 'video'));
+      if (headLen < SNIFF_HEAD_BYTES) {
+        const part = chunk.subarray(0, SNIFF_HEAD_BYTES - headLen);
+        head.push(part);
+        headLen += part.length;
+      }
+      cb(null, chunk);
+    },
+  });
+  // req TIDAK dimasukkan ke pipeline(): pipeline menghancurkan req saat galat, dan req yang hancur
+  // membuat morgan/req.ip melempar di luar try (server crash). Putus koneksi dideteksi lewat 'close'.
+  const onClose = () => {
+    if (!(body as Readable & { complete?: boolean }).complete) {
+      meter.destroy(new AppError(400, 'Unggahan video terputus', 'UPLOAD_ABORTED'));
+    }
+  };
+  const onError = (err: Error) => meter.destroy(err);
+  body.once('close', onClose);
+  body.once('error', onError);
+  const written = pipeline(meter, fs.createWriteStream(tmp, { flags: 'wx' }));
+  body.pipe(meter);
+  try {
+    await written;
+  } catch (err) {
+    body.unpipe(meter);
+    body.resume(); // buang sisa body agar respons galat (mis. 413) tetap bisa terkirim
+    await unlinkLogged(tmp);
+    throw err;
+  } finally {
+    body.off('close', onClose);
+    body.off('error', onError);
+  }
+  if (size === 0) {
+    await unlinkLogged(tmp);
+    throw new AppError(400, 'Isi video kosong', 'VALIDATION_ERROR');
+  }
+  return { type: 'file', path: tmp, size, head: Buffer.concat(head) };
+}
+
+function sourceSize(source: UploadSource): number {
+  return source.type === 'buffer' ? source.buffer.length : source.size;
+}
+
+// Jenis dari isi berkas, dan harus cocok dengan jalurnya: foto lewat RAM (batas 4 MB), video lewat disk.
+// Mencegah foto besar menyelinap lewat jalur video yang batasnya lebih longgar.
+function detectKind(source: UploadSource) {
+  const detected = sniffMedia(source.type === 'buffer' ? source.buffer : source.head);
+  const expected: MediaKind = source.type === 'buffer' ? 'photo' : 'video';
+  if (!detected || detected.kind !== expected) {
+    throw new AppError(
+      415,
+      expected === 'photo' ? 'Berkas bukan foto JPG/PNG/WebP' : 'Berkas bukan video MP4/MOV',
+      'UNSUPPORTED_MEDIA',
+    );
+  }
+  if (detected.kind === 'photo' && sourceSize(source) > MAX_PHOTO_BYTES) throw tooLargeError(MAX_PHOTO_BYTES, 'foto');
+  return detected;
+}
+
+async function placeFile(source: UploadSource, dest: string): Promise<void> {
+  if (source.type === 'buffer') {
+    await fs.promises.mkdir(path.dirname(dest), { recursive: true });
+    await fs.promises.writeFile(dest, source.buffer, { flag: 'wx' });
+  } else {
+    // Berkas sementara sudah di folder rombongan yang sama → rename atomik, tanpa salin ulang.
+    await fs.promises.rename(source.path, dest);
+  }
+}
+
+export type CreateMediaInput = {
   groupId: string;
   actor: MediaActor;
-  buffer: Buffer;
+  source: UploadSource;
   clientUuid: string | null;
   caption: string | null;
   scheduleId: string | null;
   takenAt: Date;
   width: number | null;
   height: number | null;
-}) {
-  if (input.clientUuid) {
-    const existing = await findByClientUuid(input.groupId, input.actor.userId, input.clientUuid);
-    if (existing) return { row: existing, created: false };
-  }
+  durationMs: number | null;
+};
 
-  const mime = sniffImage(input.buffer);
-  if (!mime) throw new AppError(415, 'Berkas bukan foto JPG/PNG/WebP', 'UNSUPPORTED_MEDIA');
-
-  if (input.scheduleId) {
-    const schedule = await db('schedules').where({ id: input.scheduleId, group_id: input.groupId }).first('id');
-    if (!schedule) throw new AppError(400, 'Kegiatan tidak ditemukan di rombongan ini', 'VALIDATION_ERROR');
-  }
-  // Cek awal tanpa kunci: rombongan yang sudah penuh tidak perlu menulis ke disk sama sekali.
-  if (exceedsQuota(await usedBytes(input.groupId), input.buffer.length)) throw quotaError();
-
-  const id = crypto.randomUUID();
-  const fileName = `${id}.${extensionFor(mime)}`;
-  await fs.promises.mkdir(path.join(MEDIA_DIR, input.groupId), { recursive: true });
-  await fs.promises.writeFile(fileFor(input.groupId, fileName), input.buffer, { flag: 'wx' });
-
-  const now = new Date();
-  let row;
+// Kembalikan { row, created }. client_uuid yang sama dari pengunggah yang sama → baris lama (tanpa unggah ulang).
+export async function createMedia(input: CreateMediaInput) {
+  const { source } = input;
+  let placed = false;
   try {
-    row = await db.transaction(async (trx) => {
-      // Kunci baris rombongan agar dua unggahan bersamaan tidak sama-sama lolos cek kuota.
-      await trx('groups').where('id', input.groupId).forUpdate().first('id');
-      if (exceedsQuota(await usedBytes(input.groupId, trx), input.buffer.length)) throw quotaError();
-      const [inserted] = await trx('group_media')
-        .insert({
-          id,
-          group_id: input.groupId,
-          uploader_id: input.actor.userId,
-          schedule_id: input.scheduleId,
-          kind: 'photo',
-          mime,
-          file_name: fileName,
-          size_bytes: input.buffer.length,
-          width: input.width,
-          height: input.height,
-          caption: input.caption,
-          is_official: isOfficialUpload(input.actor),
-          taken_at: input.takenAt,
-          created_at: now,
-          expires_at: expiresAt(now),
-          client_uuid: input.clientUuid,
-        })
-        .returning(PUBLIC_FIELDS);
-      return inserted;
-    });
-  } catch (err) {
-    await unlinkLogged(fileFor(input.groupId, fileName));
-    // Dua permintaan dengan client_uuid sama berbalapan → yang kalah memakai baris pemenang.
-    if (input.clientUuid && isUniqueViolation(err)) {
+    if (input.clientUuid) {
       const existing = await findByClientUuid(input.groupId, input.actor.userId, input.clientUuid);
       if (existing) return { row: existing, created: false };
     }
-    throw err;
+    const { kind, mime } = detectKind(source);
+    const size = sourceSize(source);
+
+    if (input.scheduleId) {
+      const schedule = await db('schedules').where({ id: input.scheduleId, group_id: input.groupId }).first('id');
+      if (!schedule) throw new AppError(400, 'Kegiatan tidak ditemukan di rombongan ini', 'VALIDATION_ERROR');
+    }
+    // Cek awal tanpa kunci: rombongan yang sudah penuh tidak perlu menulis ke disk sama sekali.
+    if (exceedsQuota(await usedBytes(input.groupId), size)) throw quotaError();
+
+    const id = crypto.randomUUID();
+    const fileName = `${id}.${extensionFor(mime)}`;
+    await placeFile(source, fileFor(input.groupId, fileName));
+    placed = true;
+
+    const now = new Date();
+    let row;
+    try {
+      row = await db.transaction(async (trx) => {
+        // Kunci baris rombongan agar dua unggahan bersamaan tidak sama-sama lolos cek kuota.
+        await trx('groups').where('id', input.groupId).forUpdate().first('id');
+        if (exceedsQuota(await usedBytes(input.groupId, trx), size)) throw quotaError();
+        const [inserted] = await trx('group_media')
+          .insert({
+            id,
+            group_id: input.groupId,
+            uploader_id: input.actor.userId,
+            schedule_id: input.scheduleId,
+            kind,
+            mime,
+            file_name: fileName,
+            size_bytes: size,
+            width: input.width,
+            height: input.height,
+            duration_ms: kind === 'video' ? input.durationMs : null,
+            caption: input.caption,
+            is_official: isOfficialUpload(input.actor),
+            taken_at: input.takenAt,
+            created_at: now,
+            expires_at: expiresAt(now),
+            client_uuid: input.clientUuid,
+          })
+          .returning(PUBLIC_FIELDS);
+        return inserted;
+      });
+    } catch (err) {
+      await unlinkLogged(fileFor(input.groupId, fileName));
+      // Dua permintaan dengan client_uuid sama berbalapan → yang kalah memakai baris pemenang.
+      if (input.clientUuid && isUniqueViolation(err)) {
+        const existing = await findByClientUuid(input.groupId, input.actor.userId, input.clientUuid);
+        if (existing) return { row: existing, created: false };
+      }
+      throw err;
+    }
+    await audit(input.actor.userId, 'media.upload', 'group_media', id, { group_id: input.groupId, kind, bytes: size });
+    return { row, created: true };
+  } finally {
+    // Berkas sementara video yang tidak jadi dipindahkan (duplikat, ditolak, kuota penuh) dibuang.
+    if (!placed && source.type === 'file') await unlinkLogged(source.path);
   }
-  await audit(input.actor.userId, 'media.upload', 'group_media', id, { group_id: input.groupId, bytes: input.buffer.length });
-  return { row, created: true };
 }
 
 async function loadLive(mediaId: string): Promise<MediaRow> {
@@ -260,6 +377,8 @@ export async function resolveFile(mediaId: string, auth: Auth, variant: 'file' |
   const row = await loadLive(mediaId);
   await assertCanView(row.group_id, auth);
   const isFallback = variant === 'thumb' && !row.thumb_name;
+  // Video tanpa thumbnail: jangan kirim berkas video sebagai gambar → HP menampilkan ikon pengganti.
+  if (isFallback && row.kind === 'video') throw new AppError(404, 'Thumbnail belum tersedia', 'NOT_FOUND');
   const name = variant === 'thumb' && row.thumb_name ? row.thumb_name : row.file_name;
   return { path: fileFor(row.group_id, name), mime: mimeFromFileName(name) ?? row.mime, isFallback };
 }

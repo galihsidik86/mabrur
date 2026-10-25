@@ -10,15 +10,17 @@ import { useI18n } from '../src/services/i18n';
 import { useAuthStore } from '../src/stores/auth';
 import { api, getAuthHeaders } from '../src/services/api';
 import {
-  forgetMedia, getRememberedMedia, GalleryPermissionError, markAlbumDirty, mediaUrl, rememberMedia, saveToGallery, sharePhoto,
+  forgetMedia, getRememberedMedia, GalleryPermissionError, markAlbumDirty, mediaUrl, rememberMedia, saveToGallery, shareMedia,
 } from '../src/services/documentation';
+import { formatDuration } from '../src/services/documentation-core';
+import DocumentationVideo from '../src/components/DocumentationVideo';
 
 type Busy = 'save' | 'share' | 'delete' | 'caption' | null;
 type ActionKey = Exclude<Busy, null>;
 
 const MAX_CAPTION = 200;
 
-// Satu foto Dokumentasi: tampil penuh, simpan ke galeri, bagikan (mis. WhatsApp), ubah keterangan, hapus.
+// Satu foto/video Dokumentasi: tampil penuh, simpan ke galeri, bagikan (mis. WhatsApp), ubah keterangan, hapus.
 export default function DocumentationViewScreen() {
   const router = useRouter();
   const t = useI18n((st) => st.t);
@@ -61,6 +63,10 @@ export default function DocumentationViewScreen() {
   // Hak sebenarnya ditegakkan server; ini hanya menyembunyikan tombol yang pasti ditolak.
   const canDelete = isUploader || params.mod === '1' || user?.role === 'admin';
   const uploader = item.uploader_name ?? t('doc.unknown_uploader');
+  const isVideo = item.kind === 'video';
+  const mediaLabel = item.caption ?? (isVideo
+    ? t('doc.video_label', { duration: formatDuration(item.duration_ms), name: uploader })
+    : t('doc.photo_label', { name: uploader }));
   const when = new Date(item.taken_at).toLocaleString(lang === 'en' ? 'en-GB' : 'id-ID', {
     day: 'numeric', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit',
   });
@@ -88,7 +94,7 @@ export default function DocumentationViewScreen() {
     Alert.alert(t('doc.title'), t('doc.saved'));
   });
 
-  const handleShare = () => run('share', () => sharePhoto(item, t('doc.share_title')));
+  const handleShare = () => run('share', () => shareMedia(item, t('doc.share_title')));
 
   const handleDelete = () => {
     Alert.alert(t('doc.delete_confirm_title'), t('doc.delete_confirm_body'), [
@@ -139,7 +145,16 @@ export default function DocumentationViewScreen() {
       </View>
 
       <View style={s.imageWrap}>
-        {headers && (
+        {headers && isVideo && (
+          <DocumentationVideo
+            key={imageKey}
+            uri={mediaUrl(item.id, 'file')}
+            headers={headers}
+            accessibilityLabel={mediaLabel}
+            onRetry={retryImage}
+          />
+        )}
+        {headers && !isVideo && (
           <Image
             key={imageKey}
             source={{ uri: mediaUrl(item.id, 'file'), headers }}
@@ -147,11 +162,11 @@ export default function DocumentationViewScreen() {
             resizeMode="contain"
             onLoad={() => setImageState('ok')}
             onError={() => setImageState('failed')}
-            accessibilityLabel={item.caption ?? t('doc.photo_label', { name: uploader })}
+            accessibilityLabel={mediaLabel}
           />
         )}
-        {(!headers || imageState === 'loading') && <ActivityIndicator style={s.overlay} color="#fff" />}
-        {imageState === 'failed' && (
+        {(!headers || (!isVideo && imageState === 'loading')) && <ActivityIndicator style={s.overlay} color="#fff" />}
+        {!isVideo && imageState === 'failed' && (
           <View style={[s.overlay, s.failedBox]}>
             <Text style={s.failedText}>{t('doc.image_failed')}</Text>
             <TouchableOpacity style={s.closeAlone} onPress={retryImage} accessibilityRole="button">
