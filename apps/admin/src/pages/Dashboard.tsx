@@ -54,7 +54,7 @@ export default function Dashboard() {
   }, []);
 
   const cards = [
-    { label: 'Pengguna', value: counts.users, color: '#8B2E2E' },
+    { label: 'Pengguna', value: counts.users, color: '#0B5D47' },
     { label: 'Rombongan', value: counts.groups, color: '#4A7C3A' },
     { label: 'Tuntunan Ibadah', value: counts.guides, color: '#D4A437' },
     { label: 'Doa & Bacaan', value: counts.duas, color: '#5C3A1E' },

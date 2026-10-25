@@ -200,13 +200,13 @@ export default function PetaScreen() {
             markers={[
               { lat: KAABAH.lat, lng: KAABAH.lng, icon: '🕋', name: "Ka'bah" },
               ...zones.filter((z) => z.zone_type === 'miqat').map((z) => ({
-                lat: z.center_lat, lng: z.center_lng, name: z.name, color: '#8B2E2E',
+                lat: z.center_lat, lng: z.center_lng, name: z.name, color: colors.accent,
                 popup: `<b>${escapeHtml(z.name)}</b><br/>${escapeHtml(t('monitor.popup_radius', { meters: z.radius_meters }))}`,
               })),
             ]}
             circles={zones.map((z) => ({
               lat: z.center_lat, lng: z.center_lng, radius: z.zone_type === 'haram' ? z.radius_meters : z.warning_radius,
-              color: z.zone_type === 'haram' ? '#4A7C3A' : '#8B2E2E',
+              color: z.zone_type === 'haram' ? '#4A7C3A' : colors.accent,
               fillOpacity: 0.08,
               label: z.name,
             }))}
@@ -325,7 +325,7 @@ export default function PetaScreen() {
           {/* Legend */}
           <View style={s.legend}>
             <View style={s.legendRow}>
-              <View style={[s.legendBox, { borderColor: colors.primary, borderWidth: 2, backgroundColor: 'rgba(139,46,46,0.1)' }]} />
+              <View style={[s.legendBox, { borderColor: colors.accent, borderWidth: 2, backgroundColor: 'rgba(139,46,46,0.1)' }]} />
               <Text style={s.legendText}>{t('monitor.legend_miqat')}</Text>
             </View>
             <View style={s.legendRow}>
@@ -517,7 +517,7 @@ const s = StyleSheet.create({
     width: 20,
     height: 20,
     borderRadius: 999,
-    backgroundColor: 'rgba(139,46,46,0.3)',
+    backgroundColor: 'rgba(11,93,71,0.3)',
   },
   markerDot: {
     width: 14,

@@ -189,7 +189,7 @@ export default function RootLayout() {
           justifyContent: 'center',
         }}
       >
-        <ActivityIndicator size="large" color="#8B2E2E" />
+        <ActivityIndicator size="large" color="#0B5D47" />
       </View>
     );
   }

@@ -120,7 +120,7 @@ export default function Groups() {
             >
               <div>
                 <span style={{ fontSize: 15, fontWeight: 700, color: '#1F1B16' }}>{g.name}</span>
-                <span style={{ marginLeft: 10, fontSize: 12, fontWeight: 600, color: '#8B2E2E', background: '#F3D9CD', padding: '2px 8px', borderRadius: 999 }}>{g.kloter_code}</span>
+                <span style={{ marginLeft: 10, fontSize: 12, fontWeight: 600, color: '#0B5D47', background: '#D5E7DF', padding: '2px 8px', borderRadius: 999 }}>{g.kloter_code}</span>
               </div>
               <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
                 <span style={{ fontSize: 13, color: '#8C6B4A' }}>{g.member_count} anggota</span>
@@ -192,8 +192,8 @@ const formBox: React.CSSProperties = { marginTop: 20, background: '#fff', border
 const formTitle: React.CSSProperties = { fontSize: 15, fontWeight: 700, marginBottom: 12, color: '#5C3A1E' };
 const label: React.CSSProperties = { display: 'block', fontSize: 12, fontWeight: 600, color: '#8C6B4A', marginBottom: 4 };
 const input: React.CSSProperties = { width: '100%', padding: '9px 12px', border: '1px solid #ECE5D8', borderRadius: 8, fontSize: 13 };
-const btnPrimary: React.CSSProperties = { padding: '9px 20px', background: '#8B2E2E', color: '#F5F1E8', border: 'none', borderRadius: 9, fontSize: 13, fontWeight: 700, cursor: 'pointer', whiteSpace: 'nowrap' };
+const btnPrimary: React.CSSProperties = { padding: '9px 20px', background: '#0B5D47', color: '#F5F1E8', border: 'none', borderRadius: 9, fontSize: 13, fontWeight: 700, cursor: 'pointer', whiteSpace: 'nowrap' };
 const th: React.CSSProperties = { textAlign: 'left', padding: '10px 12px', fontSize: 12, fontWeight: 700, color: '#8C6B4A', borderBottom: '1px solid #ECE5D8', background: '#FAFAF6' };
 const td: React.CSSProperties = { padding: '9px 12px', fontSize: 13, borderBottom: '1px solid #F0E9DC' };
 const chip: React.CSSProperties = { padding: '3px 10px', borderRadius: 999, fontSize: 11, fontWeight: 700 };
-const actionBtn: React.CSSProperties = { background: 'none', border: 'none', color: '#8B2E2E', fontSize: 13, fontWeight: 600, cursor: 'pointer' };
+const actionBtn: React.CSSProperties = { background: 'none', border: 'none', color: '#0B5D47', fontSize: 13, fontWeight: 600, cursor: 'pointer' };

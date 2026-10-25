@@ -30,7 +30,7 @@
       "package": "app.mabrur",
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
-        "backgroundColor": "#8B2E2E"
+        "backgroundColor": "#0B5D47"
       }
     },
     "plugins": [

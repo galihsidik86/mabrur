@@ -9,7 +9,7 @@ import Content from './pages/Content';
 import GpsValidation from './pages/GpsValidation';
 
 const C = {
-  primary: '#8B2E2E',
+  primary: '#0B5D47',
   bg: '#F5F1E8',
   sidebar: '#1F1B16',
   text: '#F5F1E8',
@@ -60,7 +60,7 @@ function Layout({ children }: { children: React.ReactNode }) {
                 display: 'flex', alignItems: 'center', gap: 10,
                 padding: '10px 20px', fontSize: 14, fontWeight: isActive ? 700 : 500,
                 color: isActive ? '#fff' : C.muted,
-                background: isActive ? 'rgba(139,46,46,0.3)' : 'transparent',
+                background: isActive ? 'rgba(11,93,71,0.3)' : 'transparent',
                 borderLeft: isActive ? `3px solid ${C.primary}` : '3px solid transparent',
                 textDecoration: 'none',
               })}

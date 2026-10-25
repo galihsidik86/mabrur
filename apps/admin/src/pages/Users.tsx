@@ -124,7 +124,7 @@ export default function Users() {
             <tr key={u.id}>
               <td style={td}>{u.name}</td>
               <td style={td}>{u.phone}</td>
-              <td style={td}><span style={{ ...chip, background: u.role === 'admin' ? '#F3D9CD' : u.role === 'muthawwif' ? '#FAEFC9' : '#DCEBD3' }}>{u.role}</span></td>
+              <td style={td}><span style={{ ...chip, background: u.role === 'admin' ? '#D5E7DF' : u.role === 'muthawwif' ? '#FAEFC9' : '#DCEBD3' }}>{u.role}</span></td>
               <td style={td}>{u.blood_type || '-'}</td>
               <td style={td}>
                 <button onClick={() => startEdit(u)} style={actionBtn}>Edit</button>
@@ -143,12 +143,12 @@ const formBox: React.CSSProperties = { marginTop: 20, background: '#fff', border
 const grid: React.CSSProperties = { display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 12 };
 const label: React.CSSProperties = { display: 'block', fontSize: 12, fontWeight: 600, color: '#8C6B4A', marginBottom: 4 };
 const input: React.CSSProperties = { width: '100%', padding: '9px 12px', border: '1px solid #ECE5D8', borderRadius: 8, fontSize: 13 };
-const btnPrimary: React.CSSProperties = { padding: '9px 20px', background: '#8B2E2E', color: '#F5F1E8', border: 'none', borderRadius: 9, fontSize: 13, fontWeight: 700, cursor: 'pointer' };
+const btnPrimary: React.CSSProperties = { padding: '9px 20px', background: '#0B5D47', color: '#F5F1E8', border: 'none', borderRadius: 9, fontSize: 13, fontWeight: 700, cursor: 'pointer' };
 const btnSecondary: React.CSSProperties = { padding: '9px 20px', background: 'transparent', color: '#8C6B4A', border: '1px solid #ECE5D8', borderRadius: 9, fontSize: 13, fontWeight: 600, cursor: 'pointer' };
 const table: React.CSSProperties = { width: '100%', marginTop: 16, background: '#fff', border: '1px solid #ECE5D8', borderRadius: 14, borderCollapse: 'collapse', overflow: 'hidden' };
 const th: React.CSSProperties = { textAlign: 'left', padding: '12px 16px', fontSize: 12, fontWeight: 700, color: '#8C6B4A', borderBottom: '1px solid #ECE5D8', background: '#FAFAF6' };
 const td: React.CSSProperties = { padding: '11px 16px', fontSize: 13, borderBottom: '1px solid #F0E9DC' };
 const chip: React.CSSProperties = { padding: '3px 10px', borderRadius: 999, fontSize: 11, fontWeight: 700 };
 const chipBtn: React.CSSProperties = { padding: '5px 12px', border: '1px solid #ECE5D8', borderRadius: 999, fontSize: 12, fontWeight: 600, cursor: 'pointer', background: '#fff', color: '#8C6B4A' };
-const chipActive: React.CSSProperties = { background: '#8B2E2E', color: '#F5F1E8', borderColor: '#8B2E2E' };
-const actionBtn: React.CSSProperties = { background: 'none', border: 'none', color: '#8B2E2E', fontSize: 13, fontWeight: 600, cursor: 'pointer', marginRight: 8 };
+const chipActive: React.CSSProperties = { background: '#0B5D47', color: '#F5F1E8', borderColor: '#0B5D47' };
+const actionBtn: React.CSSProperties = { background: 'none', border: 'none', color: '#0B5D47', fontSize: 13, fontWeight: 600, cursor: 'pointer', marginRight: 8 };

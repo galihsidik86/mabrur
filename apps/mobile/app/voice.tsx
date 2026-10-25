@@ -66,7 +66,7 @@ function Shell({ children, onClose }: { children: React.ReactNode; onClose: () =
 }
 
 const s = StyleSheet.create({
-  safe: { flex: 1, backgroundColor: colors.primaryDark ?? '#6E2424' },
+  safe: { flex: 1, backgroundColor: colors.primaryDark ?? '#084536' },
   header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', padding: 18 },
   hLabel: { fontSize: 10, fontFamily: 'PlusJakartaSans_700Bold', letterSpacing: 1.6, color: 'rgba(255,255,255,0.7)' },
   hTitle: { fontSize: 24, fontFamily: 'PlusJakartaSans_600SemiBold', color: '#fff', marginTop: 2 },

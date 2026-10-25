@@ -63,14 +63,14 @@ export default function MapViewComponent({
       return `L.marker([${m.lat},${m.lng}],{icon:L.divIcon({html:'<div style="font-size:24px;text-align:center">${m.icon}</div>',iconSize:[30,30],iconAnchor:[15,15],className:''})}).addTo(map).bindPopup(${popup});`;
     }
     if (m.pulse) {
-      return `(function(){var el=L.circleMarker([${m.lat},${m.lng}],{radius:8,color:'${m.color||'#8B2E2E'}',fillColor:'${m.color||'#8B2E2E'}',fillOpacity:1,className:'pulse-marker'}).addTo(map).bindPopup(${popup});L.circleMarker([${m.lat},${m.lng}],{radius:18,color:'${m.color||'#8B2E2E'}',fillColor:'${m.color||'#8B2E2E'}',fillOpacity:0.2,weight:0}).addTo(map)})();`;
+      return `(function(){var el=L.circleMarker([${m.lat},${m.lng}],{radius:8,color:'${m.color||'#0B5D47'}',fillColor:'${m.color||'#0B5D47'}',fillOpacity:1,className:'pulse-marker'}).addTo(map).bindPopup(${popup});L.circleMarker([${m.lat},${m.lng}],{radius:18,color:'${m.color||'#0B5D47'}',fillColor:'${m.color||'#0B5D47'}',fillOpacity:0.2,weight:0}).addTo(map)})();`;
     }
-    return `L.circleMarker([${m.lat},${m.lng}],{radius:7,color:'${m.color||'#8B2E2E'}',fillColor:'${m.color||'#8B2E2E'}',fillOpacity:0.85,weight:2}).addTo(map).bindPopup(${popup});`;
+    return `L.circleMarker([${m.lat},${m.lng}],{radius:7,color:'${m.color||'#0B5D47'}',fillColor:'${m.color||'#0B5D47'}',fillOpacity:0.85,weight:2}).addTo(map).bindPopup(${popup});`;
   }).join('\n');
 
   const polygonsJs = polygons.map((p) => {
     const coords = p.coords.map((c) => `[${c.lat},${c.lng}]`).join(',');
-    const opts = `{color:'${p.color||'#8B2E2E'}',fillColor:'${p.fillColor||p.color||'#8B2E2E'}',fillOpacity:${p.fillOpacity??0.15},weight:2${p.dashArray?`,dashArray:'${p.dashArray}'`:''}}`;
+    const opts = `{color:'${p.color||'#0B5D47'}',fillColor:'${p.fillColor||p.color||'#0B5D47'}',fillOpacity:${p.fillOpacity??0.15},weight:2${p.dashArray?`,dashArray:'${p.dashArray}'`:''}}`;
     let js = `L.polygon([${coords}],${opts}).addTo(map)`;
     if (p.label) js += `.bindPopup(${jsString(escapeHtml(p.label))})`; // label = teks biasa
     return js + ';';

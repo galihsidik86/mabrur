@@ -16,7 +16,7 @@ import mc from '../../../../docs/accuracy-test/results/monte_carlo_results.json'
 
 // ==================== token desain ====================
 const C = {
-  primary: '#8B2E2E', bg: '#F5F1E8', card: '#FFFFFF', border: '#ECE5D8',
+  primary: '#0B5D47', bg: '#F5F1E8', card: '#FFFFFF', border: '#ECE5D8',
   text: '#1F1B16', muted: '#8C6B4A', faint: '#B89A7A',
   green: '#4A7C3A', greenLight: '#DCEBD3', gold: '#D4A437', goldLight: '#FAEFC9',
   danger: '#C44536',

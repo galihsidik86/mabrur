@@ -46,7 +46,7 @@ export default function Login() {
       }}>
         <div style={{ textAlign: 'center', marginBottom: 28 }}>
           <div style={{
-            width: 48, height: 48, borderRadius: 14, background: '#8B2E2E',
+            width: 48, height: 48, borderRadius: 14, background: '#0B5D47',
             display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
             color: '#F5D98A', fontSize: 20, fontWeight: 800,
           }}>M</div>
@@ -89,7 +89,7 @@ export default function Login() {
             style={{
               position: 'absolute', right: 6, top: '50%', transform: 'translateY(-50%)',
               background: 'none', border: 'none', cursor: 'pointer', padding: '6px 8px',
-              fontSize: 12, fontWeight: 700, color: '#8B2E2E',
+              fontSize: 12, fontWeight: 700, color: '#0B5D47',
             }}
           >
             {showPassword ? 'Sembunyikan' : 'Lihat'}
@@ -102,7 +102,7 @@ export default function Login() {
           type="submit"
           disabled={loading}
           style={{
-            width: '100%', marginTop: 20, padding: '13px 0', background: '#8B2E2E',
+            width: '100%', marginTop: 20, padding: '13px 0', background: '#0B5D47',
             color: '#F5F1E8', border: 'none', borderRadius: 12, fontSize: 15,
             fontWeight: 700, cursor: 'pointer', opacity: loading ? 0.7 : 1,
           }}

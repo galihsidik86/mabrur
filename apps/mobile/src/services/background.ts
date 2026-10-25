@@ -145,7 +145,7 @@ export async function startBackgroundLocation(interactive = true): Promise<Locat
       foregroundService: {
         notificationTitle: 'Mabrur',
         notificationBody: translate('loc.service_body'),
-        notificationColor: '#8B2E2E',
+        notificationColor: '#0B5D47',
       },
     });
 

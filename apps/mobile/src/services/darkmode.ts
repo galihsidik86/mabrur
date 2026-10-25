@@ -1,7 +1,8 @@
 import { create } from 'zustand';
 
 const light = {
-  primary: '#8B2E2E', primaryDark: '#6E2424', primaryLight: '#F3D9CD',
+  primary: '#0B5D47', primaryDark: '#084536', primaryLight: '#D5E7DF',
+  accent: '#8B2E2E', accentLight: '#F3D9CD',
   green: '#4A7C3A', greenLight: '#DCEBD3', greenDark: '#3A6330',
   gold: '#D4A437', goldLight: '#FAEFC9',
   danger: '#C44536', dangerDark: '#9E2E22',

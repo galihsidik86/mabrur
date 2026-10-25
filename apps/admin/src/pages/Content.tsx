@@ -75,7 +75,7 @@ export default function Content() {
           <button key={t} onClick={() => { setTab(t); setEditing(null); }} style={{
             padding: '8px 20px', borderRadius: 999, fontSize: 13, fontWeight: 700,
             border: 'none', cursor: 'pointer',
-            background: tab === t ? '#8B2E2E' : '#EFE7D9', color: tab === t ? '#F5F1E8' : '#8C6B4A',
+            background: tab === t ? '#0B5D47' : '#EFE7D9', color: tab === t ? '#F5F1E8' : '#8C6B4A',
           }}>
             {t === 'guides' ? 'Tuntunan Ibadah' : 'Doa & Bacaan'}
           </button>
@@ -119,7 +119,7 @@ export default function Content() {
                 ) : (
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                     <div>
-                      <span style={{ fontSize: 14, fontWeight: 700, color: '#8B2E2E', marginRight: 10 }}>{g.step_number}.</span>
+                      <span style={{ fontSize: 14, fontWeight: 700, color: '#0B5D47', marginRight: 10 }}>{g.step_number}.</span>
                       <span style={{ fontSize: 15, fontWeight: 700, color: '#1F1B16' }}>{g.title}</span>
                       <span style={{ fontSize: 13, color: '#8C6B4A', marginLeft: 10 }}>{g.subtitle}</span>
                     </div>
@@ -174,6 +174,6 @@ const cardStyle: React.CSSProperties = { background: '#fff', border: '1px solid 
 const editGrid: React.CSSProperties = { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 };
 const label: React.CSSProperties = { display: 'block', fontSize: 12, fontWeight: 600, color: '#8C6B4A', marginBottom: 4 };
 const input: React.CSSProperties = { width: '100%', padding: '8px 12px', border: '1px solid #ECE5D8', borderRadius: 8, fontSize: 13 };
-const btnPrimary: React.CSSProperties = { padding: '8px 18px', background: '#8B2E2E', color: '#F5F1E8', border: 'none', borderRadius: 8, fontSize: 13, fontWeight: 700, cursor: 'pointer' };
+const btnPrimary: React.CSSProperties = { padding: '8px 18px', background: '#0B5D47', color: '#F5F1E8', border: 'none', borderRadius: 8, fontSize: 13, fontWeight: 700, cursor: 'pointer' };
 const btnSecondary: React.CSSProperties = { padding: '8px 18px', background: 'transparent', color: '#8C6B4A', border: '1px solid #ECE5D8', borderRadius: 8, fontSize: 13, fontWeight: 600, cursor: 'pointer' };
-const actionBtn: React.CSSProperties = { background: 'none', border: 'none', color: '#8B2E2E', fontSize: 13, fontWeight: 600, cursor: 'pointer' };
+const actionBtn: React.CSSProperties = { background: 'none', border: 'none', color: '#0B5D47', fontSize: 13, fontWeight: 600, cursor: 'pointer' };
