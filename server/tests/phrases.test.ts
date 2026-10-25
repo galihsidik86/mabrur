@@ -77,6 +77,13 @@ describe('rencana migrasi (aman untuk DB yang pernah diedit manual)', () => {
     expect(plan.skipped).toEqual([]);
   });
 
+  it('tabel kosong (instalasi baru, seed belum jalan) → semua frasa berharakat disisipkan', () => {
+    const plan = planPhraseMigration([]);
+    expect(plan.inserts).toHaveLength(PHRASES.length);
+    expect(plan.inserts.every((i) => !('legacy' in i))).toBe(true);
+    expect(plan.skipped).toEqual([]);
+  });
+
   it('frasa baru tidak menimpa baris yang sudah ada dengan teks Indonesia sama', () => {
     const plan = planPhraseMigration([...seed006, legacyRow('Berapa ongkosnya?', 'بكم؟')]);
     expect(plan.inserts.map((i) => i.indonesian)).not.toContain('Berapa ongkosnya?');

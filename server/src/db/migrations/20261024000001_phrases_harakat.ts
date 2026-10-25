@@ -9,7 +9,8 @@ import { Knex } from 'knex';
  * Aman untuk DB yang mungkin pernah diedit manual (tidak ada UI admin untuk tabel ini):
  * - frasa lama diperbarui hanya bila teks Indonesia DAN Arab-nya masih persis seed 006
  *   (atau sudah sama dengan teks baru -> idempoten setelah rollback); hasil edit dilewati;
- * - frasa lama yang tidak ditemukan TIDAK disisipkan ulang (hormati hapus/ganti nama);
+ * - frasa lama yang tidak ditemukan TIDAK disisipkan ulang (hormati hapus/ganti nama),
+ *   kecuali tabel masih kosong (instalasi baru) → semua frasa disisipkan;
  * - frasa baru disisipkan hanya bila teks Indonesianya belum ada.
  *
  * PERLU DIPERIKSA ustaz/ahli bahasa Arab sebelum rilis (lihat dokumen permintaan).
@@ -44,6 +45,12 @@ export interface PhraseMigrationPlan {
 
 /** Rencana murni (tanpa DB) agar aturan pencocokan bisa dites. */
 export function planPhraseMigration(existing: ExistingPhrase[]): PhraseMigrationPlan {
+  // Instalasi baru: migrasi berjalan sebelum seed 006, jadi tabel masih kosong. Tidak ada
+  // hasil edit admin yang perlu dihormati → isi semua frasa berharakat (seed 006 lalu melewati
+  // tabel yang sudah terisi). Tanpa ini instalasi baru hanya mendapat frasa yang benar-benar baru.
+  if (existing.length === 0) {
+    return { updates: [], inserts: PHRASES.map(({ legacy: _legacy, ...data }) => data), skipped: [] };
+  }
   const byIndonesian = (text: string) =>
     existing.filter((r) => r.indonesian === text).sort((a, b) => a.id.localeCompare(b.id));
 
