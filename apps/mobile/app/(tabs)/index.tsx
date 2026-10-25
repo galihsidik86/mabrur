@@ -114,11 +114,11 @@ export default function BerandaScreen() {
     color: string;
   }> = [
     // Hanya fitur yang TIDAK ada di menu bawah (Tuntunan/Doa/Jadwal sudah di sana). Maks. 5 pintasan.
-    // Frasa Arab = cadangan dari dokumen revisi; nanti diganti Dokumentasi.
+    // Susunan sesuai dokumen revisi v2 #1. Cadangan (Tawaf/Sa'i, Kartu Taksi, Frasa Arab) tetap di Alat Ibadah/SOS.
     { label: t('quick.tools'), icon: 'grid-outline', route: '/tools', color: colors.primary },
     { label: t('quick.prayer'), icon: 'compass-outline', route: '/prayer', color: colors.green },
     { label: t('quick.quran'), icon: 'book-outline', route: '/quran', color: colors.gold },
-    { label: t('quick.phrases'), icon: 'language-outline', route: '/tools?tab=frasa', color: colors.primaryDark },
+    { label: t('quick.documentation'), icon: 'images-outline', route: '/documentation', color: colors.primaryDark },
   ];
 
   return (

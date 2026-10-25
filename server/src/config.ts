@@ -22,6 +22,10 @@ const envSchema = z.object({
   LIVEKIT_URL: z.string().url().optional(),
   LIVEKIT_API_KEY: z.string().min(1).optional(),
   LIVEKIT_API_SECRET: z.string().min(1).optional(),
+
+  // Folder berkas Dokumentasi (foto rombongan). Opsional; bawaan server/storage/media.
+  // Wajib di luar server/uploads (folder itu dilayani publik tanpa login).
+  MEDIA_DIR: z.string().min(1).optional(),
 });
 
 export const config = envSchema.parse(process.env);

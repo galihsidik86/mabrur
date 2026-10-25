@@ -7,6 +7,7 @@ import { accountEn } from './parts/account';
 import { contentEn } from './parts/content';
 import { prayerEn } from './parts/prayer';
 import { quranEn } from './parts/quran';
+import { documentationEn } from './parts/documentation';
 
 export const en: Record<TranslationKey, string> = {
   // Language
@@ -60,7 +61,7 @@ export const en: Record<TranslationKey, string> = {
   'quick.tools': 'Worship Tools',
   'quick.prayer': 'Prayer & Qibla',
   'quick.quran': "Qur'an",
-  'quick.phrases': 'Arabic Phrases',
+  'quick.documentation': 'Documentation',
 
   // Dates — short month names, comma separated
   'date.months_short': 'JAN,FEB,MAR,APR,MAY,JUN,JUL,AUG,SEP,OCT,NOV,DEC',
@@ -205,4 +206,5 @@ export const en: Record<TranslationKey, string> = {
   ...contentEn,
   ...prayerEn,
   ...quranEn,
+  ...documentationEn,
 };

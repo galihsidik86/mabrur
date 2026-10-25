@@ -8,6 +8,7 @@ import { colors, radius } from '../src/theme';
 import { api } from '../src/services/api';
 import { useI18n, type Lang } from '../src/services/i18n';
 import { useTheme } from '../src/services/darkmode';
+import { countQueue } from '../src/services/documentation';
 
 export default function ProfileScreen() {
   const router = useRouter();
@@ -15,6 +16,16 @@ export default function ProfileScreen() {
   const logout = useAuthStore((s) => s.logout);
   const { t, lang, setLang } = useI18n();
   const { isDark, toggle: toggleDark } = useTheme();
+
+  // Foto Dokumentasi yang belum terkirim hilang saat keluar → minta konfirmasi dulu.
+  const confirmLogout = async () => {
+    const pending = await countQueue().catch(() => 0);
+    if (pending === 0) { void logout(); return; }
+    Alert.alert(t('doc.logout_pending_title'), t('doc.logout_pending_body', { count: pending }), [
+      { text: t('common.cancel'), style: 'cancel' },
+      { text: t('doc.logout_anyway'), style: 'destructive', onPress: () => { void logout(); } },
+    ]);
+  };
 
   const [name, setName] = useState(user?.name || '');
   const [password, setPassword] = useState('');
@@ -142,7 +153,7 @@ export default function ProfileScreen() {
           <Ionicons name="chevron-forward" size={18} color={colors.textFaint} />
         </TouchableOpacity>
 
-        <TouchableOpacity style={s.logoutBtn} onPress={logout}>
+        <TouchableOpacity style={s.logoutBtn} onPress={() => { void confirmLogout(); }}>
           <Ionicons name="log-out-outline" size={18} color={colors.danger} />
           <Text style={s.logoutText}>{t('profile.logout')}</Text>
         </TouchableOpacity>

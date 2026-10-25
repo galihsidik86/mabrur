@@ -25,6 +25,7 @@ import {
 import { startBackgroundLocation, stopBackgroundLocation, promptLocationSharing } from '../src/services/background';
 import { scheduleUpcomingNotifications } from '../src/services/schedule-notify';
 import { retryPendingUploads } from '../src/services/trace-recorder';
+import { processQueue as processMediaQueue } from '../src/services/documentation';
 import { registerGlobals as registerLiveKitGlobals } from '@livekit/react-native';
 import { VoiceHost } from '../src/components/VoiceHost';
 
@@ -103,6 +104,9 @@ export default function RootLayout() {
 
       // Unggah ulang trace uji-akurasi yang tertunda (gagal kirim saat offline)
       retryPendingUploads().catch(() => {});
+
+      // Lanjutkan antrean unggah foto Dokumentasi yang tertunda
+      processMediaQueue().catch(() => {});
     })();
   }, [isAuthenticated]);
 
@@ -113,6 +117,7 @@ export default function RootLayout() {
     const sub = AppState.addEventListener('change', (state) => {
       if (state !== 'active') return;
       retryPendingUploads().catch(() => {});
+      processMediaQueue().catch(() => {});
       startBackgroundLocation(false).catch(() => {});
     });
     return () => sub.remove();
@@ -206,6 +211,8 @@ export default function RootLayout() {
         <Stack.Screen name="prayer" />
         <Stack.Screen name="quran" />
         <Stack.Screen name="quran-read" />
+        <Stack.Screen name="documentation" />
+        <Stack.Screen name="documentation-view" options={{ presentation: 'fullScreenModal' }} />
       </Stack>
     </VoiceHost>
   );

@@ -1,6 +1,7 @@
 import { Platform } from 'react-native';
 import * as SecureStore from 'expo-secure-store';
 import Constants from 'expo-constants';
+import { jwtExpiry } from './documentation-core';
 
 function getBaseUrl(): string {
   const configured = Constants.expoConfig?.extra?.apiUrl;
@@ -47,7 +48,29 @@ async function doRefresh(): Promise<string | null> {
   }
 }
 
-async function request<T = any>(
+export function apiUrl(path: string): string {
+  return `${BASE_URL}${path}`;
+}
+
+// Header Authorization untuk permintaan di luar request() (gambar ber-auth, unggah/unduh berkas).
+// Token yang tinggal < 60 detik disegarkan dulu agar unduhan/unggahan panjang tidak gagal 401.
+const TOKEN_MIN_REMAINING_SEC = 60;
+
+export async function getAuthHeaders(forceRefresh = false): Promise<Record<string, string>> {
+  let token = await getToken();
+  const exp = token ? jwtExpiry(token) : null;
+  if (token && (forceRefresh || (exp !== null && exp - Date.now() / 1000 < TOKEN_MIN_REMAINING_SEC))) {
+    token = (await tryRefresh()) ?? (await getToken());
+  }
+  return token ? { Authorization: `Bearer ${token}` } : {};
+}
+
+async function request<T = any>(path: string, options: RequestInit = {}): Promise<T> {
+  return (await requestEnvelope<{ data: T }>(path, options)).data;
+}
+
+// Respons utuh { data, meta } — untuk daftar berhalaman.
+async function requestEnvelope<T = any>(
   path: string,
   options: RequestInit = {},
 ): Promise<T> {
@@ -72,7 +95,7 @@ async function request<T = any>(
 
   const json = await res.json();
   if (!res.ok) throw new Error(json.error?.message || 'Permintaan gagal');
-  return json.data;
+  return json;
 }
 
 /** Frasa Arab (Alat Ibadah). english/transliteration_en kosong pada server versi lama. */
@@ -94,6 +117,35 @@ export interface CurrencyRates {
   updated: string;
   updated_at?: string | null; // ISO; tidak ada pada respons server versi lama
   is_fallback: boolean;
+}
+
+/** Foto Dokumentasi rombongan (GET /groups/:id/media). Berkas: /media/:id/file & /media/:id/thumb. */
+export interface GroupMedia {
+  id: string;
+  group_id: string;
+  uploader_id: string | null;
+  uploader_name: string | null;
+  schedule_id: string | null;
+  schedule_title: string | null;
+  kind: 'photo' | 'video';
+  mime: string;
+  size_bytes: number;
+  width: number | null;
+  height: number | null;
+  caption: string | null;
+  is_official: boolean;
+  taken_at: string;
+  created_at: string;
+  expires_at: string;
+  has_thumb: boolean;
+}
+
+export interface GroupMediaMeta {
+  total: number;
+  page: number;
+  limit: number;
+  used_bytes: number;
+  quota_bytes: number;
 }
 
 export interface MemberStatus {
@@ -243,6 +295,14 @@ export const api = {
 
   // Kartu Taksi milik pengguna (hotel rombongan, kamar, kontak muthawwif)
   getTaxiCard: (groupId: string) => request<unknown>(`/groups/${groupId}/taxi-card`),
+  // Dokumentasi rombongan (unggah/unduh berkas lewat services/documentation.ts).
+  listGroupMedia: (groupId: string, page: number, limit: number, officialOnly: boolean) =>
+    requestEnvelope<{ data: GroupMedia[]; meta: GroupMediaMeta }>(
+      `/groups/${groupId}/media?page=${page}&limit=${limit}${officialOnly ? '&official=1' : ''}`,
+    ),
+  updateMediaCaption: (id: string, caption: string | null) =>
+    request<{ caption: string | null }>(`/media/${id}`, { method: 'PATCH', body: JSON.stringify({ caption }) }),
+  deleteMedia: (id: string) => request<{ ok: boolean }>(`/media/${id}`, { method: 'DELETE' }),
   getHealthTips: () => request<any[]>('/health-tips'),
   // tz = zona waktu jam HP (jam), agar waktu salat sebanding dengan jam yang dipakai layar.
   getPrayerTimes: (lat?: number, lng?: number, tz?: number) => {

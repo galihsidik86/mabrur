@@ -40,6 +40,23 @@
       "expo-font",
       "expo-splash-screen",
       "expo-status-bar",
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "Mabrur memerlukan akses foto untuk mengunggah dokumentasi kegiatan rombongan.",
+          "cameraPermission": "Mabrur memerlukan kamera untuk memotret dokumentasi kegiatan rombongan dan foto SOS.",
+          "microphonePermission": false
+        }
+      ],
+      [
+        "expo-media-library",
+        {
+          "photosPermission": "Mabrur memerlukan akses foto untuk menyimpan dokumentasi rombongan ke galeri.",
+          "savePhotosPermission": "Mabrur memerlukan izin menyimpan foto dokumentasi rombongan ke galeri.",
+          "isAccessMediaLocationEnabled": false,
+          "granularPermissions": ["photo"]
+        }
+      ],
       "@livekit/react-native-expo-plugin",
       "@config-plugins/react-native-webrtc"
     ],

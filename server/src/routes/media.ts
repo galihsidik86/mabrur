@@ -1,0 +1,205 @@
+import express, { Router, Request, Response, NextFunction } from 'express';
+import rateLimit from 'express-rate-limit';
+import { z } from 'zod';
+import { validate } from '../middleware/validate';
+import { authenticate } from '../middleware/auth';
+import { AppError } from '../middleware/error-handler';
+import * as mediaService from '../services/media.service';
+import { MAX_CAPTION_LENGTH, MAX_PHOTO_BYTES, MAX_THUMB_BYTES, normalizeCaption, normalizeTakenAt } from '../services/media-core';
+
+const router = Router();
+router.use(authenticate);
+
+function param(val: string | string[]): string {
+  return Array.isArray(val) ? val[0] : val;
+}
+
+const IMAGE_TYPES = ['image/jpeg', 'image/png', 'image/webp', 'application/octet-stream'];
+// Body unggahan ditampung di RAM → batasi unggahan serentak per akun (antrean HP mengirim satu per satu).
+const MAX_CONCURRENT_UPLOADS = 2;
+const IMMUTABLE_CACHE = 'private, max-age=604800, immutable';
+// Thumbnail yang sementara memakai foto asli (thumbnail belum terkirim) jangan di-cache lama.
+const FALLBACK_THUMB_CACHE = 'private, max-age=300';
+
+// Body biner mentah (bukan base64/JSON). Body terlalu besar → 413 yang jelas, bukan 500.
+function rawImage(limit: number) {
+  const parse = express.raw({ type: IMAGE_TYPES, limit });
+  const limitMb = Math.round((limit / 1024 / 1024) * 10) / 10;
+  return (req: Request, res: Response, next: NextFunction) => {
+    parse(req, res, (err?: unknown) => {
+      if (err && (err as { type?: string }).type === 'entity.too.large') {
+        return next(new AppError(413, `Ukuran foto maksimal ${limitMb} MB`, 'PAYLOAD_TOO_LARGE'));
+      }
+      if (err) return next(err);
+      if (!Buffer.isBuffer(req.body) || req.body.length === 0) {
+        return next(new AppError(400, 'Isi foto kosong atau Content-Type bukan gambar', 'VALIDATION_ERROR'));
+      }
+      next();
+    });
+  };
+}
+
+const inFlight = new Map<string, number>();
+
+function limitConcurrentUploads(req: Request, res: Response, next: NextFunction) {
+  const key = req.auth!.sub;
+  const n = inFlight.get(key) ?? 0;
+  if (n >= MAX_CONCURRENT_UPLOADS) {
+    return next(new AppError(429, 'Unggahan sebelumnya masih berjalan. Coba lagi sebentar.', 'RATE_LIMITED'));
+  }
+  inFlight.set(key, n + 1);
+  let released = false;
+  res.on('close', () => {
+    if (released) return;
+    released = true;
+    const left = (inFlight.get(key) ?? 1) - 1;
+    if (left <= 0) inFlight.delete(key); else inFlight.set(key, left);
+  });
+  next();
+}
+
+function makeLimiter(max: number) {
+  return rateLimit({
+    windowMs: 10 * 60 * 1000,
+    max,
+    keyGenerator: (req) => req.auth?.sub ?? req.ip ?? 'anon',
+    message: { error: { message: 'Terlalu banyak unggahan. Coba lagi beberapa menit lagi.', code: 'RATE_LIMITED' } },
+  });
+}
+// 150 foto + thumbnailnya per 10 menit per akun — cukup untuk unggah massal muthawwif.
+const photoLimiter = makeLimiter(150);
+const thumbLimiter = makeLimiter(150);
+
+const groupParams = z.object({ groupId: z.string().uuid() });
+const mediaParams = z.object({ id: z.string().uuid() });
+
+const listQuery = z.object({
+  page: z.coerce.number().int().min(1).default(1),
+  limit: z.coerce.number().int().min(1).max(100).default(60),
+  official: z.enum(['0', '1']).optional(),
+});
+
+const uploadQuery = z.object({
+  client_uuid: z.string().uuid().optional(),
+  schedule_id: z.string().uuid().optional(),
+  taken_at: z.string().max(40).optional(),
+  width: z.coerce.number().int().min(1).max(20000).optional(),
+  height: z.coerce.number().int().min(1).max(20000).optional(),
+});
+
+const captionBody = z.object({ caption: z.string().max(MAX_CAPTION_LENGTH * 2).nullable() });
+
+// Keterangan dikirim di header X-Media-Caption (URL-encoded) agar tidak tercatat di log akses URL.
+function captionFromHeader(req: Request): string | null {
+  const raw = req.get('x-media-caption');
+  if (!raw) return null;
+  try {
+    return normalizeCaption(decodeURIComponent(raw).slice(0, MAX_CAPTION_LENGTH * 2));
+  } catch {
+    throw new AppError(400, 'Keterangan tidak valid', 'VALIDATION_ERROR');
+  }
+}
+
+// Cek hak SEBELUM body dibaca: bukan anggota / bukan pengunggah tidak sempat menghabiskan RAM.
+function requireGroupMember(req: Request, res: Response, next: NextFunction) {
+  mediaService.assertCanView(param(req.params.groupId), req.auth!)
+    .then((actor) => { res.locals.actor = actor; next(); })
+    .catch(next);
+}
+
+function requireUploader(req: Request, _res: Response, next: NextFunction) {
+  mediaService.assertUploaderMember(param(req.params.id), req.auth!).then(() => next()).catch(next);
+}
+
+// GET /groups/:groupId/media — album rombongan (terbaru dulu), hanya anggota.
+router.get(
+  '/groups/:groupId/media',
+  validate(groupParams, 'params'),
+  validate(listQuery, 'query'),
+  requireGroupMember,
+  async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const q = req.query as unknown as z.infer<typeof listQuery>;
+      res.json(await mediaService.listMedia(param(req.params.groupId), { page: q.page, limit: q.limit, officialOnly: q.official === '1' }));
+    } catch (err) { next(err); }
+  },
+);
+
+// POST /groups/:groupId/media — unggah satu foto (body = berkas JPG/PNG/WebP), metadata di query.
+// client_uuid sama → 200 + baris lama (antrean HP aman mengulang setelah respons hilang).
+router.post(
+  '/groups/:groupId/media',
+  photoLimiter,
+  validate(groupParams, 'params'),
+  validate(uploadQuery, 'query'),
+  requireGroupMember,
+  limitConcurrentUploads,
+  rawImage(MAX_PHOTO_BYTES),
+  async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const q = req.query as unknown as z.infer<typeof uploadQuery>;
+      const { row, created } = await mediaService.createPhoto({
+        groupId: param(req.params.groupId),
+        actor: res.locals.actor,
+        buffer: req.body as Buffer,
+        clientUuid: q.client_uuid ?? null,
+        caption: captionFromHeader(req),
+        scheduleId: q.schedule_id ?? null,
+        takenAt: normalizeTakenAt(q.taken_at, new Date()),
+        width: q.width ?? null,
+        height: q.height ?? null,
+      });
+      res.status(created ? 201 : 200).json({ data: row });
+    } catch (err) { next(err); }
+  },
+);
+
+// PUT /media/:id/thumb — thumbnail JPG kecil dari HP (album hemat kuota data jamaah).
+router.put(
+  '/media/:id/thumb',
+  thumbLimiter,
+  validate(mediaParams, 'params'),
+  requireUploader,
+  limitConcurrentUploads,
+  rawImage(MAX_THUMB_BYTES),
+  async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      await mediaService.setThumb(param(req.params.id), req.auth!, req.body as Buffer);
+      res.json({ data: { ok: true } });
+    } catch (err) { next(err); }
+  },
+);
+
+// GET /media/:id/file & /media/:id/thumb — berkas hanya untuk anggota rombongan.
+for (const variant of ['file', 'thumb'] as const) {
+  router.get(`/media/:id/${variant}`, validate(mediaParams, 'params'), async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const file = await mediaService.resolveFile(param(req.params.id), req.auth!, variant);
+      // Header lewat opsi sendFile → hanya terpasang bila berkas benar-benar terkirim (bukan pada 404).
+      res.sendFile(file.path, {
+        headers: { 'Content-Type': file.mime, 'Cache-Control': file.isFallback ? FALLBACK_THUMB_CACHE : IMMUTABLE_CACHE },
+      }, (err) => {
+        if (err && !res.headersSent) next(new AppError(404, 'Berkas dokumentasi tidak ditemukan', 'NOT_FOUND'));
+      });
+    } catch (err) { next(err); }
+  });
+}
+
+// PATCH /media/:id — ubah keterangan (pengunggah yang masih anggota).
+router.patch('/media/:id', validate(mediaParams, 'params'), validate(captionBody), async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const caption = normalizeCaption(req.body.caption ?? undefined);
+    await mediaService.updateCaption(param(req.params.id), req.auth!, caption);
+    res.json({ data: { caption } });
+  } catch (err) { next(err); }
+});
+
+// DELETE /media/:id — pengunggah, muthawwif rombongan, atau admin.
+router.delete('/media/:id', validate(mediaParams, 'params'), async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    await mediaService.deleteMedia(param(req.params.id), req.auth!);
+    res.json({ data: { ok: true } });
+  } catch (err) { next(err); }
+});
+
+export default router;

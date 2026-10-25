@@ -1,4 +1,6 @@
 import { db } from '../db';
+import { cleanupExpiredMedia, sweepOrphanFiles } from '../services/media.service';
+import { MEDIA_RETENTION_DAYS } from '../services/media-core';
 
 export async function cleanExpiredTokens(): Promise<number> {
   const result = await db('refresh_tokens')
@@ -24,6 +26,10 @@ if (require.main === module) {
     console.log(`  ${tokens} refresh token kedaluwarsa dihapus`);
     const logs = await cleanOldAuditLogs();
     console.log(`  ${logs} audit log lama (>90 hari) dihapus`);
+    const media = await cleanupExpiredMedia();
+    console.log(`  ${media} dokumentasi lewat masa simpan (${MEDIA_RETENTION_DAYS} hari) dihapus`);
+    const orphans = await sweepOrphanFiles();
+    console.log(`  ${orphans} berkas dokumentasi yatim dihapus`);
     await db.destroy();
     console.log('Cleanup selesai.');
   })();

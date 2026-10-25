@@ -7,6 +7,7 @@ import { accountId } from './parts/account';
 import { contentId } from './parts/content';
 import { prayerId } from './parts/prayer';
 import { quranId } from './parts/quran';
+import { documentationId } from './parts/documentation';
 
 export const id = {
   // Bahasa
@@ -60,7 +61,7 @@ export const id = {
   'quick.tools': 'Alat Ibadah',
   'quick.prayer': 'Salat & Kiblat',
   'quick.quran': "Al-Qur'an",
-  'quick.phrases': 'Frasa Arab',
+  'quick.documentation': 'Dokumentasi',
 
   // Tanggal — singkatan bulan, dipisah koma (Jan..Des)
   'date.months_short': 'JAN,FEB,MAR,APR,MEI,JUN,JUL,AGU,SEP,OKT,NOV,DES',
@@ -205,6 +206,7 @@ export const id = {
   ...contentId,
   ...prayerId,
   ...quranId,
+  ...documentationId,
 } as const;
 
 export type TranslationKey = keyof typeof id;
