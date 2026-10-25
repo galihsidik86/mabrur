@@ -2,6 +2,7 @@ import { View, StyleSheet } from 'react-native';
 import { WebView } from 'react-native-webview';
 import { escapeHtml } from '../services/html-escape';
 import { useI18n } from '../services/i18n';
+import { colors } from '../theme';
 
 export interface MapMarker {
   lat: number;
@@ -63,27 +64,28 @@ export default function MapViewComponent({
       return `L.marker([${m.lat},${m.lng}],{icon:L.divIcon({html:'<div style="font-size:24px;text-align:center">${m.icon}</div>',iconSize:[30,30],iconAnchor:[15,15],className:''})}).addTo(map).bindPopup(${popup});`;
     }
     if (m.pulse) {
-      return `(function(){var el=L.circleMarker([${m.lat},${m.lng}],{radius:8,color:'${m.color||'#0B5D47'}',fillColor:'${m.color||'#0B5D47'}',fillOpacity:1,className:'pulse-marker'}).addTo(map).bindPopup(${popup});L.circleMarker([${m.lat},${m.lng}],{radius:18,color:'${m.color||'#0B5D47'}',fillColor:'${m.color||'#0B5D47'}',fillOpacity:0.2,weight:0}).addTo(map)})();`;
+      return `(function(){var el=L.circleMarker([${m.lat},${m.lng}],{radius:8,color:'${m.color||colors.primary}',fillColor:'${m.color||colors.primary}',fillOpacity:1,className:'pulse-marker'}).addTo(map).bindPopup(${popup});L.circleMarker([${m.lat},${m.lng}],{radius:18,color:'${m.color||colors.primary}',fillColor:'${m.color||colors.primary}',fillOpacity:0.2,weight:0}).addTo(map)})();`;
     }
-    return `L.circleMarker([${m.lat},${m.lng}],{radius:7,color:'${m.color||'#0B5D47'}',fillColor:'${m.color||'#0B5D47'}',fillOpacity:0.85,weight:2}).addTo(map).bindPopup(${popup});`;
+    return `L.circleMarker([${m.lat},${m.lng}],{radius:7,color:'${m.color||colors.primary}',fillColor:'${m.color||colors.primary}',fillOpacity:0.85,weight:2}).addTo(map).bindPopup(${popup});`;
   }).join('\n');
 
   const polygonsJs = polygons.map((p) => {
     const coords = p.coords.map((c) => `[${c.lat},${c.lng}]`).join(',');
-    const opts = `{color:'${p.color||'#0B5D47'}',fillColor:'${p.fillColor||p.color||'#0B5D47'}',fillOpacity:${p.fillOpacity??0.15},weight:2${p.dashArray?`,dashArray:'${p.dashArray}'`:''}}`;
+    const opts = `{color:'${p.color||colors.primary}',fillColor:'${p.fillColor||p.color||colors.primary}',fillOpacity:${p.fillOpacity??0.15},weight:2${p.dashArray?`,dashArray:'${p.dashArray}'`:''}}`;
     let js = `L.polygon([${coords}],${opts}).addTo(map)`;
     if (p.label) js += `.bindPopup(${jsString(escapeHtml(p.label))})`; // label = teks biasa
     return js + ';';
   }).join('\n');
 
   const circlesJs = circles.map((ci) => {
-    const opts = `{radius:${ci.radius},color:'${ci.color||'#4A7C3A'}',fillColor:'${ci.fillColor||ci.color||'#4A7C3A'}',fillOpacity:${ci.fillOpacity??0.1},weight:2}`;
+    const opts = `{radius:${ci.radius},color:'${ci.color||colors.green}',fillColor:'${ci.fillColor||ci.color||colors.green}',fillOpacity:${ci.fillOpacity??0.1},weight:2}`;
     let js = `L.circle([${ci.lat},${ci.lng}],${opts}).addTo(map)`;
     if (ci.label) js += `.bindPopup(${jsString(escapeHtml(ci.label))})`;
     return js + ';';
   }).join('\n');
 
   const userJs = userLocation
+    // Biru sengaja di luar palet: konvensi peta untuk "posisi Anda", beda dari marker anggota.
     ? `L.circleMarker([${userLocation.lat},${userLocation.lng}],{radius:8,color:'#2563EB',fillColor:'#3B82F6',fillOpacity:1,weight:3}).addTo(map).bindPopup(${jsString(t('monitor.your_position'))});L.circleMarker([${userLocation.lat},${userLocation.lng}],{radius:20,color:'#3B82F6',fillColor:'#3B82F6',fillOpacity:0.15,weight:0}).addTo(map);`
     : '';
 
@@ -95,20 +97,34 @@ export default function MapViewComponent({
 <style>
 body{margin:0}
 #map{width:100%;height:100vh}
-.pulse-marker{animation:pulse 1.5s infinite}
+.map-note{position:absolute;left:12px;right:12px;top:12px;z-index:1000;padding:10px 12px;border-radius:10px;
+  background:#fff;border:1px solid #C44536;color:#1F1B16;font:500 13px/1.45 sans-serif}
+.map-offline{display:flex;align-items:center;justify-content:center;height:100vh;padding:24px;box-sizing:border-box;
+  background:#F5F1E8;color:#1F1B16;font:500 14px/1.5 sans-serif;text-align:center}
+.pulse-marker{animation:pulse 1.5s 3}
 @keyframes pulse{0%,100%{opacity:1}50%{opacity:0.5}}
 </style>
 </head><body>
 <div id="map"></div>
 <script>
+// Leaflet & ubin peta diambil dari internet; tanpa sinyal, beri tahu alih-alih kotak kosong.
+if (typeof L === 'undefined') {
+  document.body.innerHTML = '<div class="map-offline"></div>';
+  document.querySelector('.map-offline').textContent = ${jsString(t('map.offline'))};
+} else {
 var map=L.map('map',{zoomControl:false}).setView([${c.lat},${c.lng}],${zoom});
-L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png',{
+var tiles=L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png',{
   attribution:'© OSM',maxZoom:19}).addTo(map);
+tiles.once('tileerror',function(){
+  var n=document.createElement('div');n.className='map-note';n.textContent=${jsString(t('map.tiles_failed'))};
+  document.body.appendChild(n);
+});
 L.control.zoom({position:'bottomright'}).addTo(map);
 ${polygonsJs}
 ${circlesJs}
 ${markersJs}
 ${userJs}
+}
 <\/script>
 </body></html>`;
 
@@ -126,6 +142,6 @@ ${userJs}
 }
 
 const styles = StyleSheet.create({
-  container: { borderRadius: 14, overflow: 'hidden', borderWidth: 1, borderColor: '#ECE5D8' },
+  container: { borderRadius: 14, overflow: 'hidden', borderWidth: 1, borderColor: colors.border },
   webview: { flex: 1 },
 });

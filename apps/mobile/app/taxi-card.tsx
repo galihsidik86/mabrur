@@ -110,7 +110,7 @@ export default function TaxiCardScreen() {
           <Text style={s.title}>{t('taxi.title')}</Text>
           <Text style={s.subtitle}>{t('taxi.subtitle')}</Text>
         </View>
-        <TouchableOpacity onPress={() => router.back()} style={s.closeBtn} accessibilityLabel={t('common.cancel')}>
+        <TouchableOpacity onPress={() => router.back()} style={s.closeBtn} accessibilityRole="button" accessibilityLabel={t('common.close')}>
           <Ionicons name="close" size={22} color={INK} />
         </TouchableOpacity>
       </View>

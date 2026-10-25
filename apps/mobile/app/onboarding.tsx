@@ -20,19 +20,19 @@ const slides = [
     icon: 'map' as const,
     title: 'account.onb_miqat_title',
     desc: 'account.onb_miqat_desc',
-    color: colors.green,
+    color: colors.primary,
   },
   {
     icon: 'radio' as const,
     title: 'account.onb_sos_title',
     desc: 'account.onb_sos_desc',
-    color: colors.danger,
+    color: colors.primary,
   },
   {
     icon: 'chatbubbles' as const,
     title: 'account.onb_chat_title',
     desc: 'account.onb_chat_desc',
-    color: colors.gold,
+    color: colors.primary,
   },
 ] as const;
 
@@ -69,7 +69,7 @@ export default function OnboardingScreen() {
       <View style={s.buttons}>
         {page < slides.length - 1 ? (
           <>
-            <TouchableOpacity onPress={finish}><Text style={s.skipText}>{t('account.onb_skip')}</Text></TouchableOpacity>
+            <TouchableOpacity onPress={finish} hitSlop={8} accessibilityRole="button"><Text style={s.skipText}>{t('account.onb_skip')}</Text></TouchableOpacity>
             <TouchableOpacity style={s.nextBtn} onPress={() => setPage(page + 1)}>
               <Text style={s.nextText}>{t('account.onb_next')}</Text>
               <Ionicons name="arrow-forward" size={18} color={colors.textOnPrimary} />

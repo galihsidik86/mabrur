@@ -5,7 +5,6 @@ import {
   ScrollView,
   TouchableOpacity,
   StyleSheet,
-  ActivityIndicator,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -13,14 +12,17 @@ import { colors, radius } from '../../src/theme';
 import { api } from '../../src/services/api';
 import { saveDuas, getDuas, type Dua } from '../../src/services/db';
 import { useI18n } from '../../src/services/i18n';
+import StateNotice from '../../src/components/StateNotice';
 
 export default function DoaScreen() {
   const t = useI18n((st) => st.t);
   const [duas, setDuas] = useState<Dua[]>([]);
   const [openIdx, setOpenIdx] = useState(0);
   const [loading, setLoading] = useState(true);
+  const [loadFailed, setLoadFailed] = useState(false);
 
   const load = useCallback(async () => {
+    setLoadFailed(false);
     // Offline-first
     const local = await getDuas();
     if (local.length > 0) {
@@ -34,7 +36,8 @@ export default function DoaScreen() {
       await saveDuas(remote);
       setDuas(remote);
     } catch {
-      // Offline
+      // Offline — data lokal (jika ada) tetap tampil
+      setLoadFailed(true);
     } finally {
       setLoading(false);
     }
@@ -50,11 +53,12 @@ export default function DoaScreen() {
         <Text style={s.title}>{t('content.dua_title')}</Text>
         <Text style={s.sub}>{t('content.dua_sub')}</Text>
 
-        {loading && duas.length === 0 ? (
-          <ActivityIndicator
-            color={colors.primary}
-            size="large"
-            style={{ marginTop: 40 }}
+        {duas.length === 0 ? (
+          <StateNotice
+            kind={loading ? 'loading' : loadFailed ? 'error' : 'empty'}
+            message={loading ? t('common.loading') : loadFailed ? t('common.load_failed') : t('content.dua_empty')}
+            actionLabel={loading ? undefined : t('common.retry')}
+            onAction={load}
           />
         ) : (
           <View style={s.list}>
@@ -71,7 +75,7 @@ export default function DoaScreen() {
                       <Ionicons
                         name="book-outline"
                         size={20}
-                        color={colors.green}
+                        color={colors.primary}
                       />
                     </View>
                     <View style={{ flex: 1 }}>
@@ -149,11 +153,6 @@ const s = StyleSheet.create({
     borderWidth: 1,
     borderColor: colors.border,
     borderRadius: 14,
-    shadowColor: colors.textSecondary,
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.08,
-    shadowRadius: 6,
-    elevation: 2,
     overflow: 'hidden',
   },
   cardHeader: {

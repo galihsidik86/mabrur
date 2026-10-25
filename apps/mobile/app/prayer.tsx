@@ -304,7 +304,7 @@ const s = StyleSheet.create({
   tileName: { fontSize: 12, fontFamily: 'PlusJakartaSans_600SemiBold', color: colors.textMuted },
   tileTime: { fontSize: 14, fontFamily: 'PlusJakartaSans_700Bold', color: colors.text },
   tileTextCurrent: { color: colors.primaryDark, fontFamily: 'PlusJakartaSans_800ExtraBold' },
-  footnote: { marginTop: 16, fontSize: 11, lineHeight: 17, fontFamily: 'PlusJakartaSans_500Medium', color: colors.textFaint, textAlign: 'center' },
+  footnote: { marginTop: 16, fontSize: 11, lineHeight: 17, fontFamily: 'PlusJakartaSans_500Medium', color: colors.textMuted, textAlign: 'center' },
   stateBox: { alignItems: 'center', gap: 12, marginTop: 28, paddingHorizontal: 12 },
   stateText: { fontSize: 13, lineHeight: 19, fontFamily: 'PlusJakartaSans_500Medium', color: colors.textMuted, textAlign: 'center' },
   retryBtn: { backgroundColor: colors.primary, borderRadius: 12, paddingHorizontal: 22, paddingVertical: 10 },

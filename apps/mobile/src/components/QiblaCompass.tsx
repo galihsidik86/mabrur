@@ -85,7 +85,8 @@ export default function QiblaCompass({ bearing }: Props) {
   return (
     <View style={s.wrap}>
       <View
-        style={[s.ring, { borderColor: ringColor, shadowColor: ringColor }]}
+        // Cahaya hanya saat menghadap kiblat: penanda keadaan "pas", bukan hiasan permanen.
+        style={[s.ring, { borderColor: ringColor }, aligned && { shadowColor: ringColor, ...s.ringGlow }]}
         accessible
         accessibilityRole="image"
         accessibilityLabel={t('prayer.compass_label')}>
@@ -145,8 +146,8 @@ const s = StyleSheet.create({
   ring: {
     width: SIZE, height: SIZE, borderRadius: SIZE / 2, borderWidth: 10,
     backgroundColor: '#FFFBF0', alignItems: 'center', justifyContent: 'center',
-    shadowOpacity: 0.45, shadowRadius: 22, shadowOffset: { width: 0, height: 0 }, elevation: 10,
   },
+  ringGlow: { shadowOpacity: 0.45, shadowRadius: 22, shadowOffset: { width: 0, height: 0 }, elevation: 10 },
   // Lapisan berputar seukuran cincin luar (offset -10 = tebal border cincin).
   layer: { position: 'absolute', top: -10, left: -10, width: SIZE, height: SIZE, alignItems: 'center' },
   cardinal: { position: 'absolute', width: 24, textAlign: 'center', fontSize: 14, fontFamily: 'PlusJakartaSans_700Bold', color: colors.textMuted },

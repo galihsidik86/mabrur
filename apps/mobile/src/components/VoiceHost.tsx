@@ -68,7 +68,7 @@ function VoiceBanner() {
           </Text>
         </TouchableOpacity>
       )}
-      <TouchableOpacity onPress={stop} style={{ padding: 4 }} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+      <TouchableOpacity onPress={stop} style={{ padding: 4 }} hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }} accessibilityRole="button" accessibilityLabel={t('a11y.voice_stop')}>
         <Ionicons name="close-circle" size={22} color="rgba(255,255,255,0.85)" />
       </TouchableOpacity>
     </View>

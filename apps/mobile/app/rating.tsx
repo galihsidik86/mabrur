@@ -49,7 +49,7 @@ export default function RatingScreen() {
   return (
     <SafeAreaView style={s.safe}>
       <View style={s.header}>
-        <TouchableOpacity onPress={() => router.back()} style={{ padding: 6 }}>
+        <TouchableOpacity onPress={() => router.back()} style={{ padding: 6 }} hitSlop={8} accessibilityRole="button" accessibilityLabel={t('common.back')}>
           <Ionicons name="arrow-back" size={22} color={colors.text} />
         </TouchableOpacity>
         <Text style={s.headerTitle}>{t('account.rating_title')}</Text>
@@ -59,7 +59,14 @@ export default function RatingScreen() {
         <Text style={s.question}>{t('account.rating_question')}</Text>
         <View style={s.stars}>
           {[1, 2, 3, 4, 5].map((i) => (
-            <TouchableOpacity key={i} onPress={() => setRating(i)}>
+            <TouchableOpacity
+              key={i}
+              onPress={() => setRating(i)}
+              style={{ padding: 2 }}
+              accessibilityRole="radio"
+              accessibilityState={{ checked: i === rating }}
+              accessibilityLabel={t('a11y.rating_star', { n: i })}
+            >
               <Ionicons name={i <= rating ? 'star' : 'star-outline'} size={40} color={i <= rating ? colors.gold : colors.textFaint} />
             </TouchableOpacity>
           ))}

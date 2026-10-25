@@ -6,7 +6,6 @@ import {
   TouchableOpacity,
   TextInput,
   StyleSheet,
-  ActivityIndicator,
   Alert,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -21,6 +20,8 @@ import {
   type Schedule,
 } from '../../src/services/db';
 import { useI18n, type TFunction, type TranslationKey } from '../../src/services/i18n';
+import StateNotice from '../../src/components/StateNotice';
+import DateTimeField from '../../src/components/DateTimeField';
 
 function formatTime(iso: string, t: TFunction): string {
   const d = new Date(iso);
@@ -46,7 +47,7 @@ const dotColors = {
 
 const chipColors = {
   done: { bg: colors.greenLight, text: colors.greenDark },
-  active: { bg: colors.goldLight, text: '#97751F' },
+  active: { bg: colors.goldLight, text: colors.goldText },
   upcoming: { bg: colors.surface, text: colors.textMuted },
 };
 
@@ -56,6 +57,8 @@ export default function JadwalScreen() {
   const canEdit = user?.role === 'muthawwif' || user?.role === 'admin';
   const [schedules, setSchedules] = useState<Schedule[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadFailed, setLoadFailed] = useState(false);
+  const [hasGroup, setHasGroup] = useState(true);
   const [groupName, setGroupName] = useState('');
   const [groupId, setGroupId] = useState('');
   const [showForm, setShowForm] = useState(false);
@@ -64,7 +67,9 @@ export default function JadwalScreen() {
   const [formTime, setFormTime] = useState('');
 
   const load = useCallback(async () => {
+    setLoadFailed(false);
     const groups = await getGroups();
+    setHasGroup(groups.length > 0);
     if (groups.length === 0) {
       setLoading(false);
       return;
@@ -85,7 +90,9 @@ export default function JadwalScreen() {
       const remote = await api.getSchedules(group.id);
       await saveSchedules(group.id, remote);
       setSchedules(remote);
-    } catch {}
+    } catch {
+      setLoadFailed(true);
+    }
     setLoading(false);
   }, []);
 
@@ -112,15 +119,16 @@ export default function JadwalScreen() {
                   style={{ borderWidth: 1, borderColor: colors.border, borderRadius: 8, padding: 10, fontSize: 13, fontFamily: 'PlusJakartaSans_500Medium', color: colors.text, marginBottom: 8 }} placeholderTextColor={colors.textFaint} />
                 <TextInput placeholder={t('content.schedule_ph_location')} value={formLocation} onChangeText={setFormLocation}
                   style={{ borderWidth: 1, borderColor: colors.border, borderRadius: 8, padding: 10, fontSize: 13, fontFamily: 'PlusJakartaSans_500Medium', color: colors.text, marginBottom: 8 }} placeholderTextColor={colors.textFaint} />
-                <TextInput placeholder={t('content.schedule_ph_time')} value={formTime} onChangeText={setFormTime}
-                  style={{ borderWidth: 1, borderColor: colors.border, borderRadius: 8, padding: 10, fontSize: 13, fontFamily: 'PlusJakartaSans_500Medium', color: colors.text, marginBottom: 8 }} placeholderTextColor={colors.textFaint} />
+                <View style={{ marginBottom: 10 }}>
+                  <DateTimeField label={t('content.schedule_time_label')} value={formTime} onChange={setFormTime} />
+                </View>
                 <TouchableOpacity onPress={async () => {
                   if (!formTitle || !formTime || !groupId) { Alert.alert('', t('content.schedule_required')); return; }
                   try {
                     await api.createSchedule(groupId, { title: formTitle, location_name: formLocation, start_time: new Date(formTime).toISOString() });
                     setFormTitle(''); setFormLocation(''); setFormTime(''); setShowForm(false); load();
                   } catch (e: any) { Alert.alert(t('content.schedule_failed'), e.message); }
-                }} style={{ backgroundColor: colors.green, borderRadius: 8, padding: 11, alignItems: 'center' }}>
+                }} style={{ backgroundColor: colors.primary, borderRadius: 8, padding: 11, alignItems: 'center' }}>
                   <Text style={{ fontSize: 13, fontFamily: 'PlusJakartaSans_700Bold', color: '#fff' }}>{t('content.schedule_save')}</Text>
                 </TouchableOpacity>
               </View>
@@ -128,11 +136,12 @@ export default function JadwalScreen() {
           </View>
         )}
 
-        <Text style={s.sub}>
-        </Text>
-
         {loading && schedules.length === 0 ? (
-          <ActivityIndicator color={colors.primary} size="large" style={{ marginTop: 40 }} />
+          <StateNotice kind="loading" message={t('common.loading')} />
+        ) : !hasGroup ? (
+          <StateNotice kind="empty" message={t('common.no_group')} />
+        ) : schedules.length === 0 && loadFailed ? (
+          <StateNotice kind="error" message={t('common.load_failed')} actionLabel={t('common.retry')} onAction={load} />
         ) : schedules.length === 0 ? (
           <View style={s.empty}>
             <Ionicons name="calendar-outline" size={48} color={colors.textFaint} />
@@ -202,7 +211,7 @@ const s = StyleSheet.create({
   },
 
   empty: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: 12, paddingTop: 80 },
-  emptyText: { fontSize: 14, fontFamily: 'PlusJakartaSans_500Medium', color: colors.textFaint },
+  emptyText: { fontSize: 14, fontFamily: 'PlusJakartaSans_500Medium', color: colors.textMuted, textAlign: 'center', paddingHorizontal: 24, lineHeight: 20 },
 
   timeline: { marginTop: 16, paddingLeft: 8 },
 
@@ -218,7 +227,7 @@ const s = StyleSheet.create({
   line: {
     width: 2,
     flex: 1,
-    backgroundColor: '#E5DDD0',
+    backgroundColor: colors.border,
     minHeight: 24,
   },
 
@@ -237,11 +246,6 @@ const s = StyleSheet.create({
     padding: 13,
     paddingHorizontal: 15,
     marginTop: 6,
-    shadowColor: colors.textSecondary,
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.06,
-    shadowRadius: 6,
-    elevation: 1,
   },
   cardTop: {
     flexDirection: 'row',

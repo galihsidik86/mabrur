@@ -84,7 +84,12 @@ export default function ChangePasswordScreen() {
             onChangeText={setPassword}
             autoFocus
           />
-          <TouchableOpacity onPress={() => setShow(!show)}>
+          <TouchableOpacity
+            onPress={() => setShow(!show)}
+            hitSlop={12}
+            accessibilityRole="button"
+            accessibilityLabel={show ? t('a11y.hide_password') : t('a11y.show_password')}
+          >
             <Ionicons
               name={show ? 'eye-off-outline' : 'eye-outline'}
               size={18}

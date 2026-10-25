@@ -27,7 +27,10 @@ export default function ChatScreen() {
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState('');
   const [groupId, setGroupId] = useState<string | null>(null);
+  // false = sudah dicek dan jamaah belum punya rombongan: chat tidak bisa dipakai.
+  const [hasGroup, setHasGroup] = useState<boolean | null>(null);
   const [sending, setSending] = useState(false);
+  const [loadFailed, setLoadFailed] = useState(false);
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const flatListRef = useRef<FlatList>(null);
 
@@ -35,8 +38,11 @@ export default function ChatScreen() {
     try {
       const msgs = await api.getMessages(gid);
       setMessages(msgs);
+      setLoadFailed(false);
       useChatUnread.getState().markRead(msgs).catch(() => {});
-    } catch {}
+    } catch {
+      setLoadFailed(true);
+    }
   }, []);
 
   useEffect(() => {
@@ -46,7 +52,11 @@ export default function ChatScreen() {
 
   useEffect(() => {
     (async () => {
-      const groups = await getGroups();
+      let groups: Array<{ id: string }> = await getGroups();
+      if (groups.length === 0) {
+        try { groups = await api.getGroups(); } catch {}
+      }
+      setHasGroup(groups.length > 0);
       if (groups.length > 0) {
         setGroupId(groups[0].id);
         // Flush queued messages
@@ -107,12 +117,21 @@ export default function ChatScreen() {
   return (
     <SafeAreaView style={s.safe}>
       <View style={s.header}>
-        <TouchableOpacity onPress={() => router.back()} style={{ padding: 6 }}>
+        <TouchableOpacity
+          onPress={() => router.back()}
+          style={{ padding: 6 }}
+          hitSlop={8}
+          accessibilityRole="button"
+          accessibilityLabel={t('common.back')}
+        >
           <Ionicons name="arrow-back" size={22} color={colors.text} />
         </TouchableOpacity>
         <Text style={s.headerTitle}>{t('account.chat_title')}</Text>
         <View style={{ width: 34 }} />
       </View>
+      {hasGroup === false ? (
+        <Text style={s.empty}>{t('account.chat_no_group')}</Text>
+      ) : (
       <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
         {/* Sekali tampil sampai ditutup: notifikasi chat bisa tertahan penghemat baterai HP. */}
         <BatteryHint isDismissible style={s.hint} />
@@ -123,8 +142,11 @@ export default function ChatScreen() {
           keyExtractor={(m) => m.id}
           contentContainerStyle={s.list}
           onContentSizeChange={() => flatListRef.current?.scrollToEnd()}
-          ListEmptyComponent={<Text style={s.empty}>{t('account.chat_empty')}</Text>}
+          ListEmptyComponent={loadFailed ? null : <Text style={s.empty}>{t('account.chat_empty')}</Text>}
         />
+        {loadFailed && (
+          <Text style={s.offline} accessibilityLiveRegion="polite">{t('account.chat_offline')}</Text>
+        )}
         <View style={s.inputRow}>
           <TextInput
             style={s.input}
@@ -134,11 +156,18 @@ export default function ChatScreen() {
             placeholderTextColor={colors.textFaint}
             multiline
           />
-          <TouchableOpacity style={s.sendBtn} onPress={send} disabled={!input.trim() || sending}>
+          <TouchableOpacity
+            style={s.sendBtn}
+            onPress={send}
+            disabled={!input.trim() || sending}
+            accessibilityRole="button"
+            accessibilityLabel={t('account.chat_send')}
+          >
             <Ionicons name="send" size={20} color={colors.textOnPrimary} />
           </TouchableOpacity>
         </View>
       </KeyboardAvoidingView>
+      )}
     </SafeAreaView>
   );
 }
@@ -149,17 +178,18 @@ const s = StyleSheet.create({
   headerTitle: { fontSize: 17, fontFamily: 'PlusJakartaSans_700Bold', color: colors.text },
   list: { padding: 16, paddingBottom: 8 },
   hint: { marginHorizontal: 16, marginTop: 12 },
-  empty: { textAlign: 'center', color: colors.textFaint, fontSize: 13, fontFamily: 'PlusJakartaSans_500Medium', marginTop: 40 },
+  empty: { textAlign: 'center', color: colors.textMuted, paddingHorizontal: 24, fontSize: 13, fontFamily: 'PlusJakartaSans_500Medium', marginTop: 40 },
   msgRow: { flexDirection: 'row', marginBottom: 12, alignItems: 'flex-end', gap: 8 },
   msgRowMe: { flexDirection: 'row-reverse' },
-  msgAvatar: { width: 28, height: 28, borderRadius: 999, backgroundColor: colors.green, alignItems: 'center', justifyContent: 'center' },
-  msgAvatarText: { fontSize: 12, fontFamily: 'PlusJakartaSans_700Bold', color: '#fff' },
+  msgAvatar: { width: 28, height: 28, borderRadius: 999, backgroundColor: colors.primaryDark, alignItems: 'center', justifyContent: 'center' },
+  msgAvatarText: { fontSize: 12, fontFamily: 'PlusJakartaSans_700Bold', color: colors.textOnPrimary },
   msgBubble: { maxWidth: '75%', borderRadius: 16, padding: 10, paddingHorizontal: 14 },
   bubbleMe: { backgroundColor: colors.primary, borderBottomRightRadius: 4 },
   bubbleOther: { backgroundColor: colors.card, borderWidth: 1, borderColor: colors.border, borderBottomLeftRadius: 4 },
   msgName: { fontSize: 11, fontFamily: 'PlusJakartaSans_700Bold', color: colors.primary, marginBottom: 2 },
   msgText: { fontSize: 14, fontFamily: 'PlusJakartaSans_500Medium', color: colors.text, lineHeight: 20 },
-  msgTime: { fontSize: 10, fontFamily: 'PlusJakartaSans_500Medium', color: colors.textFaint, marginTop: 4, textAlign: 'right' },
+  msgTime: { fontSize: 10, fontFamily: 'PlusJakartaSans_500Medium', color: colors.textMuted, marginTop: 4, textAlign: 'right' },
+  offline: { marginHorizontal: 16, marginBottom: 8, padding: 10, borderRadius: 10, borderWidth: 1, borderColor: colors.danger, backgroundColor: colors.card, fontSize: 13, lineHeight: 19, fontFamily: 'PlusJakartaSans_500Medium', color: colors.text },
   inputRow: { flexDirection: 'row', padding: 12, paddingBottom: 16, gap: 8, borderTopWidth: 1, borderTopColor: colors.border, backgroundColor: colors.card },
   input: { flex: 1, backgroundColor: colors.bg, borderWidth: 1, borderColor: colors.border, borderRadius: 20, paddingHorizontal: 16, paddingVertical: 10, fontSize: 14, fontFamily: 'PlusJakartaSans_500Medium', color: colors.text, maxHeight: 100 },
   sendBtn: { width: 42, height: 42, borderRadius: 999, backgroundColor: colors.primary, alignItems: 'center', justifyContent: 'center' },

@@ -52,6 +52,8 @@ export default function SosScreen() {
   const [history, setHistory] = useState<any[]>([]);
   const [showHistory, setShowHistory] = useState(false);
   const [photo, setPhoto] = useState<string | null>(null);
+  const [photoFailed, setPhotoFailed] = useState(false);
+  const [noLocation, setNoLocation] = useState(false);
   const [muthawwifPhone, setMuthawwifPhone] = useState<string | null>(null);
 
   useEffect(() => {
@@ -90,12 +92,15 @@ export default function SosScreen() {
       const pos = await getPosition();
       const sos = await api.sendSos(category, pos?.lat, pos?.lng);
       setSosId(sos.id);
+      setNoLocation(pos == null);
       // Upload photo if taken
       if (photo) {
         try {
           const { url } = await api.uploadPhoto(photo);
           await api.setSosPhoto(sos.id, url);
-        } catch {}
+        } catch {
+          setPhotoFailed(true);
+        }
       }
       setSent(true);
     } catch (err: any) {
@@ -131,7 +136,7 @@ export default function SosScreen() {
             <Text style={s.headerLabel}>{t('sos.header_label')}</Text>
             <Text style={s.headerTitle}>{t('sos.title')}</Text>
           </View>
-          <TouchableOpacity style={s.closeBtn} onPress={() => router.back()}>
+          <TouchableOpacity style={s.closeBtn} onPress={() => router.back()} hitSlop={6} accessibilityRole="button" accessibilityLabel={t('common.close')}>
             <Ionicons name="close" size={18} color="#fff" />
           </TouchableOpacity>
         </View>
@@ -154,6 +159,8 @@ export default function SosScreen() {
             </View>
             <Text style={s.sentTitle}>{t('sos.sent_title')}</Text>
             <Text style={s.sentSub}>{t('sos.sent_sub')}</Text>
+            {noLocation && <Text style={s.sentSub}>{t('sos.no_location')}</Text>}
+            {photoFailed && <Text style={s.sentSub}>{t('sos.photo_failed')}</Text>}
             <View style={s.locBadge}>
               <View style={s.locDot} />
               <Text style={s.locText}>{t('sos.sharing')}</Text>

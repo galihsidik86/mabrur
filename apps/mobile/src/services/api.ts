@@ -331,8 +331,6 @@ export const api = {
     request<any>(`/sos/${sosId}/photo`, { method: 'PATCH', body: JSON.stringify({ photo_url: photoUrl }) }),
   submitRating: (rating: number, feedback?: string) =>
     request<any>('/ratings', { method: 'POST', body: JSON.stringify({ rating, feedback }) }),
-  setTheme: (theme: string) =>
-    request<any>('/theme', { method: 'PATCH', body: JSON.stringify({ theme }) }),
 
   getMemberStatuses: (groupId: string) =>
     request<{

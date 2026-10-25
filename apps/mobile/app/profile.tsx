@@ -7,7 +7,6 @@ import { useAuthStore } from '../src/stores/auth';
 import { colors, radius } from '../src/theme';
 import { api } from '../src/services/api';
 import { useI18n, type Lang } from '../src/services/i18n';
-import { useTheme } from '../src/services/darkmode';
 import { countQueue } from '../src/services/documentation';
 import BatteryHint from '../src/components/BatteryHint';
 
@@ -16,7 +15,6 @@ export default function ProfileScreen() {
   const user = useAuthStore((s) => s.user);
   const logout = useAuthStore((s) => s.logout);
   const { t, lang, setLang } = useI18n();
-  const { isDark, toggle: toggleDark } = useTheme();
 
   // Foto Dokumentasi yang belum terkirim hilang saat keluar → minta konfirmasi dulu.
   const confirmLogout = async () => {
@@ -30,6 +28,7 @@ export default function ProfileScreen() {
 
   const [name, setName] = useState(user?.name || '');
   const [password, setPassword] = useState('');
+  const [passwordConfirm, setPasswordConfirm] = useState('');
   const [bloodType, setBloodType] = useState('');
   const [emergency, setEmergency] = useState('');
   const [saving, setSaving] = useState(false);
@@ -47,6 +46,15 @@ export default function ProfileScreen() {
   }, []);
 
   const handleSave = async () => {
+    // Aturan sama dengan layar ganti password: minimal 6 karakter dan dikonfirmasi.
+    if (password && password.length < 6) {
+      Alert.alert(t('account.failed'), t('account.cp_min_length'));
+      return;
+    }
+    if (password && password !== passwordConfirm) {
+      Alert.alert(t('account.failed'), t('account.cp_mismatch'));
+      return;
+    }
     setSaving(true);
     try {
       const data: Record<string, string> = {};
@@ -58,6 +66,7 @@ export default function ProfileScreen() {
         await api.updateProfile(data);
         Alert.alert(t('account.success'), t('account.profile_updated'));
         setPassword('');
+        setPasswordConfirm('');
       }
     } catch (err: any) {
       Alert.alert(t('account.failed'), err.message);
@@ -77,7 +86,7 @@ export default function ProfileScreen() {
   return (
     <SafeAreaView style={s.safe}>
       <View style={s.header}>
-        <TouchableOpacity onPress={() => router.back()} style={s.backBtn}>
+        <TouchableOpacity onPress={() => router.back()} style={s.backBtn} hitSlop={8} accessibilityRole="button" accessibilityLabel={t('common.back')}>
           <Ionicons name="arrow-back" size={22} color={colors.text} />
         </TouchableOpacity>
         <Text style={s.headerTitle}>{t('profile.title')}</Text>
@@ -112,7 +121,7 @@ export default function ProfileScreen() {
             <View style={s.statsRow}>
               <View style={s.statCard}><Text style={s.statNum}>{stats.ibadah_done}</Text><Text style={s.statLabel}>{t('account.stat_ibadah_done')}</Text></View>
               <View style={s.statCard}><Text style={s.statNum}>{stats.sos_total}</Text><Text style={s.statLabel}>{t('account.stat_sos_sent')}</Text></View>
-              <View style={s.statCard}><Text style={[s.statNum, { color: stats.is_ihram ? colors.green : colors.textMuted }]}>{stats.is_ihram ? '✓' : '—'}</Text><Text style={s.statLabel}>{t('account.stat_ihram')}</Text></View>
+              <View style={s.statCard}><Text style={[s.statNum, { color: stats.is_ihram ? colors.green : colors.textMuted }]}>{stats.is_ihram ? t('account.stat_ihram_yes') : t('account.stat_ihram_no')}</Text><Text style={s.statLabel}>{t('account.stat_ihram')}</Text></View>
             </View>
           </>
         )}
@@ -124,6 +133,9 @@ export default function ProfileScreen() {
           <TextInput style={s.input} value={name} onChangeText={setName} />
           <Text style={[s.label, { marginTop: 12 }]}>{t('profile.change_password')}</Text>
           <TextInput style={s.input} value={password} onChangeText={setPassword} secureTextEntry placeholder={t('account.password_placeholder')} placeholderTextColor={colors.textFaint} />
+          {password.length > 0 && (
+            <TextInput style={[s.input, { marginTop: 8 }]} value={passwordConfirm} onChangeText={setPasswordConfirm} secureTextEntry placeholder={t('account.cp_confirm_placeholder')} placeholderTextColor={colors.textFaint} />
+          )}
           <Text style={[s.label, { marginTop: 12 }]}>{t('account.field_blood_type')}</Text>
           <TextInput style={s.input} value={bloodType} onChangeText={setBloodType} />
           <Text style={[s.label, { marginTop: 12 }]}>{t('account.field_emergency')}</Text>
@@ -132,19 +144,6 @@ export default function ProfileScreen() {
             <Text style={s.saveBtnText}>{saving ? t('common.loading') : t('common.save')}</Text>
           </TouchableOpacity>
         </View>
-
-        {/* Dark Mode */}
-        <Text style={s.sectionTitle}>{t('account.appearance')}</Text>
-        <TouchableOpacity onPress={() => { toggleDark(); api.setTheme(isDark ? 'light' : 'dark').catch(() => {}); }}
-          style={{ backgroundColor: colors.card, borderWidth: 1, borderColor: colors.border, borderRadius: 12, padding: 14, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
-          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
-            <Ionicons name={isDark ? 'moon' : 'sunny'} size={20} color={colors.primary} />
-            <Text style={{ fontSize: 14, fontFamily: 'PlusJakartaSans_600SemiBold', color: colors.text }}>{t('account.dark_mode')}</Text>
-          </View>
-          <View style={{ width: 44, height: 24, borderRadius: 12, backgroundColor: isDark ? colors.primary : colors.border, justifyContent: 'center', padding: 2 }}>
-            <View style={{ width: 20, height: 20, borderRadius: 10, backgroundColor: '#fff', alignSelf: isDark ? 'flex-end' : 'flex-start' }} />
-          </View>
-        </TouchableOpacity>
 
         {/* Notifikasi & baterai (Android) */}
         {Platform.OS === 'android' && (
@@ -204,5 +203,5 @@ const s = StyleSheet.create({
   saveBtnText: { fontSize: 14, fontFamily: 'PlusJakartaSans_700Bold', color: colors.textOnPrimary },
   logoutBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, marginTop: 24, padding: 14, borderWidth: 1, borderColor: colors.primaryLight, borderRadius: 12 },
   logoutText: { fontSize: 14, fontFamily: 'PlusJakartaSans_700Bold', color: colors.danger },
-  creditText: { fontSize: 11, fontFamily: 'PlusJakartaSans_500Medium', color: colors.textFaint, textAlign: 'center', marginTop: 16 },
+  creditText: { fontSize: 11, fontFamily: 'PlusJakartaSans_500Medium', color: colors.textMuted, textAlign: 'center', marginTop: 16 },
 });

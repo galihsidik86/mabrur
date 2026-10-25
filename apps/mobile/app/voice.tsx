@@ -37,7 +37,7 @@ export default function VoiceScreen() {
           <Text style={s.msg}>{t('account.voice_intro')}</Text>
           <TouchableOpacity style={s.connectBtn} onPress={start} disabled={connecting}>
             {connecting ? <ActivityIndicator color="#fff" /> : (
-              <><Ionicons name="wifi" size={22} color="#fff" /><Text style={s.connectText}>{t('account.voice_connect')}</Text></>
+              <><Ionicons name="wifi" size={22} color={colors.primaryDark} /><Text style={s.connectText}>{t('account.voice_connect')}</Text></>
             )}
           </TouchableOpacity>
           {error ? <Text style={[s.msg, { color: '#FFD9D2' }]}>{error}</Text> : null}
@@ -52,11 +52,14 @@ function Shell({ children, onClose }: { children: React.ReactNode; onClose: () =
   return (
     <SafeAreaView style={s.safe}>
       <View style={s.header}>
-        <View>
-          <Text style={s.hLabel}>{t('account.voice_header')}</Text>
-          <Text style={s.hTitle}>{t('account.voice_prototype')}</Text>
-        </View>
-        <TouchableOpacity style={s.closeBtn} onPress={onClose}>
+        <Text style={s.hTitle} accessibilityRole="header">{t('account.voice_header')}</Text>
+        <TouchableOpacity
+          style={s.closeBtn}
+          onPress={onClose}
+          accessibilityRole="button"
+          accessibilityLabel={t('common.back')}
+          hitSlop={8}
+        >
           <Ionicons name="close" size={18} color="#fff" />
         </TouchableOpacity>
       </View>
@@ -67,16 +70,15 @@ function Shell({ children, onClose }: { children: React.ReactNode; onClose: () =
 
 const s = StyleSheet.create({
   safe: { flex: 1, backgroundColor: colors.primaryDark ?? '#084536' },
-  header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', padding: 18 },
-  hLabel: { fontSize: 10, fontFamily: 'PlusJakartaSans_700Bold', letterSpacing: 1.6, color: 'rgba(255,255,255,0.7)' },
+  header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: 18 },
   hTitle: { fontSize: 24, fontFamily: 'PlusJakartaSans_600SemiBold', color: '#fff', marginTop: 2 },
   closeBtn: { width: 38, height: 38, borderRadius: 999, borderWidth: 1, borderColor: 'rgba(255,255,255,0.25)', backgroundColor: 'rgba(255,255,255,0.1)', alignItems: 'center', justifyContent: 'center' },
   body: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 24, gap: 14 },
   circle: { width: 120, height: 120, borderRadius: 999, backgroundColor: 'rgba(255,255,255,0.12)', borderWidth: 2, borderColor: 'rgba(255,255,255,0.3)', alignItems: 'center', justifyContent: 'center' },
   title: { fontSize: 19, fontFamily: 'PlusJakartaSans_800ExtraBold', color: '#fff', marginTop: 6 },
   msg: { fontSize: 13, fontFamily: 'PlusJakartaSans_500Medium', color: 'rgba(255,255,255,0.85)', textAlign: 'center', lineHeight: 20 },
-  connectBtn: { flexDirection: 'row', alignItems: 'center', gap: 8, backgroundColor: colors.green, borderRadius: 12, paddingHorizontal: 24, paddingVertical: 14, marginTop: 8 },
-  connectText: { fontSize: 15, fontFamily: 'PlusJakartaSans_800ExtraBold', color: '#fff' },
+  connectBtn: { flexDirection: 'row', alignItems: 'center', gap: 8, backgroundColor: colors.textOnPrimary, borderRadius: 12, paddingHorizontal: 24, paddingVertical: 14, marginTop: 8 },
+  connectText: { fontSize: 15, fontFamily: 'PlusJakartaSans_800ExtraBold', color: colors.primaryDark },
   outlineBtn: { flexDirection: 'row', alignItems: 'center', gap: 6, borderWidth: 1, borderColor: 'rgba(255,255,255,0.4)', borderRadius: 12, paddingHorizontal: 20, paddingVertical: 12, marginTop: 8 },
   outlineText: { fontSize: 14, fontFamily: 'PlusJakartaSans_700Bold', color: '#fff' },
 });

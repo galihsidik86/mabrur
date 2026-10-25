@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import {
   View, Text, ScrollView, TouchableOpacity, TextInput,
-  StyleSheet, Vibration, Dimensions, Platform, Alert,
+  StyleSheet, Vibration, Dimensions, Platform, Alert, Linking,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter, useLocalSearchParams } from 'expo-router';
@@ -22,6 +22,19 @@ import { sendLocalNotification } from '../src/services/notification';
 import { isBarometerAvailable, watchFloor } from '../src/services/floor';
 import { startRecording, stopRecording, uploadSession, isRecording } from '../src/services/trace-recorder';
 import { useI18n, type TranslationKey } from '../src/services/i18n';
+import { useAuthStore } from '../src/stores/auth';
+import { canUseResearchTools } from '../src/services/research-access';
+import StateNotice from '../src/components/StateNotice';
+import DateTimeField from '../src/components/DateTimeField';
+import type { TFunction } from '../src/services/i18n';
+
+// Izin lokasi ditolak: jelaskan sebabnya dan beri jalan ke Pengaturan, jangan diam saja.
+function alertLocationDenied(t: TFunction) {
+  Alert.alert(t('monitor.perm_title'), t('monitor.perm_body'), [
+    { text: t('common.cancel'), style: 'cancel' },
+    { text: t('monitor.open_settings'), onPress: () => Linking.openSettings() },
+  ]);
+}
 
 const TABS = ['hub', 'tawaf', 'sai', 'tasbih', 'jumrah', 'wukuf', 'checklist', 'kurs', 'frasa', 'kesehatan'] as const;
 type Tab = typeof TABS[number];
@@ -206,16 +219,18 @@ function TawafSaiTab({ type }: { type: 'tawaf' | 'sai' }) {
 
       {autoMode && type === 'tawaf' && floorLabel ? (
         <View style={[tc.zoneIndicator, { backgroundColor: colors.surfaceWarm }]}>
+          <Ionicons name="layers-outline" size={16} color={colors.textSecondary} />
           <Text style={{ fontSize: 14, fontFamily: 'PlusJakartaSans_700Bold', color: colors.textSecondary }}>
-            🏛️ {floorLabel}
+            {floorLabel}
           </Text>
         </View>
       ) : null}
 
       {autoMode && type === 'sai' && saiZone !== 'between' ? (
         <View style={[tc.zoneIndicator, { backgroundColor: saiZone === 'safa' ? colors.greenLight : colors.goldLight }]}>
-          <Text style={{ fontSize: 14, fontFamily: 'PlusJakartaSans_700Bold', color: saiZone === 'safa' ? colors.greenDark : '#97751F' }}>
-            📍 {saiZone === 'safa' ? t('tools.sai.at_safa') : t('tools.sai.at_marwah')}
+          <Ionicons name="location" size={16} color={saiZone === 'safa' ? colors.greenDark : colors.goldText} />
+          <Text style={{ fontSize: 14, fontFamily: 'PlusJakartaSans_700Bold', color: saiZone === 'safa' ? colors.greenDark : colors.goldText }}>
+            {saiZone === 'safa' ? t('tools.sai.at_safa') : t('tools.sai.at_marwah')}
           </Text>
         </View>
       ) : null}
@@ -331,12 +346,12 @@ function JumrahTab() {
 
   const startAutoJumrah = async () => {
     const granted = await requestPermission();
-    if (!granted) return;
+    if (!granted) { alertLocationDenied(t); return; }
     setAutoMode(true);
     watchRef.current = watchSacredLocation((lat, lng) => {
       const nearest = detectNearestJamarat(lat, lng);
       if (nearest) {
-        setNearestJam(`📍 ${t('tools.jumrah.near', { name: t(`tools.jumrah.${nearest.key}`), distance: nearest.distance })}`);
+        setNearestJam(`${t('tools.jumrah.near', { name: t(`tools.jumrah.${nearest.key}`), distance: nearest.distance })}`);
       } else {
         setNearestJam(null);
       }
@@ -362,7 +377,7 @@ function JumrahTab() {
         </TouchableOpacity>
       ) : nearestJam ? (
         <View style={[tc.gpsBar, { backgroundColor: colors.goldLight }]}>
-          <Text style={[tc.gpsText, { color: '#97751F' }]}>{nearestJam}</Text>
+          <Text style={[tc.gpsText, { color: colors.goldText }]}>{nearestJam}</Text>
         </View>
       ) : (
         <View style={tc.gpsBar}><View style={tc.gpsDot} /><Text style={tc.gpsText}>{t('tools.jumrah.detecting')}</Text></View>
@@ -403,8 +418,8 @@ function JumrahTab() {
                 </Text>
               </TouchableOpacity>
               <TouchableOpacity onPress={() => { const n = stones.map((d) => [...d]); n[day][j] = Math.max(0, n[day][j] - 1); setStones(n); }}
-                style={{ padding: 10 }}>
-                <Ionicons name="arrow-undo" size={16} color={colors.textFaint} />
+                style={{ padding: 14 }} accessibilityRole="button" accessibilityLabel={t('a11y.undo_stone')}>
+                <Ionicons name="arrow-undo" size={16} color={colors.textMuted} />
               </TouchableOpacity>
             </View>
           </View>
@@ -455,7 +470,7 @@ function WukufTab() {
 
   const startAreaTracking = async () => {
     const granted = await requestPermission();
-    if (!granted) return;
+    if (!granted) { alertLocationDenied(t); return; }
     setGpsActive(true);
     watchRef2.current = watchSacredLocation((lat, lng) => {
       const result = checkArafahPosition(lat, lng);
@@ -502,7 +517,7 @@ function WukufTab() {
 
         {/* Area Monitor */}
         {!gpsActive ? (
-          <TouchableOpacity style={[tc.primaryBtn, { marginTop: 20, backgroundColor: colors.green }]} onPress={startAreaTracking}>
+          <TouchableOpacity style={[tc.primaryBtn, { marginTop: 20 }]} onPress={startAreaTracking}>
             <Ionicons name="navigate" size={18} color="#fff" />
             <Text style={[tc.primaryBtnText, { marginLeft: 6 }]}>{t('tools.wukuf.check_position')}</Text>
           </TouchableOpacity>
@@ -524,10 +539,10 @@ function WukufTab() {
           <View style={tc.gpsBar}><View style={tc.gpsDot} /><Text style={tc.gpsText}>{t('tools.gps.searching')}</Text></View>
         )}
 
-        <Text style={[tc.inputLabel, { marginTop: 20 }]}>{t('tools.wukuf.start_label')}</Text>
-        <TextInput style={tc.input} value={start} onChangeText={setStart} placeholder="2026-08-09T12:30" placeholderTextColor={colors.textFaint} />
-        <Text style={tc.inputLabel}>{t('tools.wukuf.end_label')}</Text>
-        <TextInput style={tc.input} value={end} onChangeText={setEnd} placeholder="2026-08-10T05:00" placeholderTextColor={colors.textFaint} />
+        <View style={{ marginTop: 10 }}>
+          <DateTimeField label={t('tools.wukuf.start_label')} value={start} onChange={setStart} />
+          <DateTimeField label={t('tools.wukuf.end_label')} value={end} onChange={setEnd} />
+        </View>
         <TouchableOpacity style={[tc.primaryBtn, { marginTop: 16 }]} onPress={() => {
           const s = new Date(start).getTime(), e = new Date(end).getTime();
           if (!start || !end || !isFinite(s) || !isFinite(e) || e <= s) {
@@ -551,7 +566,8 @@ function WukufTab() {
     );
   }
 
-  const bgColor = phase === 'active' ? colors.gold : phase === 'done' ? colors.green : colors.primary;
+  // Teks putih di atas emas hanya 2,29:1 — fase aktif pakai zamrud tua, emas jadi garis aksen saja.
+  const bgColor = phase === 'active' ? colors.primaryDark : phase === 'done' ? colors.greenDark : colors.primary;
 
   return (
     <View style={[tc.wrap, { alignItems: 'center' }]}>
@@ -561,14 +577,14 @@ function WukufTab() {
           <View style={wk.areaHeader}>
             <Ionicons name={statusIcon as any} size={22} color={statusColor} />
             <Text style={[wk.areaStatus, { color: statusColor, fontSize: 13 }]}>
-              {arafah.status === 'inside' ? `${t('tools.wukuf.status_inside')} ✓` : arafah.status === 'namirah_danger' ? `${t('tools.wukuf.status_warning')} ⚠` : `${t('tools.wukuf.status_outside')} ✗`}
+              {arafah.status === 'inside' ? t('tools.wukuf.status_inside') : arafah.status === 'namirah_danger' ? t('tools.wukuf.status_warning') : t('tools.wukuf.status_outside')}
             </Text>
           </View>
           {arafah.status !== 'inside' && <Text style={[wk.areaMessage, { fontSize: 12 }]}>{t(`tools.wukuf.msg_${arafah.status}`)}</Text>}
         </View>
       )}
 
-      <View style={[wk.hero, { backgroundColor: bgColor }]}>
+      <View style={[wk.hero, { backgroundColor: bgColor }, phase === 'active' && wk.heroActive]}>
         <Text style={wk.heroLabel}>
           {phase === 'waiting' ? t('tools.wukuf.hero_waiting') : phase === 'active' ? t('tools.wukuf.hero_active') : t('tools.wukuf.hero_done')}
         </Text>
@@ -586,6 +602,7 @@ function WukufTab() {
 
 const wk = StyleSheet.create({
   hero: { width: '100%', borderRadius: 20, padding: 28, alignItems: 'center', marginTop: 16 },
+  heroActive: { borderWidth: 3, borderColor: colors.gold },
   heroLabel: { fontSize: 11, fontFamily: 'PlusJakartaSans_700Bold', letterSpacing: 1.5, color: 'rgba(255,255,255,0.8)' },
   heroTime: { fontSize: 48, fontFamily: 'PlusJakartaSans_800ExtraBold', color: '#fff', marginTop: 8 },
   heroSub: { fontSize: 14, fontFamily: 'PlusJakartaSans_600SemiBold', color: 'rgba(255,255,255,0.9)', marginTop: 8 },
@@ -606,15 +623,29 @@ const wk = StyleSheet.create({
 function ChecklistTab() {
   const t = useI18n((st) => st.t);
   const [items, setItems] = useState<any[]>([]); const [newText, setNewText] = useState('');
-  const load = useCallback(async () => { try { setItems(await api.getChecklist()); } catch {} }, []);
+  const [status, setStatus] = useState<'loading' | 'ready' | 'failed'>('loading');
+  const load = useCallback(async () => {
+    try { setItems(await api.getChecklist()); setStatus('ready'); } catch { setStatus('failed'); }
+  }, []);
   useEffect(() => { load(); }, [load]);
   const done = items.filter((i: any) => i.checked).length;
+  if (status !== 'ready' && items.length === 0) {
+    return (
+      <StateNotice
+        kind={status === 'loading' ? 'loading' : 'error'}
+        message={status === 'loading' ? t('common.loading') : t('common.load_failed')}
+        actionLabel={status === 'failed' ? t('common.retry') : undefined}
+        onAction={() => { setStatus('loading'); load(); }}
+      />
+    );
+  }
   return (
     <View style={tc.wrap}>
-      <Text style={tc.checkProgress}>{t('tools.checklist.progress', { done, total: items.length })}</Text>
+      {items.length > 0 && <Text style={tc.checkProgress}>{t('tools.checklist.progress', { done, total: items.length })}</Text>}
       <View style={{ flexDirection: 'row', gap: 8, marginBottom: 16 }}>
         <TextInput style={[tc.input, { flex: 1 }]} value={newText} onChangeText={setNewText} placeholder={t('tools.checklist.add_placeholder')} placeholderTextColor={colors.textFaint} />
-        <TouchableOpacity style={{ width: 42, height: 42, borderRadius: 10, backgroundColor: colors.primary, alignItems: 'center', justifyContent: 'center' }}
+        <TouchableOpacity style={{ width: 44, height: 44, borderRadius: 10, backgroundColor: colors.primary, alignItems: 'center', justifyContent: 'center' }}
+          accessibilityRole="button" accessibilityLabel={t('a11y.checklist_add')}
           onPress={async () => { if (!newText.trim()) return; try { await api.addChecklist(newText.trim()); setNewText(''); load(); } catch { Alert.alert(t('tools.checklist.save_fail_title'), t('tools.checklist.save_fail_body')); } }}>
           <Ionicons name="add" size={20} color="#fff" />
         </TouchableOpacity>
@@ -624,9 +655,10 @@ function ChecklistTab() {
           <TouchableOpacity style={{ flex: 1, flexDirection: 'row', alignItems: 'center', gap: 12 }}
             onPress={async () => { try { await api.toggleChecklist(item.id, !item.checked); load(); } catch { Alert.alert(t('tools.checklist.fail_title'), t('tools.checklist.toggle_fail')); } }}>
             <Ionicons name={item.checked ? 'checkbox' : 'square-outline'} size={22} color={item.checked ? colors.green : colors.textFaint} />
-            <Text style={{ fontSize: 14, fontFamily: 'PlusJakartaSans_500Medium', color: item.checked ? colors.textFaint : colors.text, textDecorationLine: item.checked ? 'line-through' : 'none' }}>{item.text}</Text>
+            <Text style={{ fontSize: 14, fontFamily: 'PlusJakartaSans_500Medium', color: item.checked ? colors.textMuted : colors.text, textDecorationLine: item.checked ? 'line-through' : 'none' }}>{item.text}</Text>
           </TouchableOpacity>
           <TouchableOpacity style={{ padding: 8 }} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+            accessibilityRole="button" accessibilityLabel={t('a11y.checklist_delete', { item: item.text })}
             onPress={() => Alert.alert(t('tools.checklist.delete_confirm'), item.text, [
               { text: t('common.cancel'), style: 'cancel' },
               { text: t('tools.checklist.delete'), style: 'destructive', onPress: async () => { try { await api.deleteChecklist(item.id); load(); } catch { Alert.alert(t('tools.checklist.fail_title'), t('tools.checklist.delete_fail')); } } },
@@ -635,63 +667,117 @@ function ChecklistTab() {
           </TouchableOpacity>
         </View>
       ))}
+      {items.length === 0 && <Text style={tc.emptyHint}>{t('tools.checklist.empty')}</Text>}
+    </View>
+  );
+}
+
+function HealthTab() {
+  const t = useI18n((st) => st.t);
+  const [tips, setTips] = useState<any[]>([]);
+  const [status, setStatus] = useState<'loading' | 'ready' | 'failed'>('loading');
+  const load = useCallback(() => {
+    setStatus('loading');
+    api.getHealthTips().then((d) => { setTips(d); setStatus('ready'); }).catch(() => setStatus('failed'));
+  }, []);
+  useEffect(() => { load(); }, [load]);
+  if (tips.length === 0) {
+    return (
+      <StateNotice
+        kind={status === 'loading' ? 'loading' : status === 'failed' ? 'error' : 'empty'}
+        message={status === 'loading' ? t('common.loading') : status === 'failed' ? t('common.load_failed') : t('tools.health.empty')}
+        actionLabel={status === 'failed' ? t('common.retry') : undefined}
+        onAction={load}
+      />
+    );
+  }
+  return (
+    <View style={tc.wrap}>
+      {tips.map((tip: any) => (
+        <View key={tip.id} style={{ backgroundColor: colors.card, borderWidth: 1, borderColor: colors.border, borderRadius: 14, padding: 16, marginBottom: 10 }}>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 8 }}>
+            <Ionicons name={tip.icon as any} size={20} color={colors.primary} />
+            <Text style={{ fontSize: 15, fontFamily: 'PlusJakartaSans_700Bold', color: colors.text }}>{tip.title}</Text>
+          </View>
+          <Text style={{ fontSize: 13, fontFamily: 'PlusJakartaSans_500Medium', color: colors.textMuted, lineHeight: 20 }}>{tip.tips}</Text>
+        </View>
+      ))}
     </View>
   );
 }
 
 // ==================== HUB (MAIN MENU) ====================
+type IconName = React.ComponentProps<typeof Ionicons>['name'];
+type HubItem = { key: string; icon: IconName; label: string; sub?: string; onPress: () => void };
+
+// Dua kelompok dengan bobot berbeda: penghitung ritual (dipakai saat ibadah, butuh target besar)
+// tampil sebagai kartu; utilitas perjalanan tampil sebagai daftar. Satu warna ikon (zamrud).
 function HubMenu({ onSelect }: { onSelect: (t: Tab) => void }) {
   const router = useRouter();
   const t = useI18n((st) => st.t);
-  const items: Array<{ id: Tab | 'prayer'; icon: React.ComponentProps<typeof Ionicons>['name']; label: string; arabic: string; color: string }> = [
-    { id: 'tawaf', icon: 'refresh-circle', label: t('tools.hub.tawaf'), arabic: 'طَوَاف', color: colors.primary },
-    { id: 'sai', icon: 'swap-horizontal', label: t('tools.hub.sai'), arabic: 'سَعْي', color: colors.green },
-    { id: 'tasbih', icon: 'ellipsis-horizontal-circle', label: t('tools.hub.tasbih'), arabic: 'تَسْبِيح', color: colors.gold },
-    { id: 'jumrah', icon: 'radio-button-on', label: t('tools.hub.jumrah'), arabic: 'جَمَرَات', color: colors.danger },
-    { id: 'wukuf', icon: 'timer', label: t('tools.hub.wukuf'), arabic: 'وُقُوف', color: colors.primaryDark },
-    { id: 'prayer', icon: 'compass', label: t('tools.hub.prayer'), arabic: 'صَلَاة', color: colors.green },
-    { id: 'checklist', icon: 'checkbox', label: t('tools.hub.checklist'), arabic: 'قائمة', color: colors.gold },
-    { id: 'kurs', icon: 'cash', label: t('tools.hub.kurs'), arabic: 'عملة', color: colors.green },
-    { id: 'frasa', icon: 'language', label: t('tools.hub.frasa'), arabic: 'عربي', color: colors.primaryDark },
-    { id: 'kesehatan', icon: 'medkit', label: t('tools.hub.kesehatan'), arabic: 'صحة', color: colors.danger },
+  const role = useAuthStore((st) => st.user?.role);
+  const rituals: Array<{ id: Tab; icon: IconName; label: string; arabic: string }> = [
+    { id: 'tawaf', icon: 'refresh-circle', label: t('tools.hub.tawaf'), arabic: 'طَوَاف' },
+    { id: 'sai', icon: 'swap-horizontal', label: t('tools.hub.sai'), arabic: 'سَعْي' },
+    { id: 'jumrah', icon: 'radio-button-on', label: t('tools.hub.jumrah'), arabic: 'جَمَرَات' },
+    { id: 'wukuf', icon: 'timer', label: t('tools.hub.wukuf'), arabic: 'وُقُوف' },
+    { id: 'tasbih', icon: 'ellipsis-horizontal-circle', label: t('tools.hub.tasbih'), arabic: 'تَسْبِيح' },
   ];
+  const utilities: HubItem[] = [
+    { key: 'prayer', icon: 'compass', label: t('tools.hub.prayer'), onPress: () => router.push('/prayer') },
+    { key: 'checklist', icon: 'checkbox', label: t('tools.hub.checklist'), onPress: () => onSelect('checklist') },
+    { key: 'kurs', icon: 'cash', label: t('tools.hub.kurs'), onPress: () => onSelect('kurs') },
+    { key: 'frasa', icon: 'language', label: t('tools.hub.frasa'), onPress: () => onSelect('frasa') },
+    { key: 'kesehatan', icon: 'medkit', label: t('tools.hub.kesehatan'), onPress: () => onSelect('kesehatan') },
+    { key: 'voice', icon: 'megaphone', label: t('tools.hub.voice'), sub: t('tools.hub.voice_sub'), onPress: () => router.push('/voice') },
+  ];
+  // alat riset: perekam trace GPS untuk validasi lapangan naskah — bukan untuk jamaah
+  if (canUseResearchTools(role)) {
+    utilities.push({ key: 'gps', icon: 'analytics', label: t('tools.hub.gps_recorder'), sub: t('tools.hub.gps_recorder_sub'), onPress: () => router.push('/gps-recorder') });
+  }
   return (
-    <View style={hub.grid}>
-      {items.map((item) => (
-        <TouchableOpacity key={item.id} style={hub.card} onPress={() => (item.id === 'prayer' ? router.push('/prayer') : onSelect(item.id))} activeOpacity={0.7}>
-          <View style={[hub.iconBox, { backgroundColor: item.color }]}>
-            <Ionicons name={item.icon} size={24} color="#fff" />
-          </View>
-          <Text style={hub.label}>{item.label}</Text>
-          <Text style={hub.arabic}>{item.arabic}</Text>
-        </TouchableOpacity>
-      ))}
-      {/* alat riset: perekam trace GPS untuk validasi lapangan naskah */}
-      <TouchableOpacity style={hub.card} onPress={() => router.push('/gps-recorder')} activeOpacity={0.7}>
-        <View style={[hub.iconBox, { backgroundColor: colors.textMuted }]}>
-          <Ionicons name="analytics" size={24} color="#fff" />
-        </View>
-        <Text style={hub.label}>{t('tools.hub.gps_recorder')}</Text>
-        <Text style={hub.arabic}>{t('tools.hub.gps_recorder_sub')}</Text>
-      </TouchableOpacity>
-      {/* prototipe: suara rombongan (broadcast muthawwif → jamaah) */}
-      <TouchableOpacity style={hub.card} onPress={() => router.push('/voice')} activeOpacity={0.7}>
-        <View style={[hub.iconBox, { backgroundColor: colors.primaryDark }]}>
-          <Ionicons name="megaphone" size={24} color="#fff" />
-        </View>
-        <Text style={hub.label}>{t('tools.hub.voice')}</Text>
-        <Text style={hub.arabic}>{t('tools.hub.voice_sub')}</Text>
-      </TouchableOpacity>
+    <View style={hub.wrap}>
+      <Text style={hub.section} accessibilityRole="header">{t('tools.hub.section_ritual')}</Text>
+      <View style={hub.grid}>
+        {rituals.map((item) => (
+          <TouchableOpacity key={item.id} style={hub.card} onPress={() => onSelect(item.id)} activeOpacity={0.7} accessibilityRole="button" accessibilityLabel={item.label}>
+            <View style={hub.iconBox}>
+              <Ionicons name={item.icon} size={26} color={colors.primary} />
+            </View>
+            <Text style={hub.label}>{item.label}</Text>
+            <Text style={hub.arabic} importantForAccessibility="no">{item.arabic}</Text>
+          </TouchableOpacity>
+        ))}
+      </View>
+
+      <Text style={hub.section} accessibilityRole="header">{t('tools.hub.section_travel')}</Text>
+      <View style={hub.list}>
+        {utilities.map((item, i) => (
+          <TouchableOpacity key={item.key} style={[hub.row, i > 0 && hub.rowBorder]} onPress={item.onPress} activeOpacity={0.7} accessibilityRole="button">
+            <Ionicons name={item.icon} size={22} color={colors.primary} />
+            <Text style={hub.rowLabel}>{item.label}</Text>
+            {item.sub && <Text style={hub.rowSub}>{item.sub}</Text>}
+            <Ionicons name="chevron-forward" size={18} color={colors.textFaint} />
+          </TouchableOpacity>
+        ))}
+      </View>
     </View>
   );
 }
 
 const hub = StyleSheet.create({
-  grid: { flexDirection: 'row', flexWrap: 'wrap', gap: 10, padding: 16, justifyContent: 'center' },
-  card: { width: (W - 52) / 3, backgroundColor: colors.card, borderWidth: 1, borderColor: colors.border, borderRadius: 14, padding: 14, alignItems: 'center', gap: 6 },
-  iconBox: { width: 44, height: 44, borderRadius: 12, alignItems: 'center', justifyContent: 'center' },
-  label: { fontSize: 12, fontFamily: 'PlusJakartaSans_700Bold', color: colors.text },
-  arabic: { fontSize: 13, fontWeight: '600', color: colors.textMuted },
+  wrap: { padding: 16, paddingTop: 8 },
+  section: { fontSize: 13, fontFamily: 'PlusJakartaSans_700Bold', color: colors.textSecondary, marginTop: 14, marginBottom: 10 },
+  grid: { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
+  card: { width: (W - 42) / 2, backgroundColor: colors.card, borderWidth: 1, borderColor: colors.border, borderRadius: 14, padding: 16, gap: 6, minHeight: 112 },
+  iconBox: { width: 44, height: 44, borderRadius: 12, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.primaryLight },
+  label: { fontSize: 15, fontFamily: 'PlusJakartaSans_700Bold', color: colors.text },
+  arabic: { fontSize: 16, fontFamily: 'Amiri_400Regular', color: colors.textMuted },
+  list: { backgroundColor: colors.card, borderWidth: 1, borderColor: colors.border, borderRadius: 14 },
+  row: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingHorizontal: 16, minHeight: 52 },
+  rowBorder: { borderTopWidth: 1, borderTopColor: colors.borderLight },
+  rowLabel: { flex: 1, fontSize: 14, fontFamily: 'PlusJakartaSans_600SemiBold', color: colors.text },
+  rowSub: { fontSize: 12, fontFamily: 'PlusJakartaSans_500Medium', color: colors.textMuted },
 });
 
 // ==================== MAIN ====================
@@ -703,16 +789,17 @@ export default function ToolsScreen() {
   const [tab, setTab] = useState<Tab>(entryTab);
   // Dibuka langsung ke satu alat (pintasan beranda) → tombol kembali pulang ke layar sebelumnya.
   const backLeavesScreen = tab === 'hub' || tab === entryTab;
-  const [healthTips, setHealthTips] = useState<any[]>([]);
-
-  useEffect(() => {
-    if (tab === 'kesehatan') api.getHealthTips().then(setHealthTips).catch(() => {});
-  }, [tab]);
 
   return (
     <SafeAreaView style={tc.safe}>
       <View style={tc.header}>
-        <TouchableOpacity onPress={() => backLeavesScreen ? router.back() : setTab('hub')} style={{ padding: 6 }}>
+        <TouchableOpacity
+          onPress={() => backLeavesScreen ? router.back() : setTab('hub')}
+          style={{ padding: 6 }}
+          hitSlop={8}
+          accessibilityRole="button"
+          accessibilityLabel={backLeavesScreen ? t('common.back') : t('a11y.tools_menu')}
+        >
           <Ionicons name={backLeavesScreen ? 'arrow-back' : 'grid'} size={22} color={colors.text} />
         </TouchableOpacity>
         <Text style={tc.headerTitle}>{tab === 'hub' ? t('tools.title') : t(`tools.tab.${tab}`)}</Text>
@@ -732,19 +819,7 @@ export default function ToolsScreen() {
 
         {tab === 'frasa' && <PhrasesList />}
 
-        {tab === 'kesehatan' && (
-          <View style={tc.wrap}>
-            {healthTips.map((t: any) => (
-              <View key={t.id} style={{ backgroundColor: colors.card, borderWidth: 1, borderColor: colors.border, borderRadius: 14, padding: 16, marginBottom: 10 }}>
-                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 8 }}>
-                  <Ionicons name={t.icon as any} size={20} color={colors.primary} />
-                  <Text style={{ fontSize: 15, fontFamily: 'PlusJakartaSans_700Bold', color: colors.text }}>{t.title}</Text>
-                </View>
-                <Text style={{ fontSize: 13, fontFamily: 'PlusJakartaSans_500Medium', color: colors.textMuted, lineHeight: 20 }}>{t.tips}</Text>
-              </View>
-            ))}
-          </View>
-        )}
+        {tab === 'kesehatan' && <HealthTab />}
       </ScrollView>
     </SafeAreaView>
   );
@@ -755,6 +830,7 @@ const tc = StyleSheet.create({
   header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', padding: 16, borderBottomWidth: 1, borderBottomColor: colors.border },
   headerTitle: { fontSize: 17, fontFamily: 'PlusJakartaSans_700Bold', color: colors.text },
   wrap: { padding: 20 },
+  emptyHint: { fontSize: 13, lineHeight: 19, fontFamily: 'PlusJakartaSans_500Medium', color: colors.textMuted, textAlign: 'center', marginTop: 8 },
   btns: { flexDirection: 'row', justifyContent: 'center', gap: 16, marginTop: 16 },
   undoBtn: { flexDirection: 'row', alignItems: 'center', gap: 4, padding: 8 },
   undoBtnText: { fontSize: 13, fontFamily: 'PlusJakartaSans_600SemiBold', color: colors.textMuted },
@@ -767,7 +843,7 @@ const tc = StyleSheet.create({
   gridLabel: { fontSize: 10, fontFamily: 'PlusJakartaSans_500Medium', color: colors.textMuted, marginTop: 2 },
   primaryBtn: { backgroundColor: colors.primary, borderRadius: radius.md, padding: 14, alignItems: 'center' },
   primaryBtnText: { fontSize: 15, fontFamily: 'PlusJakartaSans_700Bold', color: colors.textOnPrimary },
-  resetText: { textAlign: 'center', marginTop: 16, fontSize: 13, fontFamily: 'PlusJakartaSans_600SemiBold', color: colors.textFaint },
+  resetText: { textAlign: 'center', marginTop: 16, fontSize: 13, fontFamily: 'PlusJakartaSans_600SemiBold', color: colors.textMuted },
   modeToggle: { flexDirection: 'row', backgroundColor: colors.surface, borderRadius: 999, padding: 3, gap: 2, marginBottom: 12, alignSelf: 'center' },
   modeToggleBtn: { flexDirection: 'row', alignItems: 'center', gap: 5, paddingHorizontal: 16, paddingVertical: 8, borderRadius: 999 },
   modeToggleBtnActive: { backgroundColor: colors.primary },
@@ -775,10 +851,10 @@ const tc = StyleSheet.create({
   gpsBar: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, backgroundColor: colors.greenLight, borderRadius: 10, padding: 10, marginBottom: 12 },
   gpsDot: { width: 8, height: 8, borderRadius: 999, backgroundColor: colors.green },
   gpsText: { fontSize: 12, fontFamily: 'PlusJakartaSans_600SemiBold', color: colors.greenDark },
-  zoneIndicator: { borderRadius: 10, padding: 10, marginBottom: 8, alignItems: 'center' },
-  autoHint: { fontSize: 12, fontFamily: 'PlusJakartaSans_500Medium', color: colors.textFaint, textAlign: 'center', marginTop: 12, fontStyle: 'italic' },
+  zoneIndicator: { borderRadius: 10, padding: 10, marginBottom: 8, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6 },
+  autoHint: { fontSize: 12, fontFamily: 'PlusJakartaSans_500Medium', color: colors.textMuted, textAlign: 'center', marginTop: 12, fontStyle: 'italic' },
   checkProgress: { fontSize: 14, fontFamily: 'PlusJakartaSans_700Bold', color: colors.primary, textAlign: 'center', marginBottom: 12 },
   input: { backgroundColor: colors.card, borderWidth: 1, borderColor: colors.border, borderRadius: 10, paddingHorizontal: 14, paddingVertical: 10, fontSize: 14, fontFamily: 'PlusJakartaSans_500Medium', color: colors.text },
   inputLabel: { fontSize: 12, fontFamily: 'PlusJakartaSans_600SemiBold', color: colors.textMuted, marginBottom: 4, marginTop: 12 },
-  loadingText: { textAlign: 'center', color: colors.textFaint, fontFamily: 'PlusJakartaSans_500Medium', marginTop: 40 },
+  loadingText: { textAlign: 'center', color: colors.textMuted, fontFamily: 'PlusJakartaSans_500Medium', marginTop: 40 },
 });

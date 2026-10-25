@@ -164,7 +164,7 @@ const s = StyleSheet.create({
     backgroundColor: colors.text,
     borderRadius: 4,
     borderWidth: 2,
-    borderColor: '#F5D98A',
+    borderColor: colors.goldOnPrimary,
   },
   appName: {
     fontSize: 30,
@@ -235,7 +235,7 @@ const s = StyleSheet.create({
   },
   footer: {
     textAlign: 'center',
-    color: colors.textFaint,
+    color: colors.textMuted,
     fontSize: 12,
     fontFamily: 'PlusJakartaSans_400Regular',
     marginTop: 32,

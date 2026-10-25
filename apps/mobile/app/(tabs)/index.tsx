@@ -37,12 +37,26 @@ interface GroupData {
   member_count: number;
 }
 
+const AVATAR_LIMIT = 3;
+
+function toInitials(members: { name: string }[]): string[] {
+  return members.slice(0, AVATAR_LIMIT).map((m) =>
+    m.name
+      .split(/\s+/)
+      .filter(Boolean)
+      .slice(0, 2)
+      .map((w) => w[0].toUpperCase())
+      .join(''),
+  );
+}
+
 export default function BerandaScreen() {
   const user = useAuthStore((s) => s.user);
   const logout = useAuthStore((s) => s.logout);
   const router = useRouter();
   const [group, setGroup] = useState<GroupData | null>(null);
   const [muthawwif, setMuthawwif] = useState<string | null>(null);
+  const [memberInitials, setMemberInitials] = useState<string[]>([]);
   const [nextAgenda, setNextAgenda] = useState<Schedule | null>(null);
   const [ihram, setIhram] = useState<{ is_ihram: boolean; distance_meters: number | null; nearest_miqat: string | null }>({ is_ihram: false, distance_meters: null, nearest_miqat: null });
   const [mode, setMode] = useState<'jamaah' | 'muthawwif'>('jamaah');
@@ -68,6 +82,7 @@ export default function BerandaScreen() {
       const members = await getGroupMembers(localGroups[0].id);
       const m = members.find((m) => m.role_in_group === 'muthawwif');
       if (m) setMuthawwif(m.name);
+      setMemberInitials(toInitials(members));
       const agenda = await getNextSchedule(localGroups[0].id);
       if (agenda) setNextAgenda(agenda);
     }
@@ -83,6 +98,7 @@ export default function BerandaScreen() {
         await saveGroupMembers(groups[0].id, members);
         const m = members.find((m: any) => m.role_in_group === 'muthawwif');
         if (m) setMuthawwif(m.name);
+        setMemberInitials(toInitials(members));
 
         // Sync schedules
         try {
@@ -116,7 +132,7 @@ export default function BerandaScreen() {
     // Hanya fitur yang TIDAK ada di menu bawah (Tuntunan/Doa/Jadwal sudah di sana). Maks. 5 pintasan.
     // Susunan sesuai dokumen revisi v2 #1. Cadangan (Tawaf/Sa'i, Kartu Taksi, Frasa Arab) tetap di Alat Ibadah/SOS.
     { label: t('quick.tools'), icon: 'grid-outline', route: '/tools', color: colors.primary },
-    { label: t('quick.prayer'), icon: 'compass-outline', route: '/prayer', color: colors.green },
+    { label: t('quick.prayer'), icon: 'compass-outline', route: '/prayer', color: colors.primary },
     { label: t('quick.quran'), icon: 'book-outline', route: '/quran', color: colors.gold },
     { label: t('quick.documentation'), icon: 'images-outline', route: '/documentation', color: colors.primaryDark },
   ];
@@ -132,7 +148,13 @@ export default function BerandaScreen() {
           <Text style={s.appTitle}>Mabrur</Text>
         </View>
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-          <TouchableOpacity onPress={() => router.push('/chat')} style={s.logoutBtn}>
+          <TouchableOpacity
+            onPress={() => router.push('/chat')}
+            style={s.logoutBtn}
+            hitSlop={6}
+            accessibilityRole="button"
+            accessibilityLabel={chatUnread > 0 ? t('a11y.chat_unread', { count: chatUnread }) : t('a11y.chat')}
+          >
             <Ionicons name="chatbubbles-outline" size={20} color={colors.textMuted} />
             {chatUnread > 0 && (
               <View style={s.unreadBadge}>
@@ -140,19 +162,25 @@ export default function BerandaScreen() {
               </View>
             )}
           </TouchableOpacity>
-          <TouchableOpacity onPress={() => router.push('/profile')} style={s.logoutBtn}>
+          <TouchableOpacity onPress={() => router.push('/profile')} style={s.logoutBtn} hitSlop={6} accessibilityRole="button" accessibilityLabel={t('a11y.profile')}>
             <Ionicons name="person-circle-outline" size={22} color={colors.textMuted} />
           </TouchableOpacity>
           {isMuthawwif && (
             <View style={s.modeToggle}>
               <TouchableOpacity
                 style={[s.modeBtn, mode === 'jamaah' && s.modeBtnActive]}
+                hitSlop={{ top: 10, bottom: 10 }}
+                accessibilityRole="radio"
+                accessibilityState={{ checked: mode === 'jamaah' }}
                 onPress={() => setMode('jamaah')}
               >
                 <Text style={[s.modeBtnText, mode === 'jamaah' && s.modeBtnTextActive]}>{t('mode.jamaah')}</Text>
               </TouchableOpacity>
               <TouchableOpacity
                 style={[s.modeBtn, mode === 'muthawwif' && s.modeBtnActive]}
+                hitSlop={{ top: 10, bottom: 10 }}
+                accessibilityRole="radio"
+                accessibilityState={{ checked: mode === 'muthawwif' }}
                 onPress={() => setMode('muthawwif')}
               >
                 <Text style={[s.modeBtnText, mode === 'muthawwif' && s.modeBtnTextActive]}>{t('mode.muthawwif')}</Text>
@@ -245,11 +273,16 @@ export default function BerandaScreen() {
             <>
               <View style={s.sectionHeader}>
                 <Text style={s.sectionTitle}>{t('home.next_agenda')}</Text>
-                <TouchableOpacity onPress={() => router.push('/jadwal')}>
+                <TouchableOpacity onPress={() => router.push('/jadwal')} hitSlop={12} accessibilityRole="link">
                   <Text style={s.sectionLink}>{t('home.see_all')}</Text>
                 </TouchableOpacity>
               </View>
-              <View style={s.card}>
+              <TouchableOpacity
+                style={s.card}
+                onPress={() => router.push('/jadwal')}
+                accessibilityRole="button"
+                accessibilityLabel={`${nextAgenda.title}, ${day} ${mon} ${h}:${m}`}
+              >
                 <View style={s.agendaDate}>
                   <Text style={s.agendaDay}>{day}</Text>
                   <Text style={s.agendaMonth}>{mon}</Text>
@@ -261,7 +294,7 @@ export default function BerandaScreen() {
                   </Text>
                 </View>
                 <Ionicons name="chevron-forward" size={18} color={colors.textFaint} />
-              </View>
+              </TouchableOpacity>
             </>
           );
         })()}
@@ -280,24 +313,18 @@ export default function BerandaScreen() {
             <View style={[s.card, { flexDirection: 'column', gap: 10 }]}>
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: 11 }}>
                 <View style={s.avatarRow}>
-                  {['AH', 'SR', 'MZ'].map((init, i) => (
+                  {memberInitials.map((init, i) => (
                     <View
-                      key={init}
-                      style={[
-                        s.avatar,
-                        {
-                          backgroundColor: [colors.primary, colors.green, colors.gold][i],
-                          marginLeft: i > 0 ? -9 : 0,
-                        },
-                      ]}
+                      key={`${init}-${i}`}
+                      style={[s.avatar, { marginLeft: i > 0 ? -9 : 0 }]}
                     >
                       <Text style={s.avatarText}>{init}</Text>
                     </View>
                   ))}
-                  {group.member_count > 3 && (
+                  {memberInitials.length > 0 && group.member_count > memberInitials.length && (
                     <View style={[s.avatar, { backgroundColor: colors.surface, marginLeft: -9 }]}>
                       <Text style={[s.avatarText, { color: colors.textMuted }]}>
-                        +{group.member_count - 3}
+                        +{group.member_count - memberInitials.length}
                       </Text>
                     </View>
                   )}
@@ -345,7 +372,7 @@ const s = StyleSheet.create({
   appIconInner: {
     width: 14,
     height: 3,
-    backgroundColor: '#F5D98A',
+    backgroundColor: colors.goldOnPrimary,
     borderRadius: 1,
   },
   appTitle: {
@@ -362,7 +389,7 @@ const s = StyleSheet.create({
     flexDirection: 'row',
     backgroundColor: colors.surface,
     borderWidth: 1,
-    borderColor: '#E5DDD0',
+    borderColor: colors.border,
     borderRadius: 999,
     padding: 3,
     gap: 2,
@@ -438,7 +465,7 @@ const s = StyleSheet.create({
   heroBadgeText: {
     fontSize: 11,
     fontFamily: 'PlusJakartaSans_700Bold',
-    color: colors.dangerDark,
+    color: colors.primaryDark,
   },
   heroDivider: {
     height: 1,
@@ -465,7 +492,7 @@ const s = StyleSheet.create({
   heroDistValue: {
     fontSize: 14,
     fontFamily: 'PlusJakartaSans_700Bold',
-    color: '#F5D98A',
+    color: colors.goldOnPrimary,
     marginTop: 3,
   },
   heroBtn: {
@@ -501,11 +528,6 @@ const s = StyleSheet.create({
     borderColor: colors.border,
     alignItems: 'center',
     justifyContent: 'center',
-    shadowColor: colors.textSecondary,
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.06,
-    shadowRadius: 2,
-    elevation: 1,
   },
   quickLabel: {
     fontSize: 11,
@@ -540,11 +562,6 @@ const s = StyleSheet.create({
     borderColor: colors.border,
     borderRadius: 14,
     padding: 16,
-    shadowColor: colors.textSecondary,
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.08,
-    shadowRadius: 6,
-    elevation: 2,
     flexDirection: 'row',
     alignItems: 'center',
     gap: 13,
@@ -555,7 +572,7 @@ const s = StyleSheet.create({
     alignItems: 'center',
     backgroundColor: colors.surfaceWarm,
     borderWidth: 1,
-    borderColor: '#EBD4CB',
+    borderColor: colors.border,
     borderRadius: 11,
     paddingHorizontal: 12,
     paddingVertical: 8,
@@ -569,7 +586,7 @@ const s = StyleSheet.create({
   agendaMonth: {
     fontSize: 10,
     fontFamily: 'PlusJakartaSans_600SemiBold',
-    color: '#A5654E',
+    color: colors.textMuted,
     marginTop: 2,
   },
   agendaTitle: {
@@ -586,7 +603,7 @@ const s = StyleSheet.create({
 
   // Group
   safeChip: {
-    backgroundColor: colors.greenLight,
+    backgroundColor: colors.surface,
     paddingHorizontal: 10,
     paddingVertical: 3,
     borderRadius: 999,
@@ -594,7 +611,7 @@ const s = StyleSheet.create({
   safeChipText: {
     fontSize: 12,
     fontFamily: 'PlusJakartaSans_600SemiBold',
-    color: colors.green,
+    color: colors.textSecondary,
   },
   avatarRow: { flexDirection: 'row' },
   avatar: {
@@ -605,6 +622,7 @@ const s = StyleSheet.create({
     justifyContent: 'center',
     borderWidth: 2,
     borderColor: colors.card,
+    backgroundColor: colors.primary,
   },
   avatarText: {
     fontSize: 12,

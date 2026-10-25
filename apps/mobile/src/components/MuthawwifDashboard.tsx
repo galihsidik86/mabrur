@@ -16,6 +16,7 @@ import { api, type MemberStatus } from '../services/api';
 import { getGroups } from '../services/db';
 import { trackingLabel } from '../services/tracking-label';
 import { useI18n, type TFunction, type TranslationKey } from '../services/i18n';
+import StateNotice from './StateNotice';
 import { formatDistance } from '../services/location';
 
 type MemberData = MemberStatus;
@@ -90,7 +91,7 @@ function reminderResultText(
   return lines.join('\n');
 }
 
-const avatarColors = [colors.primary, colors.green, colors.gold, colors.textSecondary, colors.danger];
+const avatarColors = [colors.primary];
 
 function openGoogleMaps(lat: number, lng: number) {
   Linking.openURL(`https://www.google.com/maps?q=${lat},${lng}`);
@@ -106,7 +107,11 @@ function openWhatsApp(phone: string, name: string, category: string, t: TFunctio
 export default function MuthawwifDashboard({ userName }: { userName: string }) {
   const router = useRouter();
   const t = useI18n((st) => st.t);
-  const [stats, setStats] = useState<Stats>({ jamaah_total: 0, tracked: 0, untracked: 0 });
+  // null sampai data pertama tiba — jangan tampilkan 0 yang terbaca seperti data asli.
+  const [stats, setStats] = useState<Stats | null>(null);
+  const [hasGroup, setHasGroup] = useState(true);
+  const [syncFailed, setSyncFailed] = useState(false);
+  const [lastSync, setLastSync] = useState<Date | null>(null);
   const [reminding, setReminding] = useState(false);
   const [members, setMembers] = useState<MemberData[]>([]);
   const [sosAlerts, setSosAlerts] = useState<SosAlert[]>([]);
@@ -119,6 +124,7 @@ export default function MuthawwifDashboard({ userName }: { userName: string }) {
     const id = gid || groupId;
     if (!id) {
       const groups = await getGroups();
+      setHasGroup(groups.length > 0);
       if (groups.length > 0) {
         setGroupId(groups[0].id);
         return load(groups[0].id);
@@ -135,12 +141,14 @@ export default function MuthawwifDashboard({ userName }: { userName: string }) {
       });
       setMembers([...data.members].sort((a, b) => memberRank(a) - memberRank(b) || a.name.localeCompare(b.name)));
 
-      // Fetch SOS
-      try {
-        const alerts = await api.getGroupSos(id);
-        setSosAlerts(alerts);
-      } catch {}
-    } catch {}
+      // SOS ikut menentukan status sinkron: muthawwif harus tahu kalau SOS gagal dimuat.
+      const alerts = await api.getGroupSos(id);
+      setSosAlerts(alerts);
+      setSyncFailed(false);
+      setLastSync(new Date());
+    } catch {
+      setSyncFailed(true);
+    }
   }, [groupId]);
 
   useEffect(() => {
@@ -194,6 +202,18 @@ export default function MuthawwifDashboard({ userName }: { userName: string }) {
     >
       <Text style={s.modeLabel}>{t('mode.muthawwif_title')}</Text>
       <Text style={s.name}>{userName}</Text>
+
+      {!hasGroup && <StateNotice kind="empty" message={t('common.no_group')} />}
+      {syncFailed && (
+        <View style={s.syncBanner} accessibilityRole="alert">
+          <Ionicons name="cloud-offline-outline" size={18} color={colors.dangerDark} />
+          <Text style={s.syncBannerText}>
+            {lastSync
+              ? t('monitor.sync_failed_stale', { time: `${String(lastSync.getHours()).padStart(2, '0')}:${String(lastSync.getMinutes()).padStart(2, '0')}` })
+              : t('monitor.sync_failed')}
+          </Text>
+        </View>
+      )}
 
       {/* SOS Alerts — besar dan jelas untuk kondisi darurat */}
       {sosAlerts.map((sos) => {
@@ -250,7 +270,12 @@ export default function MuthawwifDashboard({ userName }: { userName: string }) {
                   [
                     { text: t('common.cancel'), style: 'cancel' },
                     { text: t('monitor.sos_resolve_yes'), onPress: async () => {
-                      try { await api.resolveSos(sos.id); setSosAlerts((prev) => prev.filter((s2) => s2.id !== sos.id)); } catch {}
+                      try {
+                        await api.resolveSos(sos.id);
+                        setSosAlerts((prev) => prev.filter((s2) => s2.id !== sos.id));
+                      } catch {
+                        Alert.alert(t('common.failed_title'), t('monitor.sos_resolve_failed'));
+                      }
                     }},
                   ]
                 )}>
@@ -265,20 +290,20 @@ export default function MuthawwifDashboard({ userName }: { userName: string }) {
       {/* Stats */}
       <View style={s.statsRow}>
         <View style={s.statCard}>
-          <Text style={s.statNum}>{stats.jamaah_total}</Text>
+          <Text style={s.statNum}>{stats?.jamaah_total ?? '–'}</Text>
           <Text style={s.statLabel}>{t('monitor.stat_total')}</Text>
         </View>
         <View style={s.statCard}>
-          <Text style={[s.statNum, { color: colors.green }]}>{stats.tracked}</Text>
+          <Text style={[s.statNum, { color: colors.green }]}>{stats?.tracked ?? '–'}</Text>
           <Text style={s.statLabel}>{t('monitor.stat_tracked')}</Text>
         </View>
         <View style={s.statCard}>
-          <Text style={[s.statNum, { color: colors.danger }]}>{stats.untracked}</Text>
+          <Text style={[s.statNum, { color: colors.danger }]}>{stats?.untracked ?? '–'}</Text>
           <Text style={s.statLabel}>{t('monitor.stat_untracked')}</Text>
         </View>
       </View>
 
-      {stats.untracked > 0 && (
+      {stats != null && stats.untracked > 0 && (
         <TouchableOpacity style={s.remindAllBtn} onPress={() => remind()} disabled={reminding}>
           <Ionicons name="notifications-outline" size={18} color={colors.textOnPrimary} />
           <Text style={s.remindAllText}>
@@ -334,7 +359,7 @@ export default function MuthawwifDashboard({ userName }: { userName: string }) {
                 style={[
                   s.chipText,
                   m.status === 'attention'
-                    ? { color: '#97751F' }
+                    ? { color: colors.goldText }
                     : { color: colors.greenDark },
                 ]}
               >
@@ -343,7 +368,7 @@ export default function MuthawwifDashboard({ userName }: { userName: string }) {
             </View>
           </TouchableOpacity>
         ))}
-        {members.length === 0 && (
+        {members.length === 0 && stats != null && (
           <View style={s.empty}>
             <Ionicons name="people-outline" size={32} color={colors.textFaint} />
             <Text style={s.emptyText}>{t('monitor.empty_members')}</Text>
@@ -356,6 +381,11 @@ export default function MuthawwifDashboard({ userName }: { userName: string }) {
 
 const s = StyleSheet.create({
   scroll: { flex: 1 },
+  syncBanner: {
+    flexDirection: 'row', gap: 8, alignItems: 'flex-start', marginTop: 12, padding: 12,
+    borderRadius: 12, borderWidth: 1, borderColor: colors.danger, backgroundColor: colors.card,
+  },
+  syncBannerText: { flex: 1, fontSize: 13, lineHeight: 19, fontFamily: 'PlusJakartaSans_500Medium', color: colors.text },
   content: { padding: 16, paddingBottom: 24 },
 
   modeLabel: {
@@ -384,11 +414,6 @@ const s = StyleSheet.create({
     borderRadius: radius.md,
     padding: 14,
     paddingHorizontal: 12,
-    shadowColor: colors.textSecondary,
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.08,
-    shadowRadius: 6,
-    elevation: 2,
   },
   statNum: {
     fontSize: 26,
@@ -417,11 +442,6 @@ const s = StyleSheet.create({
     borderWidth: 1,
     borderColor: colors.border,
     borderRadius: 14,
-    shadowColor: colors.textSecondary,
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.08,
-    shadowRadius: 6,
-    elevation: 2,
     overflow: 'hidden',
   },
   memberRow: {
@@ -486,7 +506,7 @@ const s = StyleSheet.create({
   emptyText: {
     fontSize: 13,
     fontFamily: 'PlusJakartaSans_500Medium',
-    color: colors.textFaint,
+    color: colors.textMuted,
   },
 
   sosCard: {

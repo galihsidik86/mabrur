@@ -3,7 +3,7 @@ import {
   View, Text, ScrollView, TouchableOpacity, StyleSheet, Alert,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useRouter } from 'expo-router';
+import { Redirect, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { activateKeepAwakeAsync, deactivateKeepAwake } from 'expo-keep-awake';
 import { colors, radius } from '../src/theme';
@@ -13,6 +13,8 @@ import {
   deleteSession, exportSession, uploadSession, TraceSession, LivePoint,
 } from '../src/services/trace-recorder';
 import { useI18n } from '../src/services/i18n';
+import { useAuthStore } from '../src/stores/auth';
+import { canUseResearchTools } from '../src/services/research-access';
 
 // key = label sesi tersimpan (data riset, jangan diterjemahkan); label/hint = kunci i18n.
 const SCENARIOS = [
@@ -27,6 +29,13 @@ function fmtDur(ms: number): string {
 }
 
 export default function GpsRecorderScreen() {
+  const role = useAuthStore((st) => st.user?.role);
+  // Rute bisa dibuka langsung (deep link): jamaah dialihkan, layar riset tidak untuk mereka.
+  if (!canUseResearchTools(role)) return <Redirect href="/tools" />;
+  return <GpsRecorder />;
+}
+
+function GpsRecorder() {
   const router = useRouter();
   const t = useI18n((st) => st.t);
   const lang = useI18n((st) => st.lang);
@@ -96,7 +105,7 @@ export default function GpsRecorderScreen() {
   return (
     <SafeAreaView style={st.safe} edges={['top']}>
       <View style={st.header}>
-        <TouchableOpacity onPress={() => router.back()} style={{ padding: 6 }}>
+        <TouchableOpacity onPress={() => router.back()} style={{ padding: 6 }} hitSlop={8} accessibilityRole="button" accessibilityLabel={t('common.back')}>
           <Ionicons name="arrow-back" size={22} color={colors.text} />
         </TouchableOpacity>
         <Text style={st.headerTitle}>{t('account.gps_title')}</Text>
@@ -176,17 +185,17 @@ export default function GpsRecorderScreen() {
                 {s.uploaded_at ? ` · ${t('account.gps_uploaded_tag')}` : ''}
               </Text>
             </View>
-            <TouchableOpacity onPress={() => onUpload(s)} style={st.iconBtn} disabled={uploading === s.id}>
+            <TouchableOpacity onPress={() => onUpload(s)} style={st.iconBtn} disabled={uploading === s.id} accessibilityRole="button" accessibilityLabel={t('a11y.upload_session', { label: s.label })}>
               <Ionicons
                 name={s.uploaded_at ? 'cloud-done' : 'cloud-upload-outline'}
                 size={20}
                 color={uploading === s.id ? colors.textFaint : s.uploaded_at ? colors.green : colors.primary}
               />
             </TouchableOpacity>
-            <TouchableOpacity onPress={() => onExport(s)} style={st.iconBtn}>
+            <TouchableOpacity onPress={() => onExport(s)} style={st.iconBtn} accessibilityRole="button" accessibilityLabel={t('a11y.share_session', { label: s.label })}>
               <Ionicons name="share-outline" size={20} color={colors.primary} />
             </TouchableOpacity>
-            <TouchableOpacity onPress={() => onDelete(s)} style={st.iconBtn}>
+            <TouchableOpacity onPress={() => onDelete(s)} style={st.iconBtn} accessibilityRole="button" accessibilityLabel={t('a11y.delete_session', { label: s.label })}>
               <Ionicons name="trash-outline" size={20} color={colors.danger} />
             </TouchableOpacity>
           </View>
@@ -227,15 +236,15 @@ const st = StyleSheet.create({
   stat: { alignItems: 'center' },
   statNum: { fontSize: 24, fontFamily: 'PlusJakartaSans_800ExtraBold', color: colors.text },
   statLabel: { fontSize: 11, fontFamily: 'PlusJakartaSans_500Medium', color: colors.textMuted },
-  liveCoord: { fontSize: 12, fontFamily: 'PlusJakartaSans_500Medium', color: colors.textFaint, marginTop: 12 },
+  liveCoord: { fontSize: 12, fontFamily: 'PlusJakartaSans_500Medium', color: colors.textMuted, marginTop: 12 },
   mainBtn: {
     flexDirection: 'row', gap: 8, alignItems: 'center', justifyContent: 'center',
     backgroundColor: colors.primary, borderRadius: radius.lg, paddingVertical: 14, marginTop: 16,
   },
   mainBtnText: { fontSize: 15, fontFamily: 'PlusJakartaSans_700Bold', color: colors.textOnPrimary },
-  tip: { fontSize: 11.5, lineHeight: 16, fontFamily: 'PlusJakartaSans_500Medium', color: colors.textFaint, marginTop: 10, textAlign: 'center' },
+  tip: { fontSize: 11.5, lineHeight: 16, fontFamily: 'PlusJakartaSans_500Medium', color: colors.textMuted, marginTop: 10, textAlign: 'center' },
   sectionTitle: { fontSize: 14, fontFamily: 'PlusJakartaSans_700Bold', color: colors.text, marginTop: 24, marginBottom: 8 },
-  empty: { fontSize: 13, fontFamily: 'PlusJakartaSans_500Medium', color: colors.textFaint },
+  empty: { fontSize: 13, fontFamily: 'PlusJakartaSans_500Medium', color: colors.textMuted },
   session: {
     flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: colors.card,
     borderWidth: 1, borderColor: colors.border, borderRadius: radius.md, padding: 12, marginBottom: 8,
