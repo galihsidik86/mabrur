@@ -86,18 +86,36 @@ function createPNG(width, height, drawFn) {
   return Buffer.concat([sig, chunk('IHDR', ihdr), chunk('IDAT', deflateSync(raw, {level: 9})), chunk('IEND', Buffer.alloc(0))]);
 }
 
+// Warna merek (DESIGN.md): tepi lingkaran zamrud #0B5D47, pusat zamrud tua #084536.
+const EMERALD = [11, 93, 71];
+const EMERALD_DARK = [8, 69, 54];
+// t = 1 di tepi, 0 di pusat.
+const bgAt = (t) => EMERALD.map((c, i) => Math.round(c * t + EMERALD_DARK[i] * (1 - t)));
+// Lingkaran pemotong bulan sabit harus sewarna latar di posisinya (~0,52 dari pusat).
+const CRESCENT_T = 0.52;
+
+// Cincin emas tipis (anulus 0,415–0,43 S). Dulu ditumpuk fillCircle penuh sehingga
+// seluruh isi lingkaran ikut menjadi emas dan bulan sabit tampak sebagai titik gelap.
+function goldRing(ctx, cx, cy, S) {
+  const r0 = S*0.415, r1 = S*0.43;
+  for (let y = Math.floor(cy-r1); y <= Math.ceil(cy+r1); y++)
+    for (let x = Math.floor(cx-r1); x <= Math.ceil(cx+r1); x++) {
+      const d = Math.hypot(x-cx, y-cy);
+      if (d >= r0 && d <= r1) ctx.setPixel(x, y, 212, 164, 55, 220);
+    }
+}
+
 function drawIcon(ctx, S) {
   const cx = S/2, cy = S/2;
 
   // Background gradient circle
   for (let r = S*0.48; r > 0; r -= 1) {
     const t = r / (S*0.48);
-    ctx.fillCircle(cx, cy, r, Math.round(139*t+100*(1-t)), Math.round(46*t+30*(1-t)), Math.round(46*t+30*(1-t)), 255);
+    ctx.fillCircle(cx, cy, r, ...bgAt(t), 255);
   }
 
   // Gold ring
-  for (let r = S*0.43; r > S*0.40; r -= 0.5)
-    ctx.fillCircle(cx, cy, r, 245, 217, 138, 55);
+  goldRing(ctx, cx, cy, S);
 
   // Ka'bah cube
   const k = S*0.21, kx = cx-k/2, ky = cy-k/2-S*0.02;
@@ -111,7 +129,7 @@ function drawIcon(ctx, S) {
 
   // Crescent moon
   ctx.fillCircle(cx+S*0.14, cy-S*0.20, S*0.055, 245, 217, 138, 255);
-  ctx.fillCircle(cx+S*0.16, cy-S*0.21, S*0.046, 130, 42, 42, 255);
+  ctx.fillCircle(cx+S*0.16, cy-S*0.21, S*0.046, ...bgAt(CRESCENT_T), 255);
   // Star
   ctx.fillCircle(cx+S*0.22, cy-S*0.17, S*0.014, 245, 217, 138, 255);
 
@@ -152,15 +170,14 @@ const splash = createPNG(1284, 2778, (ctx) => {
   const S = 500, cx = 642, cy = 1200;
   for (let r = S*0.48; r > 0; r -= 1) {
     const t = r / (S*0.48);
-    ctx.fillCircle(cx, cy, r, Math.round(139*t+100*(1-t)), Math.round(46*t+30*(1-t)), Math.round(46*t+30*(1-t)), 255);
+    ctx.fillCircle(cx, cy, r, ...bgAt(t), 255);
   }
-  for (let r = S*0.43; r > S*0.40; r -= 0.5)
-    ctx.fillCircle(cx, cy, r, 245, 217, 138, 55);
+  goldRing(ctx, cx, cy, S);
   const k = S*0.21, kx = cx-k/2, ky = cy-k/2-S*0.02;
   ctx.fillRoundRect(kx, ky, k, k, 12, 31, 27, 22, 255);
   ctx.fillRect(kx+2, ky+k*0.33, k-4, k*0.09, 212, 164, 55, 255);
   ctx.fillCircle(cx+S*0.14, cy-S*0.20, S*0.055, 245, 217, 138, 255);
-  ctx.fillCircle(cx+S*0.16, cy-S*0.21, S*0.046, 139, 46, 46, 255);
+  ctx.fillCircle(cx+S*0.16, cy-S*0.21, S*0.046, ...bgAt(CRESCENT_T), 255);
   ctx.fillCircle(cx+S*0.22, cy-S*0.17, S*0.014, 245, 217, 138, 255);
 });
 fs.writeFileSync('assets/splash.png', splash);

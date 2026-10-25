@@ -12,6 +12,10 @@ export const colors = {
 
   gold: '#D4A437',
   goldLight: '#FAEFC9',
+  // Emas untuk teks di latar terang; gold sendiri hanya aksen (2,29:1 dengan putih).
+  goldText: '#806316',
+  // Emas muda di atas zamrud (badge/angka di hero beranda).
+  goldOnPrimary: '#F5D98A',
 
   danger: '#C44536',
   dangerDark: '#9E2E22',
@@ -22,12 +26,13 @@ export const colors = {
   border: '#ECE5D8',
   borderLight: '#F0E9DC',
   surface: '#EFE7D9',
-  surfaceWarm: '#FBF2EE',
+  surfaceWarm: '#FBF6EA',
 
   text: '#1F1B16',
   textSecondary: '#5C3A1E',
-  textMuted: '#8C6B4A',
-  textFaint: '#B89A7A',
+  textMuted: '#7A5C3E',
+  // Hanya ikon, garis, placeholder (≥3:1). Teks isi pakai textMuted (≥4,5:1).
+  textFaint: '#9A7B5C',
   textOnPrimary: '#F5F1E8',
   textOnDanger: '#FFF0EB',
 } as const;
