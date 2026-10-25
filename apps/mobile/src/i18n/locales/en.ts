@@ -8,6 +8,7 @@ import { contentEn } from './parts/content';
 import { prayerEn } from './parts/prayer';
 import { quranEn } from './parts/quran';
 import { documentationEn } from './parts/documentation';
+import { batteryEn } from './parts/battery';
 
 export const en: Record<TranslationKey, string> = {
   // Language
@@ -153,6 +154,12 @@ export const en: Record<TranslationKey, string> = {
   'phrase.cat.belanja': 'Shopping',
   'phrase.cat.darurat': 'Emergency',
   'phrase.cat.makanan': 'Food & drink',
+  'phrase.listen': 'Listen to pronunciation',
+  'phrase.stop': 'Stop audio',
+  'phrase.audio_note': 'Audio is read by your phone\'s speech engine (not a recording by a teacher). Tap the speaker icon to listen.',
+  'phrase.no_voice_title': 'Arabic voice not installed',
+  'phrase.no_voice_body': 'This phone has no Arabic voice yet. Install one in Settings → Text-to-speech → Arabic (needs internet once to download), then try again.',
+  'phrase.open_tts': 'Open speech settings',
 
   // Taxi Card
   'sos.taxi_card': 'Taxi Card',
@@ -207,4 +214,5 @@ export const en: Record<TranslationKey, string> = {
   ...prayerEn,
   ...quranEn,
   ...documentationEn,
+  ...batteryEn,
 };

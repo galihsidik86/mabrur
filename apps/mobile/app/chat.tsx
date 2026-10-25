@@ -10,6 +10,7 @@ import { getGroups, queueMessage, getQueuedMessages, clearQueuedMessage } from '
 import { setChatScreenOpen } from '../src/services/notification';
 import { useChatUnread } from '../src/services/chat-unread';
 import { useI18n } from '../src/services/i18n';
+import BatteryHint from '../src/components/BatteryHint';
 
 interface Message {
   id: string;
@@ -113,6 +114,8 @@ export default function ChatScreen() {
         <View style={{ width: 34 }} />
       </View>
       <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+        {/* Sekali tampil sampai ditutup: notifikasi chat bisa tertahan penghemat baterai HP. */}
+        <BatteryHint isDismissible style={s.hint} />
         <FlatList
           ref={flatListRef}
           data={messages}
@@ -145,6 +148,7 @@ const s = StyleSheet.create({
   header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', padding: 16, borderBottomWidth: 1, borderBottomColor: colors.border, backgroundColor: 'rgba(245,241,232,0.9)' },
   headerTitle: { fontSize: 17, fontFamily: 'PlusJakartaSans_700Bold', color: colors.text },
   list: { padding: 16, paddingBottom: 8 },
+  hint: { marginHorizontal: 16, marginTop: 12 },
   empty: { textAlign: 'center', color: colors.textFaint, fontSize: 13, fontFamily: 'PlusJakartaSans_500Medium', marginTop: 40 },
   msgRow: { flexDirection: 'row', marginBottom: 12, alignItems: 'flex-end', gap: 8 },
   msgRowMe: { flexDirection: 'row-reverse' },

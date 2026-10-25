@@ -1,6 +1,9 @@
-import { useEffect, useState } from 'react';
-import { View, Text, StyleSheet } from 'react-native';
+import { useEffect, useRef, useState } from 'react';
+import { View, Text, StyleSheet, TouchableOpacity, Alert, Linking, Platform } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
+import * as Speech from 'expo-speech';
 import { colors } from '../theme';
+import { ARABIC_FALLBACK_LANGUAGE, arabicVoiceStatus, pickArabicVoice, type VoiceInfo } from '../services/phrase-audio-core';
 import { api, type Phrase } from '../services/api';
 import { getMeta, setMeta } from '../services/db';
 import { useI18n, type TranslationKey } from '../services/i18n';
@@ -40,11 +43,54 @@ function groupByCategory(phrases: Phrase[]): Array<{ category: string; items: Ph
   return [...groups].map(([category, items]) => ({ category, items }));
 }
 
+// Pengucapan sedikit diperlambat agar jamaah bisa menirukan.
+const SPEECH_RATE = 0.8;
+const TTS_SETTINGS_INTENT = 'com.android.settings.TTS_SETTINGS';
+
 export default function PhrasesList() {
   const t = useI18n((st) => st.t);
   const lang = useI18n((st) => st.lang);
   const [phrases, setPhrases] = useState<Phrase[]>([]);
   const [loading, setLoading] = useState(true);
+  const [speakingId, setSpeakingId] = useState<string | null>(null);
+  const voicesRef = useRef<VoiceInfo[]>([]);
+
+  // Daftar suara dibaca sekali; kosong = mesin TTS belum siap, dicoba lagi saat tombol diketuk.
+  useEffect(() => {
+    Speech.getAvailableVoicesAsync().then((v) => { voicesRef.current = v; }).catch(() => {});
+    return () => { void Speech.stop(); };
+  }, []);
+
+  const showNoVoice = () => {
+    const buttons: Parameters<typeof Alert.alert>[2] = [{ text: t('common.cancel'), style: 'cancel' }];
+    if (Platform.OS === 'android') {
+      buttons.push({
+        text: t('phrase.open_tts'),
+        onPress: () => { Linking.sendIntent(TTS_SETTINGS_INTENT).catch(() => Linking.openSettings()); },
+      });
+    }
+    Alert.alert(t('phrase.no_voice_title'), t('phrase.no_voice_body'), buttons);
+  };
+
+  const togglePlay = async (p: Phrase) => {
+    await Speech.stop();
+    if (speakingId === p.id) { setSpeakingId(null); return; }
+    if (voicesRef.current.length === 0) {
+      voicesRef.current = await Speech.getAvailableVoicesAsync().catch(() => []);
+    }
+    if (arabicVoiceStatus(voicesRef.current) === 'missing') { showNoVoice(); return; }
+    const voice = pickArabicVoice(voicesRef.current);
+    const clear = () => setSpeakingId((cur) => (cur === p.id ? null : cur));
+    setSpeakingId(p.id);
+    Speech.speak(p.arabic, {
+      language: voice?.language ?? ARABIC_FALLBACK_LANGUAGE,
+      voice: voice?.identifier,
+      rate: SPEECH_RATE,
+      onDone: clear,
+      onStopped: clear,
+      onError: () => { clear(); showNoVoice(); },
+    });
+  };
 
   // Offline-first: frasa paling dibutuhkan justru saat di luar jangkauan internet.
   useEffect(() => {
@@ -73,6 +119,7 @@ export default function PhrasesList() {
 
   return (
     <View style={s.wrap}>
+      <Text style={s.audioNote}>{t('phrase.audio_note')}</Text>
       {groupByCategory(phrases).map((group) => {
         const key = categoryKey(group.category);
         return (
@@ -82,9 +129,21 @@ export default function PhrasesList() {
               // English bila dipilih & tersedia (server lama belum punya kolom ini).
               const latin = lang === 'en' && p.transliteration_en ? p.transliteration_en : p.transliteration;
               const meaning = lang === 'en' && p.english ? p.english : p.indonesian;
+              const playing = speakingId === p.id;
               return (
                 <View key={p.id} style={s.card}>
-                  <Text style={s.arabic}>{p.arabic}</Text>
+                  <View style={s.arabicRow}>
+                    <TouchableOpacity
+                      onPress={() => { void togglePlay(p); }}
+                      style={[s.playBtn, playing && s.playBtnActive]}
+                      accessibilityRole="button"
+                      accessibilityLabel={`${playing ? t('phrase.stop') : t('phrase.listen')}: ${meaning}`}
+                      hitSlop={8}>
+                      <Ionicons name={playing ? 'stop' : 'volume-high'} size={18}
+                        color={playing ? colors.textOnPrimary : colors.primary} />
+                    </TouchableOpacity>
+                    <Text style={s.arabic}>{p.arabic}</Text>
+                  </View>
                   {latin ? <Text style={s.latin}>{latin}</Text> : null}
                   <Text style={s.meaning}>{meaning}</Text>
                 </View>
@@ -111,8 +170,18 @@ const s = StyleSheet.create({
   },
   // Amiri: harakat tampil utuh & tidak bertumpuk; lineHeight lega untuk tanda di atas/bawah huruf.
   arabic: {
-    fontFamily: 'Amiri_700Bold', fontSize: 28, lineHeight: 54, color: colors.text,
+    flex: 1, fontFamily: 'Amiri_700Bold', fontSize: 28, lineHeight: 54, color: colors.text,
     textAlign: 'right', writingDirection: 'rtl',
+  },
+  arabicRow: { flexDirection: 'row', alignItems: 'center', gap: 10 },
+  playBtn: {
+    width: 36, height: 36, borderRadius: 999, alignItems: 'center', justifyContent: 'center',
+    backgroundColor: colors.primaryLight,
+  },
+  playBtnActive: { backgroundColor: colors.primary },
+  audioNote: {
+    fontSize: 12, fontFamily: 'PlusJakartaSans_500Medium', color: colors.textMuted,
+    marginBottom: 12, lineHeight: 17,
   },
   latin: { fontSize: 14, fontFamily: 'PlusJakartaSans_500Medium', color: colors.primary, marginTop: 4, fontStyle: 'italic' },
   meaning: { fontSize: 14, fontFamily: 'PlusJakartaSans_600SemiBold', color: colors.textSecondary, marginTop: 2 },

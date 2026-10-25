@@ -8,6 +8,7 @@ import { contentId } from './parts/content';
 import { prayerId } from './parts/prayer';
 import { quranId } from './parts/quran';
 import { documentationId } from './parts/documentation';
+import { batteryId } from './parts/battery';
 
 export const id = {
   // Bahasa
@@ -153,6 +154,12 @@ export const id = {
   'phrase.cat.belanja': 'Belanja',
   'phrase.cat.darurat': 'Darurat',
   'phrase.cat.makanan': 'Makanan & minuman',
+  'phrase.listen': 'Dengarkan pengucapan',
+  'phrase.stop': 'Hentikan suara',
+  'phrase.audio_note': 'Suara dibacakan mesin suara HP (bukan rekaman ustaz). Ketuk ikon speaker untuk mendengar.',
+  'phrase.no_voice_title': 'Suara Arab belum terpasang',
+  'phrase.no_voice_body': 'HP ini belum punya suara bahasa Arab. Pasang lewat Pengaturan → Text-to-speech → bahasa Arab (perlu internet sekali untuk mengunduh), lalu coba lagi.',
+  'phrase.open_tts': 'Buka pengaturan suara',
 
   // Kartu Taksi
   'sos.taxi_card': 'Kartu Taksi',
@@ -207,6 +214,7 @@ export const id = {
   ...prayerId,
   ...quranId,
   ...documentationId,
+  ...batteryId,
 } as const;
 
 export type TranslationKey = keyof typeof id;

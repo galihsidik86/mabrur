@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { View, Text, TextInput, TouchableOpacity, ScrollView, StyleSheet, Alert } from 'react-native';
+import { View, Text, TextInput, TouchableOpacity, ScrollView, StyleSheet, Alert, Platform } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -9,6 +9,7 @@ import { api } from '../src/services/api';
 import { useI18n, type Lang } from '../src/services/i18n';
 import { useTheme } from '../src/services/darkmode';
 import { countQueue } from '../src/services/documentation';
+import BatteryHint from '../src/components/BatteryHint';
 
 export default function ProfileScreen() {
   const router = useRouter();
@@ -144,6 +145,14 @@ export default function ProfileScreen() {
             <View style={{ width: 20, height: 20, borderRadius: 10, backgroundColor: '#fff', alignSelf: isDark ? 'flex-end' : 'flex-start' }} />
           </View>
         </TouchableOpacity>
+
+        {/* Notifikasi & baterai (Android) */}
+        {Platform.OS === 'android' && (
+          <>
+            <Text style={s.sectionTitle}>{t('battery.section')}</Text>
+            <BatteryHint />
+          </>
+        )}
 
         {/* Rating */}
         <TouchableOpacity onPress={() => router.push('/rating')}
