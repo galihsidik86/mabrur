@@ -26,6 +26,8 @@ export const toolsId = {
   'tools.hub.kurs': 'Kurs',
   'tools.hub.frasa': 'Frasa Arab',
   'tools.hub.kesehatan': 'Kesehatan',
+  'tools.hub.section_ritual': 'Penghitung ibadah',
+  'tools.hub.section_travel': 'Perjalanan & persiapan',
   'tools.hub.gps_recorder': 'Perekam GPS',
   'tools.hub.gps_recorder_sub': 'riset',
   'tools.hub.voice': 'Suara Rombongan',
@@ -108,6 +110,8 @@ export const toolsId = {
 
   // Checklist
   'tools.checklist.progress': '{done}/{total} disiapkan',
+  'tools.checklist.empty': 'Daftar persiapan masih kosong. Tulis barang atau tugas di atas, lalu ketuk + untuk menambah.',
+  'tools.health.empty': 'Belum ada tips kesehatan dari admin travel Anda.',
   'tools.checklist.add_placeholder': 'Tambah item...',
   'tools.checklist.save_fail_title': 'Gagal menyimpan',
   'tools.checklist.save_fail_body': 'Item tidak tersimpan. Periksa koneksi internet lalu coba lagi.',
@@ -140,6 +144,8 @@ export const toolsEn: Record<keyof typeof toolsId, string> = {
   'tools.hub.kurs': 'Currency',
   'tools.hub.frasa': 'Arabic Phrases',
   'tools.hub.kesehatan': 'Health',
+  'tools.hub.section_ritual': 'Ritual counters',
+  'tools.hub.section_travel': 'Travel & preparation',
   'tools.hub.gps_recorder': 'GPS Recorder',
   'tools.hub.gps_recorder_sub': 'research',
   'tools.hub.voice': 'Group Voice',
@@ -217,6 +223,8 @@ export const toolsEn: Record<keyof typeof toolsId, string> = {
 
   // Checklist
   'tools.checklist.progress': '{done}/{total} prepared',
+  'tools.checklist.empty': 'Your checklist is empty. Type an item or task above, then tap + to add it.',
+  'tools.health.empty': 'Your travel admin has not added any health tips yet.',
   'tools.checklist.add_placeholder': 'Add item...',
   'tools.checklist.save_fail_title': 'Failed to save',
   'tools.checklist.save_fail_body': 'The item was not saved. Check your internet connection and try again.',

@@ -12,8 +12,6 @@ export const accountId = {
   'account.password_placeholder': 'Kosongkan jika tidak diubah',
   'account.field_blood_type': 'Gol. Darah',
   'account.field_emergency': 'Kontak Darurat',
-  'account.appearance': 'Tampilan',
-  'account.dark_mode': 'Dark Mode',
   'account.rating_link': 'Beri Rating & Feedback',
   'account.success': 'Berhasil',
   'account.profile_updated': 'Profil diperbarui',
@@ -67,6 +65,11 @@ export const accountId = {
   'account.chat_title': 'Chat Rombongan',
   'account.chat_empty': 'Belum ada pesan. Mulai percakapan!',
   'account.chat_placeholder': 'Ketik pesan...',
+  'account.chat_no_group': 'Anda belum terdaftar di rombongan, jadi belum ada chat. Hubungi admin travel Anda.',
+  'account.chat_send': 'Kirim pesan',
+  'account.stat_ihram_yes': 'Ya',
+  'account.stat_ihram_no': 'Belum',
+  'account.chat_offline': 'Tidak tersambung ke server. Pesan baru belum bisa dimuat; pesan yang Anda kirim disimpan di HP dan terkirim saat chat dibuka lagi dengan sinyal.',
 
   // Suara rombongan
   'account.voice_ready_speaker': 'Siap menyiarkan',
@@ -84,8 +87,7 @@ export const accountId = {
   'account.voice_title': 'Suara Rombongan',
   'account.voice_intro': 'Sambungkan untuk memandu/mendengar doa. Setelah tersambung, koneksi tetap hidup meski Anda pindah layar — Tawaf/Sa\'i tetap menghitung otomatis.',
   'account.voice_connect': 'Sambungkan',
-  'account.voice_header': 'SUARA ROMBONGAN',
-  'account.voice_prototype': 'Prototipe',
+  'account.voice_header': 'Suara Rombongan',
 
   // Perekam GPS (riset)
   'account.gps_scn_a_label': 'A. Lapangan terbuka',
@@ -131,8 +133,6 @@ export const accountEn: Record<keyof typeof accountId, string> = {
   'account.password_placeholder': 'Leave blank to keep current',
   'account.field_blood_type': 'Blood Type',
   'account.field_emergency': 'Emergency Contact',
-  'account.appearance': 'Appearance',
-  'account.dark_mode': 'Dark Mode',
   'account.rating_link': 'Rate & Give Feedback',
   'account.success': 'Success',
   'account.profile_updated': 'Profile updated',
@@ -186,6 +186,11 @@ export const accountEn: Record<keyof typeof accountId, string> = {
   'account.chat_title': 'Group Chat',
   'account.chat_empty': 'No messages yet. Start the conversation!',
   'account.chat_placeholder': 'Type a message...',
+  'account.chat_no_group': 'You are not in a group yet, so there is no chat. Contact your travel admin.',
+  'account.chat_send': 'Send message',
+  'account.stat_ihram_yes': 'Yes',
+  'account.stat_ihram_no': 'Not yet',
+  'account.chat_offline': 'Could not reach the server. New messages cannot load yet; messages you send are saved on this phone and sent when you reopen chat with signal.',
 
   // Group voice
   'account.voice_ready_speaker': 'Ready to broadcast',
@@ -203,8 +208,7 @@ export const accountEn: Record<keyof typeof accountId, string> = {
   'account.voice_title': 'Group Voice',
   'account.voice_intro': 'Connect to lead or listen to prayers. Once connected, the connection stays alive even if you switch screens — Tawaf/Sa\'i keeps counting automatically.',
   'account.voice_connect': 'Connect',
-  'account.voice_header': 'GROUP VOICE',
-  'account.voice_prototype': 'Prototype',
+  'account.voice_header': 'Group Voice',
 
   // GPS recorder (research)
   'account.gps_scn_a_label': 'A. Open field',
