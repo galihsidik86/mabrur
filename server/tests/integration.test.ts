@@ -165,3 +165,22 @@ describe('Integration: Content', () => {
     expect(res.data.data.length).toBeGreaterThanOrEqual(8);
   });
 });
+
+// Paling akhir: menghabiskan jatah rate limit login untuk satu alamat klien.
+describe('Integration: rate limit login per klien di belakang proxy', () => {
+  const login = async (clientIp: string) => {
+    const res = await fetch(`${BASE}/auth/login`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'X-Forwarded-For': clientIp },
+      body: JSON.stringify({ phone: '08999999990', password: 'salah' }),
+    });
+    return res.status;
+  };
+
+  it('jamaah lain tidak ikut terkunci saat satu klien kena batas', async () => {
+    const statuses: number[] = [];
+    for (let i = 0; i < 11; i++) statuses.push(await login('203.0.113.7'));
+    expect(statuses.at(-1)).toBe(429);
+    expect(await login('203.0.113.8')).not.toBe(429);
+  });
+});

@@ -25,6 +25,11 @@ import { db } from './db';
 
 const app = express();
 
+// Di produksi API berada di belakang Caddy di host yang sama. Tanpa ini req.ip selalu 127.0.0.1,
+// sehingga rate limit login dipakai bersama oleh SEMUA jamaah. Hanya proxy loopback yang dipercaya,
+// jadi X-Forwarded-For dari klien langsung tetap diabaikan.
+app.set('trust proxy', 'loopback');
+
 app.use(helmet());
 app.use(cors());
 app.use(compression());
