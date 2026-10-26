@@ -1,0 +1,10 @@
+{
+  "//": "tsconfig lokal TANPA extends, kembaran src/services/tsconfig.json. Dibaca oleh Vite (tsconfck) saat tes server mengimpor i18n/core.ts & locales/*, agar TIDAK menengok apps/mobile/tsconfig.json (extends 'expo/tsconfig.base' yang tak terpasang di CI). Tidak memengaruhi tsc mobile (pakai tsconfig root) maupun Metro/Babel.",
+  "compilerOptions": {
+    "target": "ESNext",
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    "skipLibCheck": true,
+    "strict": true
+  }
+}
