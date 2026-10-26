@@ -121,6 +121,18 @@ export async function listSessions(): Promise<TraceSession[]> {
   `);
 }
 
+// Sesi yang direkam otomatis oleh mode auto Tawaf/Sa'i (bukan rekaman manual tim riset).
+export const AUTO_LABEL_SUFFIX = ' (auto)';
+
+/** Hapus sesi otomatis yang belum terunggah — dipanggil saat jamaah menarik persetujuan. */
+export async function discardPendingAutoSessions(): Promise<void> {
+  const d = await getDb();
+  const rows = await d.getAllAsync<{ id: number }>(
+    'SELECT id FROM sessions WHERE uploaded_at IS NULL AND label LIKE ?', `%${AUTO_LABEL_SUFFIX}`,
+  );
+  for (const r of rows) await deleteSession(r.id);
+}
+
 export async function deleteSession(id: number): Promise<void> {
   const d = await getDb();
   await d.runAsync('DELETE FROM points WHERE session_id = ?', id);

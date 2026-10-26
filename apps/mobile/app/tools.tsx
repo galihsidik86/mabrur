@@ -20,7 +20,8 @@ import {
 } from '../src/services/sacred-zones';
 import { sendLocalNotification } from '../src/services/notification';
 import { isBarometerAvailable, watchFloor } from '../src/services/floor';
-import { startRecording, stopRecording, uploadSession, isRecording } from '../src/services/trace-recorder';
+import { startRecording, stopRecording, uploadSession, isRecording, AUTO_LABEL_SUFFIX } from '../src/services/trace-recorder';
+import { ensureTraceConsent } from '../src/services/trace-consent';
 import { useI18n, type TranslationKey } from '../src/services/i18n';
 import { useAuthStore } from '../src/stores/auth';
 import { canUseResearchTools } from '../src/services/research-access';
@@ -135,10 +136,12 @@ function TawafSaiTab({ type }: { type: 'tawaf' | 'sai' }) {
     setGpsStatus(t('tools.gps.searching'));
 
     // Rekam trace mentah (lat/lng/akurasi) ke SQLite lokal untuk uji akurasi —
-    // diunggah otomatis ke server saat Stop, tanpa perlu buka menu Record.
+    // diunggah otomatis ke server saat Stop. Hanya dengan persetujuan jamaah;
+    // tanpa persetujuan penghitung otomatis tetap berjalan, hanya tidak merekam.
     try {
-      if (!isRecording()) {
-        autoRecRef.current = await startRecording(type === 'tawaf' ? 'Tawaf (auto)' : "Sa'i (auto)", () => {});
+      if (!isRecording() && (await ensureTraceConsent(t))) {
+        const name = type === 'tawaf' ? 'Tawaf' : "Sa'i";
+        autoRecRef.current = await startRecording(`${name}${AUTO_LABEL_SUFFIX}`, () => {});
       }
     } catch { autoRecRef.current = null; }
 

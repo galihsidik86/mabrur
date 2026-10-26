@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { View, Text, TextInput, TouchableOpacity, ScrollView, StyleSheet, Alert, Platform } from 'react-native';
+import { View, Text, TextInput, TouchableOpacity, ScrollView, StyleSheet, Alert, Platform, Switch } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -9,6 +9,7 @@ import { api } from '../src/services/api';
 import { useI18n, type Lang } from '../src/services/i18n';
 import { countQueue } from '../src/services/documentation';
 import BatteryHint from '../src/components/BatteryHint';
+import { getTraceConsent, setTraceConsent } from '../src/services/trace-consent';
 
 export default function ProfileScreen() {
   const router = useRouter();
@@ -33,6 +34,21 @@ export default function ProfileScreen() {
   const [emergency, setEmergency] = useState('');
   const [saving, setSaving] = useState(false);
   const [stats, setStats] = useState<any>(null);
+  const [traceConsent, setTraceConsentState] = useState(false);
+
+  useEffect(() => {
+    getTraceConsent().then((c) => setTraceConsentState(c === 'granted')).catch(() => {});
+  }, []);
+
+  const toggleTraceConsent = async (granted: boolean) => {
+    setTraceConsentState(granted);
+    try {
+      await setTraceConsent(granted);
+    } catch {
+      setTraceConsentState(!granted);
+      Alert.alert(t('account.failed'), t('consent.trace_save_failed'));
+    }
+  };
 
   useEffect(() => {
     (async () => {
@@ -145,6 +161,22 @@ export default function ProfileScreen() {
           </TouchableOpacity>
         </View>
 
+        {/* Persetujuan jejak GPS riset (mode otomatis Tawaf/Sa'i) — bisa ditarik kapan saja */}
+        <Text style={s.sectionTitle}>{t('consent.trace_section')}</Text>
+        <View style={s.consentCard}>
+          <View style={{ flex: 1 }}>
+            <Text style={s.consentLabel}>{t('consent.trace_switch')}</Text>
+            <Text style={s.consentHint}>{t('consent.trace_switch_hint')}</Text>
+          </View>
+          <Switch
+            value={traceConsent}
+            onValueChange={toggleTraceConsent}
+            trackColor={{ false: colors.border, true: colors.primary }}
+            thumbColor={colors.card}
+            accessibilityLabel={t('consent.trace_switch')}
+          />
+        </View>
+
         {/* Notifikasi & baterai (Android) */}
         {Platform.OS === 'android' && (
           <>
@@ -193,6 +225,12 @@ const s = StyleSheet.create({
   langText: { fontSize: 13, fontFamily: 'PlusJakartaSans_600SemiBold', color: colors.textMuted },
   langTextActive: { color: colors.textOnPrimary },
   statsRow: { flexDirection: 'row', gap: 10 },
+  consentCard: {
+    flexDirection: 'row', alignItems: 'center', gap: 12, padding: 14,
+    backgroundColor: colors.card, borderWidth: 1, borderColor: colors.border, borderRadius: 12,
+  },
+  consentLabel: { fontSize: 14, fontFamily: 'PlusJakartaSans_600SemiBold', color: colors.text },
+  consentHint: { fontSize: 12, lineHeight: 18, fontFamily: 'PlusJakartaSans_500Medium', color: colors.textMuted, marginTop: 4 },
   statCard: { flex: 1, backgroundColor: colors.card, borderWidth: 1, borderColor: colors.border, borderRadius: 12, padding: 14, alignItems: 'center' },
   statNum: { fontSize: 22, fontFamily: 'PlusJakartaSans_800ExtraBold', color: colors.primary },
   statLabel: { fontSize: 11, fontFamily: 'PlusJakartaSans_500Medium', color: colors.textMuted, marginTop: 4, textAlign: 'center' },
