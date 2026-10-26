@@ -39,7 +39,8 @@ jobs:
         with:
           node-version: 22
           cache: npm
-          cache-dependency-path: server/package-lock.json
+          # Lockfile workspace npm ada di root (server adalah anggota workspace).
+          cache-dependency-path: package-lock.json
 
       - name: Install dependencies
         run: npm ci
@@ -55,8 +56,30 @@ jobs:
       - name: Run seeds
         run: npm run db:seed
 
+      # Akun jamaah & muthawwif yang dipakai tests/integration.test.ts, dalam satu rombongan
+      # (seed biasa hanya membuat admin).
+      - name: Seed integration accounts
+        run: |
+          npm run seed-test-accounts -w server
+          psql "$DATABASE_URL" -v ON_ERROR_STOP=1 <<'SQL'
+          INSERT INTO groups (name, kloter_code, year) VALUES ('Rombongan CI', 'CI-INTEG', 2026)
+            ON CONFLICT (kloter_code) DO NOTHING;
+          INSERT INTO group_members (group_id, user_id, role_in_group)
+            SELECT g.id, u.id, CASE WHEN u.role = 'muthawwif' THEN 'muthawwif'::group_role ELSE 'jamaah'::group_role END
+            FROM groups g CROSS JOIN users u
+            WHERE g.kloter_code = 'CI-INTEG' AND u.phone IN ('08123456789', '08111222333')
+            ON CONFLICT (group_id, user_id) DO NOTHING;
+          SQL
+        env:
+          JAMAAH_PHONE: '08123456789'
+          JAMAAH_PASSWORD: jamaah123
+          MUTHAWWIF_PHONE: '08111222333'
+          MUTHAWWIF_PASSWORD: muth123456
+
+      # integration.test.ts memanggil API lewat HTTP, jadi baru dijalankan setelah server hidup.
       - name: Unit tests
-        run: npm run test
+        run: npx vitest run --exclude tests/integration.test.ts
+        working-directory: server
 
       - name: Start server
         run: npm run server:dev &
