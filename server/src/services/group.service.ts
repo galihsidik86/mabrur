@@ -1,6 +1,7 @@
 import { db } from '../db';
 import { AppError } from '../middleware/error-handler';
 import { audit } from './audit.service';
+import { deleteGroupMediaFiles } from './media.service';
 
 export async function createGroup(
   data: { name: string; kloter_code: string; year: number },
@@ -135,6 +136,8 @@ export async function deleteGroup(id: string, adminId: string) {
   if (!group) throw new AppError(404, 'Rombongan tidak ditemukan', 'NOT_FOUND');
 
   await db('groups').where('id', id).delete();
+  // Baris dokumentasi ikut terhapus (CASCADE); berkas fotonya di disk dihapus di sini.
+  await deleteGroupMediaFiles(id);
   await audit(adminId, 'group.delete', 'groups', id);
 }
 
@@ -166,6 +169,8 @@ export async function listMembers(groupId: string) {
       'users.role',
       'group_members.role_in_group',
       'group_members.joined_at',
+      'group_members.room_makkah',
+      'group_members.room_madinah',
     )
     .orderBy('group_members.joined_at');
 

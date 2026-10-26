@@ -9,7 +9,12 @@
     *{box-sizing:border-box;margin:0;padding:0}
     body{font-family:'Plus Jakarta Sans',system-ui,sans-serif;background:#F5F1E8;color:#1F1B16}
     input,select,textarea,button{font-family:inherit}
-    a{color:#8B2E2E;text-decoration:none}
+    a{color:#0B5D47;text-decoration:none}
+    /* Satu cincin fokus untuk semua kontrol (pengguna keyboard); emas di sidebar gelap. */
+    :focus-visible{outline:2px solid #0B5D47;outline-offset:2px}
+    aside :focus-visible{outline-color:#D4A437}
+    .dropzone:focus-within{outline:2px solid #0B5D47;outline-offset:2px}
+    .sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);border:0}
   </style>
 </head>
 <body>

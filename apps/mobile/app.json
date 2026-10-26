@@ -30,7 +30,7 @@
       "package": "app.mabrur",
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
-        "backgroundColor": "#8B2E2E"
+        "backgroundColor": "#0B5D47"
       }
     },
     "plugins": [
@@ -40,8 +40,29 @@
       "expo-font",
       "expo-splash-screen",
       "expo-status-bar",
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "Mabrur memerlukan akses foto untuk mengunggah dokumentasi kegiatan rombongan.",
+          "cameraPermission": "Mabrur memerlukan kamera untuk memotret dan merekam dokumentasi kegiatan rombongan serta foto SOS.",
+          "microphonePermission": "Mabrur memerlukan mikrofon untuk siaran suara rombongan (muthawwif memandu doa) dan suara pada video dokumentasi."
+        }
+      ],
+      [
+        "expo-media-library",
+        {
+          "photosPermission": "Mabrur memerlukan akses foto untuk menyimpan dokumentasi rombongan ke galeri.",
+          "savePhotosPermission": "Mabrur memerlukan izin menyimpan foto dokumentasi rombongan ke galeri.",
+          "isAccessMediaLocationEnabled": false,
+          "granularPermissions": [
+            "photo"
+          ]
+        }
+      ],
       "@livekit/react-native-expo-plugin",
-      "@config-plugins/react-native-webrtc"
+      "@config-plugins/react-native-webrtc",
+      "react-native-compressor",
+      "expo-video"
     ],
     "extra": {
       "apiUrl": "https://mabrur.sosmartpro.com"

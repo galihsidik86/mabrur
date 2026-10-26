@@ -6,6 +6,7 @@ import {
   getProfile,
   clearAll as clearDB,
 } from '../services/db';
+import { clearQueueFiles } from '../services/documentation';
 
 interface User {
   id: string;
@@ -73,6 +74,8 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     await SecureStore.deleteItemAsync('refresh_token');
     await SecureStore.deleteItemAsync('must_change_pw');
     await clearDB();
+    // Foto Dokumentasi yang belum terkirim milik akun ini — jangan ikut ke akun berikutnya.
+    clearQueueFiles();
 
     set({ user: null, accessToken: null, isAuthenticated: false });
   },

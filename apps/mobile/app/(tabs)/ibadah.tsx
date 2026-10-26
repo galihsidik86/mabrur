@@ -1,11 +1,10 @@
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useRef } from 'react';
 import {
   View,
   Text,
   ScrollView,
   TouchableOpacity,
   StyleSheet,
-  ActivityIndicator,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -16,6 +15,8 @@ import {
   getGuidesByType,
   type Guide,
 } from '../../src/services/db';
+import { useI18n } from '../../src/services/i18n';
+import StateNotice from '../../src/components/StateNotice';
 
 type TabType = 'umrah' | 'haji' | 'ziarah';
 
@@ -25,25 +26,33 @@ interface ZiarahPlace {
 }
 
 export default function IbadahScreen() {
+  const t = useI18n((st) => st.t);
   const [tab, setTab] = useState<TabType>('umrah');
   const [guides, setGuides] = useState<Guide[]>([]);
   const [ziarah, setZiarah] = useState<ZiarahPlace[]>([]);
   const [openIdx, setOpenIdx] = useState(0);
   const [loading, setLoading] = useState(true);
+  const [loadFailed, setLoadFailed] = useState(false);
 
   const loadZiarah = useCallback(async () => {
     try {
       const data = await api.getZiarah();
       setZiarah(data);
-    } catch {}
+    } catch {
+      setLoadFailed(true);
+    }
     setLoading(false);
   }, []);
 
+  // Tab yang sedang diminta; respons untuk tab lain (pengguna sudah pindah) diabaikan.
+  const activeTabRef = useRef<TabType>(tab);
+
   const load = useCallback(async (type: TabType) => {
     if (type === 'ziarah') { loadZiarah(); return; }
+    const isCurrent = () => activeTabRef.current === type;
     // Offline-first: baca dari SQLite
     const local = await getGuidesByType(type);
-    if (local.length > 0) {
+    if (local.length > 0 && isCurrent()) {
       setGuides(local);
       setLoading(false);
     }
@@ -52,35 +61,47 @@ export default function IbadahScreen() {
     try {
       const remote = await api.getGuides(type);
       await saveGuides(remote);
-      setGuides(remote);
+      if (isCurrent()) setGuides(remote);
     } catch {
-      // Offline — data lokal sudah dimuat
+      // Offline — data lokal (jika ada) sudah dimuat
+      if (isCurrent()) setLoadFailed(true);
     } finally {
-      setLoading(false);
+      if (isCurrent()) setLoading(false);
     }
   }, []);
 
-  useEffect(() => {
+  const reload = useCallback(() => {
+    activeTabRef.current = tab;
     setLoading(true);
+    setLoadFailed(false);
     setOpenIdx(0);
+    // Kosongkan dulu agar tab baru tidak menampilkan tuntunan tab sebelumnya.
+    setGuides([]);
     load(tab);
   }, [tab, load]);
 
-  const switchTab = (t: TabType) => {
-    if (t !== tab) setTab(t);
+  useEffect(() => { reload(); }, [reload]);
+
+  const listState = (emptyKey: 'content.ziyarah_empty' | 'content.guide_empty') => (
+    <StateNotice
+      kind={loading ? 'loading' : loadFailed ? 'error' : 'empty'}
+      message={loading ? t('common.loading') : loadFailed ? t('common.load_failed') : t(emptyKey)}
+      actionLabel={loading ? undefined : t('common.retry')}
+      onAction={reload}
+    />
+  );
+
+  const switchTab = (next: TabType) => {
+    if (next !== tab) setTab(next);
   };
 
-  const count = guides.length;
-  const subtitle =
-    tab === 'umrah'
-      ? `${count} tahap · ketuk untuk membuka langkah & doa`
-      : `${count} tahap · ketuk untuk membuka langkah & doa`;
+  const subtitle = t('content.guide_steps_count', { count: guides.length });
 
   return (
     <SafeAreaView style={s.safe} edges={['top']}>
       <ScrollView style={s.scroll} contentContainerStyle={s.content}>
-        <Text style={s.title}>Tuntunan ibadah</Text>
-        <Text style={s.sub}>Panduan langkah demi langkah, urut & jelas.</Text>
+        <Text style={s.title}>{t('content.guide_title')}</Text>
+        <Text style={s.sub}>{t('content.guide_sub')}</Text>
 
         {/* Tab selector */}
         <View style={s.tabRow}>
@@ -90,7 +111,7 @@ export default function IbadahScreen() {
             activeOpacity={0.7}
           >
             <Text style={[s.tabText, tab === 'umrah' && s.tabTextActive]}>
-              Umrah
+              {t('content.tab_umrah')}
             </Text>
           </TouchableOpacity>
           <TouchableOpacity
@@ -99,7 +120,7 @@ export default function IbadahScreen() {
             activeOpacity={0.7}
           >
             <Text style={[s.tabText, tab === 'haji' && s.tabTextActive]}>
-              Haji
+              {t('content.tab_hajj')}
             </Text>
           </TouchableOpacity>
           <TouchableOpacity
@@ -108,7 +129,7 @@ export default function IbadahScreen() {
             activeOpacity={0.7}
           >
             <Text style={[s.tabText, tab === 'ziarah' && s.tabTextActive]}>
-              Ziarah
+              {t('content.tab_ziyarah')}
             </Text>
           </TouchableOpacity>
         </View>
@@ -118,8 +139,8 @@ export default function IbadahScreen() {
             {ziarah.map((z, idx) => (
               <View key={z.id} style={s.card}>
                 <TouchableOpacity style={s.cardHeader} onPress={() => setOpenIdx(openIdx === idx ? -1 : idx)} activeOpacity={0.7}>
-                  <View style={[s.stepNum, { backgroundColor: '#EAF2E4' }]}>
-                    <Ionicons name="location" size={16} color={colors.green} />
+                  <View style={[s.stepNum, { backgroundColor: colors.primaryLight }]}>
+                    <Ionicons name="location" size={16} color={colors.primary} />
                   </View>
                   <View style={{ flex: 1 }}>
                     <Text style={s.cardTitle}>{z.name}</Text>
@@ -132,7 +153,7 @@ export default function IbadahScreen() {
                     <Text style={s.stepsText}>{z.description}</Text>
                     {z.tips && (
                       <View style={s.prayerBox}>
-                        <Text style={s.prayerLabel}>TIPS</Text>
+                        <Text style={s.prayerLabel}>{t('content.ziyarah_tips')}</Text>
                         <Text style={[s.latinText, { fontStyle: 'normal', marginTop: 4 }]}>{z.tips}</Text>
                       </View>
                     )}
@@ -140,20 +161,14 @@ export default function IbadahScreen() {
                 )}
               </View>
             ))}
-            {ziarah.length === 0 && !loading && (
-              <Text style={{ color: colors.textFaint, textAlign: 'center', marginTop: 40, fontFamily: 'PlusJakartaSans_500Medium' }}>Belum ada data ziarah</Text>
-            )}
+            {ziarah.length === 0 && listState('content.ziyarah_empty')}
           </View>
         ) : (
         <>
-        <Text style={s.subtitle}>{`${guides.length} tahap · ketuk untuk membuka langkah & doa`}</Text>
+        {guides.length > 0 && <Text style={s.subtitle}>{subtitle}</Text>}
 
-        {loading && guides.length === 0 ? (
-          <ActivityIndicator
-            color={colors.primary}
-            size="large"
-            style={{ marginTop: 40 }}
-          />
+        {guides.length === 0 ? (
+          listState('content.guide_empty')
         ) : (
           <View style={s.list}>
             {guides.map((guide, idx) => {
@@ -202,7 +217,7 @@ export default function IbadahScreen() {
                       {guide.arabic_text && (
                         <View style={s.prayerBox}>
                           <Text style={s.prayerLabel}>
-                            DOA SAAT {guide.title.toUpperCase()}
+                            {t('content.guide_prayer_label', { title: guide.title.toUpperCase() })}
                           </Text>
                           <Text style={s.arabicText}>
                             {guide.arabic_text}
@@ -250,7 +265,7 @@ const s = StyleSheet.create({
     flexDirection: 'row',
     backgroundColor: colors.surface,
     borderWidth: 1,
-    borderColor: '#E5DDD0',
+    borderColor: colors.border,
     borderRadius: 12,
     padding: 4,
     gap: 4,
@@ -289,11 +304,6 @@ const s = StyleSheet.create({
     borderWidth: 1,
     borderColor: colors.border,
     borderRadius: 14,
-    shadowColor: colors.textSecondary,
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.08,
-    shadowRadius: 6,
-    elevation: 2,
     overflow: 'hidden',
   },
   cardHeader: {
@@ -351,7 +361,7 @@ const s = StyleSheet.create({
     fontSize: 10,
     fontFamily: 'PlusJakartaSans_700Bold',
     letterSpacing: 1,
-    color: '#97751F',
+    color: colors.goldText,
   },
   arabicText: {
     fontSize: 22,

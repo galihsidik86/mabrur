@@ -9,6 +9,7 @@ import { audit } from '../services/audit.service';
 import bcrypt from 'bcryptjs';
 import { encrypt, decrypt } from '../services/crypto.service';
 import { revokeAllTokens } from '../services/auth.service';
+import { notifyGroupMessage } from '../services/push.service';
 
 const router = Router();
 router.use(authenticate);
@@ -52,6 +53,16 @@ router.patch('/profile', validate(profileUpdateSchema), async (req: Request, res
       .select('id', 'phone', 'name', 'role', 'blood_type', 'emergency_contact', 'created_at').first();
     await audit(req.auth!.sub, 'profile.update', 'users', req.auth!.sub);
     res.json({ data: user });
+  } catch (err) { next(err); }
+});
+
+// Bahasa pilihan pengguna — dipakai server untuk push notification (SOS, pengingat lokasi).
+const languageSchema = z.object({ language: z.enum(['id', 'en']) });
+
+router.put('/profile/language', validate(languageSchema), async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    await db('users').where('id', req.auth!.sub).update({ language: req.body.language });
+    res.json({ data: { language: req.body.language } });
   } catch (err) { next(err); }
 });
 
@@ -143,6 +154,8 @@ router.post('/groups/:groupId/messages', validate(messageSchema), async (req: Re
     const [msg] = await db('messages').insert({ group_id: groupId, user_id: req.auth!.sub, text: req.body.text }).returning('*');
     const user = await db('users').where('id', req.auth!.sub).select('name').first();
     res.status(201).json({ data: { ...msg, user_name: user?.name } });
+    // Sengaja tidak di-await: respons ke pengirim tidak menunggu Expo push.
+    void notifyGroupMessage(groupId, req.auth!.sub, user?.name || 'Pesan baru', req.body.text);
   } catch (err) { next(err); }
 });
 

@@ -5,18 +5,25 @@ import {
   ScrollView,
   TouchableOpacity,
   StyleSheet,
-  Alert,
   Dimensions,
+  Linking,
+  Alert,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { colors, radius } from '../../src/theme';
-import { api } from '../../src/services/api';
+import { useLocalSearchParams } from 'expo-router';
+import { api, type MemberStatus } from '../../src/services/api';
+import { escapeHtml } from '../../src/services/html-escape';
+import { trackingLabel } from '../../src/services/tracking-label';
+import { useI18n } from '../../src/services/i18n';
 import {
   saveMiqatZones,
   getMiqatZones,
   saveIhramLocal,
   getIhramLocal,
+  getMeta,
+  setMeta,
 } from '../../src/services/db';
 import {
   requestPermission,
@@ -33,26 +40,42 @@ import MapViewComponent from '../../src/components/MapView';
 import { ARAFAH_BOUNDARY, ARAFAH_CENTER, KAABAH, NAMIRAH_MOSQUE_CENTER } from '../../src/services/sacred-zones';
 
 const MAP_HEIGHT = 300;
+// sync_meta: status ihram yang diubah saat offline dan belum sampai ke server ('1' / '0' / '').
+const IHRAM_PENDING_KEY = 'ihram_pending';
+// Jarak (m) yang dianggap awal bilah progres menuju miqat.
+const PROGRESS_RANGE_M = 12000;
 const screenW = Dimensions.get('window').width;
+// Kunci (bukan teks) agar terjemahan dipanggil saat render.
+const HARAM_RULE_KEYS = [
+  'monitor.haram_rule_hunt',
+  'monitor.haram_rule_plants',
+  'monitor.haram_rule_ihram',
+] as const;
 
 export default function PetaScreen() {
   const user = useAuthStore((s) => s.user);
   const isMuthawwif = user?.role === 'muthawwif' || user?.role === 'admin';
+  const t = useI18n((st) => st.t);
   const [zones, setZones] = useState<MiqatZone[]>([]);
   const [nearest, setNearest] = useState<NearestResult | null>(null);
   const [isIhram, setIsIhram] = useState(false);
   const [hasLocation, setHasLocation] = useState(false);
+  const [locationDenied, setLocationDenied] = useState(false);
   const [userPos, setUserPos] = useState<{ lat: number; lng: number } | null>(null);
   const [mapTab, setMapTab] = useState<'miqat' | 'realmap' | 'arafah' | 'monitor'>('miqat');
-  const [memberLocs, setMemberLocs] = useState<any[]>([]);
+  const [members, setMembers] = useState<MemberStatus[]>([]);
+  // ?focus=<userId> dari dashboard muthawwif: buka tab Monitor berpusat di jamaah itu.
+  const { focus } = useLocalSearchParams<{ focus?: string }>();
   const watchRef = useRef<{ remove: () => void } | null>(null);
 
-  const distance = nearest?.distance ?? 12000;
+  // null sampai GPS memberi posisi dan zona miqat tersedia — jangan tampilkan jarak karangan.
+  const distance = nearest?.distance ?? null;
   // Pakai withinWarning dari findNearest (radius zona), bukan ambang hardcode.
   const warn = (nearest?.withinWarning ?? false) && !isIhram;
   const ready = isIhram;
-  const approach = !warn && !isIhram;
-  const progress = Math.max(0, Math.min(1, 1 - distance / 12000));
+  const approach = nearest != null && !warn && !isIhram;
+  const unknown = nearest == null && !isIhram;
+  const progress = distance == null ? 0 : Math.max(0, Math.min(1, 1 - distance / PROGRESS_RANGE_M));
 
   const loadZones = useCallback(async () => {
     let z = await getMiqatZones();
@@ -69,7 +92,14 @@ export default function PetaScreen() {
   const loadIhram = useCallback(async () => {
     const local = await getIhramLocal();
     if (local) setIsIhram(local.is_ihram);
+    // Perubahan yang dibuat saat offline dikirim dulu, agar tidak ditimpa status lama dari server.
+    const pending = await getMeta(IHRAM_PENDING_KEY);
     try {
+      if (pending) {
+        await api.toggleIhram(pending === '1', 'umrah');
+        await setMeta(IHRAM_PENDING_KEY, '');
+        return;
+      }
       const remote = await api.getIhramStatus();
       setIsIhram(remote.is_ihram);
     } catch {}
@@ -78,9 +108,10 @@ export default function PetaScreen() {
   const startTracking = useCallback(async (z: MiqatZone[]) => {
     const granted = await requestPermission();
     if (!granted) {
-      Alert.alert('Izin Lokasi', 'Mabrur memerlukan akses lokasi untuk fitur geofence miqat.');
+      setLocationDenied(true);
       return;
     }
+    setLocationDenied(false);
 
     // Initial position
     const pos = await getPosition();
@@ -101,7 +132,7 @@ export default function PetaScreen() {
       if (n) saveIhramLocal({ is_ihram: isIhram, distance_meters: n.distance, nearest_miqat: n.zone.name });
       api.sendLocation(lat, lng, acc ?? undefined).catch(() => {});
     });
-  }, [isIhram]);
+  }, [isIhram, t]);
 
   useEffect(() => {
     (async () => {
@@ -115,9 +146,22 @@ export default function PetaScreen() {
   const toggleIhram = async () => {
     const next = !isIhram;
     setIsIhram(next);
-    await saveIhramLocal({ is_ihram: next, distance_meters: distance, nearest_miqat: nearest?.zone.name });
-    try { await api.toggleIhram(next, 'umrah'); } catch {}
+    // Offline-first: status di HP selalu tersimpan, terlepas dari sinyal.
+    try {
+      await saveIhramLocal({ is_ihram: next, distance_meters: distance, nearest_miqat: nearest?.zone.name });
+    } catch {}
+    try {
+      await api.toggleIhram(next, 'umrah');
+      await setMeta(IHRAM_PENDING_KEY, '');
+    } catch {
+      await setMeta(IHRAM_PENDING_KEY, next ? '1' : '0').catch(() => {});
+      Alert.alert(t('monitor.ihram_pending_title'), t('monitor.ihram_pending_body'));
+    }
   };
+
+  useEffect(() => {
+    if (focus && isMuthawwif) setMapTab('monitor');
+  }, [focus, isMuthawwif]);
 
   // Load member locations for muthawwif monitoring
   useEffect(() => {
@@ -129,7 +173,7 @@ export default function PetaScreen() {
       const loadMembers = async () => {
         try {
           const data = await api.getMemberStatuses(groups[0].id);
-          setMemberLocs(data.members.filter((m: any) => m.location));
+          setMembers(data.members);
         } catch {}
       };
       await loadMembers();
@@ -146,10 +190,10 @@ export default function PetaScreen() {
   const my = 44 - (r * Math.sin(angle)) / 3;
 
   const mapTabs: Array<{ id: typeof mapTab; label: string }> = [
-    { id: 'miqat', label: 'Miqat' },
-    { id: 'realmap', label: 'Peta' },
-    { id: 'arafah', label: 'Arafah' },
-    ...(isMuthawwif ? [{ id: 'monitor' as const, label: 'Monitor' }] : []),
+    { id: 'miqat', label: t('monitor.tab_miqat') },
+    { id: 'realmap', label: t('monitor.tab_map') },
+    { id: 'arafah', label: t('monitor.tab_arafah') },
+    ...(isMuthawwif ? [{ id: 'monitor' as const, label: t('monitor.tab_monitor') }] : []),
   ];
 
   return (
@@ -163,10 +207,13 @@ export default function PetaScreen() {
       }}>
         <ScrollView horizontal showsHorizontalScrollIndicator={false}
           contentContainerStyle={{ paddingHorizontal: 12, paddingVertical: 10, gap: 6 }}>
-          {mapTabs.map((t) => (
-            <TouchableOpacity key={t.id} onPress={() => setMapTab(t.id)}
-              style={{ paddingHorizontal: 16, paddingVertical: 8, borderRadius: 999, backgroundColor: mapTab === t.id ? colors.primary : colors.card, borderWidth: 1, borderColor: mapTab === t.id ? colors.primary : colors.border }}>
-              <Text style={{ fontSize: 13, fontFamily: 'PlusJakartaSans_700Bold', color: mapTab === t.id ? '#fff' : colors.textMuted }}>{t.label}</Text>
+          {mapTabs.map((tab) => (
+            <TouchableOpacity key={tab.id} onPress={() => setMapTab(tab.id)}
+              hitSlop={{ top: 5, bottom: 5 }}
+              accessibilityRole="tab"
+              accessibilityState={{ selected: mapTab === tab.id }}
+              style={{ paddingHorizontal: 16, paddingVertical: 8, borderRadius: 999, backgroundColor: mapTab === tab.id ? colors.primary : colors.card, borderWidth: 1, borderColor: mapTab === tab.id ? colors.primary : colors.border }}>
+              <Text style={{ fontSize: 13, fontFamily: 'PlusJakartaSans_700Bold', color: mapTab === tab.id ? '#fff' : colors.textMuted }}>{tab.label}</Text>
             </TouchableOpacity>
           ))}
         </ScrollView>
@@ -181,22 +228,23 @@ export default function PetaScreen() {
             userLocation={userPos}
             center={userPos || { lat: KAABAH.lat, lng: KAABAH.lng }}
             markers={[
-              { lat: KAABAH.lat, lng: KAABAH.lng, icon: '🕋', name: "Ka'bah" },
+              // Piktogram landmark sengaja dipakai: ini penanda tempatnya sendiri, bukan hiasan.
+            { lat: KAABAH.lat, lng: KAABAH.lng, icon: '🕋', name: "Ka'bah" },
               ...zones.filter((z) => z.zone_type === 'miqat').map((z) => ({
-                lat: z.center_lat, lng: z.center_lng, name: z.name, color: '#8B2E2E',
-                popup: `<b>${z.name}</b><br/>Radius: ${z.radius_meters}m`,
+                lat: z.center_lat, lng: z.center_lng, name: z.name, color: colors.accent,
+                popup: `<b>${escapeHtml(z.name)}</b><br/>${escapeHtml(t('monitor.popup_radius', { meters: z.radius_meters }))}`,
               })),
             ]}
             circles={zones.map((z) => ({
               lat: z.center_lat, lng: z.center_lng, radius: z.zone_type === 'haram' ? z.radius_meters : z.warning_radius,
-              color: z.zone_type === 'haram' ? '#4A7C3A' : '#8B2E2E',
+              color: z.zone_type === 'haram' ? colors.green : colors.accent,
               fillOpacity: 0.08,
               label: z.name,
             }))}
           />
           {nearest && (
             <View style={{ padding: 16 }}>
-              <Text style={{ fontSize: 14, fontFamily: 'PlusJakartaSans_700Bold', color: colors.text }}>Miqat terdekat: {nearest.zone.name}</Text>
+              <Text style={{ fontSize: 14, fontFamily: 'PlusJakartaSans_700Bold', color: colors.text }}>{t('monitor.nearest_miqat', { name: nearest.zone.name })}</Text>
               <Text style={{ fontSize: 22, fontFamily: 'PlusJakartaSans_800ExtraBold', color: colors.primary, marginTop: 4 }}>{formatDistance(nearest.distance)}</Text>
             </View>
           )}
@@ -213,49 +261,85 @@ export default function PetaScreen() {
             userLocation={userPos}
             markers={[
               { lat: ARAFAH_CENTER.lat, lng: ARAFAH_CENTER.lng, icon: '⛰️', name: 'Jabal Rahmah' },
-              { lat: NAMIRAH_MOSQUE_CENTER.lat, lng: NAMIRAH_MOSQUE_CENTER.lng, icon: '🕌', name: 'Masjid Namirah (batas rawan!)' },
+              { lat: NAMIRAH_MOSQUE_CENTER.lat, lng: NAMIRAH_MOSQUE_CENTER.lng, icon: '🕌', name: t('monitor.namirah_marker') },
             ]}
             polygons={[{
               coords: ARAFAH_BOUNDARY,
-              color: '#4A7C3A', fillColor: '#4A7C3A', fillOpacity: 0.12,
-              label: 'Batas Padang Arafah — wukuf sah di dalam area ini',
+              color: colors.green, fillColor: colors.green, fillOpacity: 0.12,
+              label: t('monitor.arafah_polygon'),
             }]}
           />
           <View style={{ padding: 16 }}>
-            <Text style={{ fontSize: 15, fontFamily: 'PlusJakartaSans_700Bold', color: colors.text }}>Area Wukuf Arafah</Text>
+            <Text style={{ fontSize: 15, fontFamily: 'PlusJakartaSans_700Bold', color: colors.text }}>{t('monitor.arafah_title')}</Text>
             <Text style={{ fontSize: 13, fontFamily: 'PlusJakartaSans_500Medium', color: colors.textMuted, marginTop: 4, lineHeight: 20 }}>
-              Area hijau = batas Padang Arafah. Wukuf HANYA sah di dalam area ini.{'\n'}
-              🕌 Masjid Namirah: sebagian di luar Arafah — hati-hati!{'\n'}
-              Gunakan fitur Wukuf di Alat Ibadah untuk monitoring posisi real-time.
+              {t('monitor.arafah_line_area')}{'\n'}
+              {t('monitor.arafah_line_namirah')}{'\n'}
+              {t('monitor.arafah_line_tool')}
             </Text>
           </View>
         </ScrollView>
       )}
 
       {/* ===== MONITORING MAP (MUTHAWWIF) ===== */}
-      {mapTab === 'monitor' && isMuthawwif && (
+      {mapTab === 'monitor' && isMuthawwif && (() => {
+        const now = Date.now();
+        const jamaah = members.filter((m) => m.role_in_group === 'jamaah');
+        const located = members.filter((m) => m.location);
+        const noLocation = jamaah.filter((m) => m.tracking === 'none');
+        const focused = members.find((m) => m.id === focus && m.location);
+        const markerColor = (m: MemberStatus) =>
+          m.tracking !== 'tracked' ? colors.textMuted : m.status === 'safe' ? colors.green : colors.danger;
+        return (
         <ScrollView style={s.scroll} contentContainerStyle={s.content}>
           <MapViewComponent
+            key={focused?.id ?? 'all'}
             height={400}
-            zoom={13}
-            center={userPos || { lat: KAABAH.lat, lng: KAABAH.lng }}
+            zoom={focused ? 17 : 13}
+            center={focused?.location ?? userPos ?? { lat: KAABAH.lat, lng: KAABAH.lng }}
             userLocation={userPos}
-            markers={memberLocs.map((m: any) => ({
-              lat: m.location.lat, lng: m.location.lng,
+            markers={located.map((m) => ({
+              lat: m.location!.lat, lng: m.location!.lng,
               name: m.name,
-              color: m.status === 'safe' ? '#4A7C3A' : '#C44536',
-              pulse: m.status === 'attention',
-              popup: `<b>${m.name}</b><br/>${m.status === 'safe' ? '✅ Aman' : '⚠️ Perlu perhatian'}${m.nearest_miqat ? '<br/>' + m.nearest_miqat.name + ': ' + (m.nearest_miqat.distance/1000).toFixed(1) + 'km' : ''}`,
+              color: markerColor(m),
+              pulse: m.id === focused?.id || (m.tracking === 'tracked' && m.status === 'attention'),
+              popup: `<b>${escapeHtml(m.name)}</b><br/>${escapeHtml(trackingLabel(m.tracking, m.last_seen_at, now, t))}`
+                + (m.far_from_group && m.distance_to_leader != null
+                  ? `<br/>${escapeHtml(t('monitor.from_muthawwif', { distance: formatDistance(m.distance_to_leader) }))}`
+                  : '')
+                + (m.nearest_miqat ? `<br/>${escapeHtml(m.nearest_miqat.name)}: ${formatDistance(m.nearest_miqat.distance)}` : ''),
             }))}
           />
           <View style={{ padding: 16 }}>
-            <Text style={{ fontSize: 15, fontFamily: 'PlusJakartaSans_700Bold', color: colors.text }}>{memberLocs.length} jamaah di peta</Text>
-            <Text style={{ fontSize: 12, fontFamily: 'PlusJakartaSans_500Medium', color: colors.textMuted, marginTop: 2 }}>
-              🟢 Aman · 🔴 Perlu perhatian · Auto-refresh tiap 15 detik
+            <Text style={s.monitorTitle}>
+              {t('monitor.tracked_count', {
+                tracked: jamaah.filter((m) => m.tracking === 'tracked').length,
+                total: jamaah.length,
+              })}
             </Text>
+            <View style={s.legendSwatches}>
+              {[
+                { color: colors.green, label: t('monitor.legend_safe') },
+                { color: colors.danger, label: t('monitor.legend_attention') },
+                { color: colors.textMuted, label: t('monitor.legend_stale') },
+              ].map((item) => (
+                <View key={item.label} style={s.legendSwatch}>
+                  <View style={[s.legendDot, { backgroundColor: item.color }]} />
+                  <Text style={s.monitorLegend}>{item.label}</Text>
+                </View>
+              ))}
+            </View>
+            <Text style={s.monitorLegend}>{t('monitor.legend_refresh')}</Text>
+            {noLocation.length > 0 && (
+              <View style={s.noLocBox}>
+                <Text style={s.noLocTitle}>{t('monitor.no_location_count', { count: noLocation.length })}</Text>
+                <Text style={s.noLocNames}>{noLocation.map((m) => m.name).join(', ')}</Text>
+                <Text style={s.noLocHint}>{t('monitor.no_location_hint')}</Text>
+              </View>
+            )}
           </View>
         </ScrollView>
-      )}
+        );
+      })()}
 
       {/* ===== MIQAT (existing stylized) ===== */}
       {mapTab === 'miqat' && (
@@ -265,7 +349,7 @@ export default function PetaScreen() {
           {/* Miqat ring */}
           <View style={s.miqatRing} />
           <View style={s.miqatLabel}>
-            <Text style={s.miqatLabelText}>BATAS MIQAT</Text>
+            <Text style={s.miqatLabelText}>{t('monitor.miqat_boundary_caps')}</Text>
           </View>
           {/* Haram ring */}
           <View style={s.haramRing} />
@@ -284,12 +368,12 @@ export default function PetaScreen() {
           {/* Legend */}
           <View style={s.legend}>
             <View style={s.legendRow}>
-              <View style={[s.legendBox, { borderColor: colors.primary, borderWidth: 2, backgroundColor: 'rgba(139,46,46,0.1)' }]} />
-              <Text style={s.legendText}>Batas miqat</Text>
+              <View style={[s.legendBox, { borderColor: colors.accent, borderWidth: 2, backgroundColor: 'rgba(139,46,46,0.1)' }]} />
+              <Text style={s.legendText}>{t('monitor.legend_miqat')}</Text>
             </View>
             <View style={s.legendRow}>
               <View style={[s.legendBox, { borderColor: colors.green, borderWidth: 2, borderStyle: 'dashed', backgroundColor: 'rgba(74,124,58,0.12)' }]} />
-              <Text style={s.legendText}>Tanah Haram</Text>
+              <Text style={s.legendText}>{t('monitor.legend_haram')}</Text>
             </View>
           </View>
         </View>
@@ -301,8 +385,8 @@ export default function PetaScreen() {
               <Ionicons name="warning" size={24} color="#fff" />
             </View>
             <View style={{ flex: 1 }}>
-              <Text style={s.statusWarnTitle}>Pakai ihram sekarang</Text>
-              <Text style={s.statusWarnSub}>Batas miqat tinggal {formatDistance(distance)} lagi</Text>
+              <Text style={s.statusWarnTitle}>{t('miqat.warn_title')}</Text>
+              <Text style={s.statusWarnSub}>{t('miqat.warn_sub', { distance: distance == null ? '–' : formatDistance(distance) })}</Text>
             </View>
           </View>
         )}
@@ -312,8 +396,36 @@ export default function PetaScreen() {
               <Ionicons name="checkmark" size={24} color="#fff" />
             </View>
             <View style={{ flex: 1 }}>
-              <Text style={s.statusReadyTitle}>Kamu sudah berihram</Text>
-              <Text style={s.statusReadySub}>Niat umrah sudah dilafalkan</Text>
+              <Text style={s.statusReadyTitle}>{t('miqat.ready_title')}</Text>
+              <Text style={s.statusReadySub}>{t('miqat.ready_sub')}</Text>
+            </View>
+          </View>
+        )}
+        {unknown && (
+          <View style={s.statusApproach}>
+            <View style={[s.statusIcon, { backgroundColor: colors.surface }]}>
+              <Ionicons name={locationDenied ? 'location-outline' : 'locate-outline'} size={23} color={colors.primary} />
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text style={s.statusApproachTitle}>
+                {locationDenied
+                  ? t('monitor.perm_title')
+                  : hasLocation ? t('monitor.no_zones_title') : t('monitor.gps_waiting_title')}
+              </Text>
+              <Text style={s.statusApproachSub}>
+                {locationDenied
+                  ? t('monitor.perm_body')
+                  : hasLocation ? t('monitor.no_zones_sub') : t('monitor.gps_waiting_sub')}
+              </Text>
+              {locationDenied && (
+                <TouchableOpacity
+                  onPress={() => Linking.openSettings()}
+                  accessibilityRole="button"
+                  style={s.settingsBtn}
+                >
+                  <Text style={s.settingsBtnText}>{t('monitor.open_settings')}</Text>
+                </TouchableOpacity>
+              )}
             </View>
           </View>
         )}
@@ -323,8 +435,8 @@ export default function PetaScreen() {
               <Ionicons name="location" size={23} color={colors.primary} />
             </View>
             <View style={{ flex: 1 }}>
-              <Text style={s.statusApproachTitle}>Menuju miqat</Text>
-              <Text style={s.statusApproachSub}>Belum berihram · masih aman</Text>
+              <Text style={s.statusApproachTitle}>{t('miqat.approach_title')}</Text>
+              <Text style={s.statusApproachSub}>{t('miqat.approach_sub')}</Text>
             </View>
           </View>
         )}
@@ -332,8 +444,8 @@ export default function PetaScreen() {
         {/* Distance + Progress */}
         <View style={s.distCard}>
           <View style={s.distRow}>
-            <Text style={s.distLabel}>Jarak ke garis miqat</Text>
-            <Text style={s.distValue}>{formatDistance(distance)}</Text>
+            <Text style={s.distLabel}>{t('miqat.distance_label')}</Text>
+            <Text style={s.distValue}>{distance == null ? '–' : formatDistance(distance)}</Text>
           </View>
           <View style={s.progressTrack}>
             <View style={[s.progressBar, {
@@ -342,12 +454,12 @@ export default function PetaScreen() {
             }]} />
           </View>
           <View style={s.progressLabels}>
-            <Text style={s.progressLabel}>Miqat</Text>
-            <Text style={s.progressLabel}>Perjalanan menuju batas</Text>
+            <Text style={s.progressLabel}>{t('monitor.progress_miqat')}</Text>
+            <Text style={s.progressLabel}>{t('monitor.progress_journey')}</Text>
           </View>
           {nearest && (
             <Text style={s.nearestInfo}>
-              Miqat terdekat: {nearest.zone.name}
+              {t('monitor.nearest_miqat', { name: nearest.zone.name })}
             </Text>
           )}
         </View>
@@ -364,21 +476,17 @@ export default function PetaScreen() {
             color={isIhram ? colors.primary : colors.textOnPrimary}
           />
           <Text style={[s.ihramBtnText, isIhram && s.ihramBtnTextActive]}>
-            {isIhram ? 'Batalkan status ihram' : 'Saya sudah berihram & berniat'}
+            {isIhram ? t('monitor.ihram_cancel') : t('monitor.ihram_confirm')}
           </Text>
         </TouchableOpacity>
 
         {/* Info */}
-        <Text style={s.infoTitle}>Batas & larangan Tanah Haram</Text>
+        <Text style={s.infoTitle}>{t('monitor.haram_rules_title')}</Text>
         <View style={s.infoCard}>
-          {[
-            'Di dalam Tanah Haram dilarang berburu & membunuh binatang liar.',
-            'Dilarang menebang pohon atau mencabut tanaman yang tumbuh sendiri.',
-            'Selama ihram: tidak memakai wangi-wangian, memotong rambut/kuku, atau menikah.',
-          ].map((text, i) => (
-            <View key={i} style={[s.infoRow, i > 0 && s.infoRowBorder]}>
+          {HARAM_RULE_KEYS.map((key, i) => (
+            <View key={key} style={[s.infoRow, i > 0 && s.infoRowBorder]}>
               <Ionicons name="checkmark" size={18} color={colors.green} style={{ marginTop: 1 }} />
-              <Text style={s.infoText}>{text}</Text>
+              <Text style={s.infoText}>{t(key)}</Text>
             </View>
           ))}
         </View>
@@ -459,9 +567,18 @@ const s = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  kaabahGold: { width: 14, height: 3, backgroundColor: '#D4A437', borderRadius: 1 },
+  kaabahGold: { width: 14, height: 3, backgroundColor: colors.gold, borderRadius: 1 },
   kaabahLabel: { fontSize: 10, fontFamily: 'PlusJakartaSans_700Bold', color: colors.textSecondary, marginTop: 4 },
 
+  monitorTitle: { fontSize: 15, fontFamily: 'PlusJakartaSans_700Bold', color: colors.text },
+  legendSwatches: { flexDirection: 'row', flexWrap: 'wrap', columnGap: 14, rowGap: 4, marginTop: 4 },
+  legendSwatch: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+  legendDot: { width: 10, height: 10, borderRadius: 5 },
+  monitorLegend: { fontSize: 12, fontFamily: 'PlusJakartaSans_500Medium', color: colors.textMuted, marginTop: 2 },
+  noLocBox: { marginTop: 12, padding: 12, borderRadius: 12, backgroundColor: colors.goldLight },
+  noLocTitle: { fontSize: 13, fontFamily: 'PlusJakartaSans_700Bold', color: colors.textSecondary },
+  noLocNames: { fontSize: 12, fontFamily: 'PlusJakartaSans_500Medium', color: colors.textSecondary, marginTop: 4, lineHeight: 18 },
+  noLocHint: { fontSize: 11, fontFamily: 'PlusJakartaSans_500Medium', color: colors.textMuted, marginTop: 6 },
   marker: {
     position: 'absolute',
     width: 20,
@@ -474,7 +591,7 @@ const s = StyleSheet.create({
     width: 20,
     height: 20,
     borderRadius: 999,
-    backgroundColor: 'rgba(139,46,46,0.3)',
+    backgroundColor: 'rgba(11,93,71,0.3)',
   },
   markerDot: {
     width: 14,
@@ -493,7 +610,7 @@ const s = StyleSheet.create({
     bottom: 12,
     backgroundColor: 'rgba(245,241,232,0.9)',
     borderWidth: 1,
-    borderColor: '#E5DDD0',
+    borderColor: colors.border,
     borderRadius: 10,
     padding: 9,
     paddingHorizontal: 11,
@@ -550,6 +667,8 @@ const s = StyleSheet.create({
     alignItems: 'center',
     gap: 11,
   },
+  settingsBtn: { alignSelf: 'flex-start', marginTop: 8, minHeight: 44, justifyContent: 'center' },
+  settingsBtnText: { fontSize: 14, fontFamily: 'PlusJakartaSans_700Bold', color: colors.primary },
   statusApproachTitle: { fontSize: 17, fontFamily: 'PlusJakartaSans_700Bold', color: colors.text },
   statusApproachSub: { fontSize: 13, fontFamily: 'PlusJakartaSans_600SemiBold', color: colors.textMuted, marginTop: 2 },
 
@@ -569,11 +688,11 @@ const s = StyleSheet.create({
   progressTrack: { height: 8, backgroundColor: colors.border, borderRadius: 999, marginTop: 12, overflow: 'hidden' },
   progressBar: { height: '100%', borderRadius: 999 },
   progressLabels: { flexDirection: 'row', justifyContent: 'space-between', marginTop: 6 },
-  progressLabel: { fontSize: 11, fontFamily: 'PlusJakartaSans_500Medium', color: colors.textFaint },
+  progressLabel: { fontSize: 11, fontFamily: 'PlusJakartaSans_500Medium', color: colors.textMuted },
   nearestInfo: {
     fontSize: 11,
     fontFamily: 'PlusJakartaSans_600SemiBold',
-    color: '#A5654E',
+    color: colors.textMuted,
     marginTop: 14,
     textAlign: 'center',
     backgroundColor: colors.surfaceWarm,
@@ -596,7 +715,7 @@ const s = StyleSheet.create({
   ihramBtnActive: {
     backgroundColor: colors.surface,
     borderWidth: 1,
-    borderColor: '#E5DDD0',
+    borderColor: colors.border,
   },
   ihramBtnText: { fontSize: 15, fontFamily: 'PlusJakartaSans_700Bold', color: colors.textOnPrimary },
   ihramBtnTextActive: { color: colors.primary },

@@ -3,20 +3,21 @@ import { Tabs, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { colors } from '../../src/theme';
+import { useI18n, type TranslationKey } from '../../src/services/i18n';
 
 type IoniconsName = React.ComponentProps<typeof Ionicons>['name'];
 
 const tabs: Array<{
   name: string;
-  title: string;
+  titleKey: TranslationKey;
   icon: IoniconsName;
   iconActive: IoniconsName;
 }> = [
-  { name: 'index', title: 'Beranda', icon: 'home-outline', iconActive: 'home' },
-  { name: 'peta', title: 'Peta', icon: 'map-outline', iconActive: 'map' },
-  { name: 'ibadah', title: 'Ibadah', icon: 'book-outline', iconActive: 'book' },
-  { name: 'doa', title: 'Doa', icon: 'reader-outline', iconActive: 'reader' },
-  { name: 'jadwal', title: 'Jadwal', icon: 'calendar-outline', iconActive: 'calendar' },
+  { name: 'index', titleKey: 'nav.home', icon: 'home-outline', iconActive: 'home' },
+  { name: 'peta', titleKey: 'nav.map', icon: 'map-outline', iconActive: 'map' },
+  { name: 'ibadah', titleKey: 'nav.guide', icon: 'book-outline', iconActive: 'book' },
+  { name: 'doa', titleKey: 'nav.doa', icon: 'reader-outline', iconActive: 'reader' },
+  { name: 'jadwal', titleKey: 'nav.schedule', icon: 'calendar-outline', iconActive: 'calendar' },
 ];
 
 function SosFab() {
@@ -36,6 +37,7 @@ function SosFab() {
 
 export default function TabLayout() {
   const insets = useSafeAreaInsets();
+  const t = useI18n((st) => st.t);
   const tabBarHeight = 56 + insets.bottom;
 
   return (
@@ -44,7 +46,7 @@ export default function TabLayout() {
         screenOptions={{
           headerShown: false,
           tabBarActiveTintColor: colors.primary,
-          tabBarInactiveTintColor: colors.textFaint,
+          tabBarInactiveTintColor: colors.textMuted,
           tabBarStyle: {
             backgroundColor: 'rgba(255,255,255,0.94)',
             borderTopColor: colors.border,
@@ -63,7 +65,7 @@ export default function TabLayout() {
             key={tab.name}
             name={tab.name}
             options={{
-              title: tab.title,
+              title: t(tab.titleKey),
               tabBarIcon: ({ color, focused }) => (
                 <Ionicons
                   name={focused ? tab.iconActive : tab.icon}

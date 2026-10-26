@@ -1,5 +1,6 @@
 import * as Notifications from 'expo-notifications';
 import { getGroups, getSchedules, type Schedule } from './db';
+import { translate } from './i18n';
 
 export async function scheduleUpcomingNotifications(): Promise<void> {
   try {
@@ -21,8 +22,11 @@ export async function scheduleUpcomingNotifications(): Promise<void> {
       if (reminderTime > now) {
         await Notifications.scheduleNotificationAsync({
           content: {
-            title: 'Agenda segera dimulai',
-            body: `${s.title}${s.location_name ? ' · ' + s.location_name : ''} dalam 30 menit`,
+            title: translate('content.notif_reminder_title'),
+            body: translate('content.notif_reminder_body', {
+              title: s.title,
+              location: s.location_name ? ' · ' + s.location_name : '',
+            }),
           },
           trigger: { type: Notifications.SchedulableTriggerInputTypes.DATE, date: new Date(reminderTime) },
         });

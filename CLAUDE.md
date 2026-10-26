@@ -12,9 +12,10 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ### Design Tokens
 
-- **Primary (maroon)**: `#8B2E2E`, darker `#6E2424`, lighter `#F3D9CD`
-- **Green**: `#4A7C3A`, badge `#DCEBD3` | **Gold**: `#D4A437`, badge `#FAEFC9` | **Danger**: `#C44536`
-- **Background**: `#F5F1E8` (screen), `#E4DAC7` (outer) | **Text**: `#1F1B16` / `#5C3A1E` / `#8C6B4A`
+- **Primary (emerald)**: `#0B5D47`, darker `#084536`, lighter `#D5E7DF`
+- **Accent (maroon)**: `#8B2E2E`, lighter `#F3D9CD` — sparing accent only, always on cream/white, never on or adjacent to emerald (1.06:1). Currently marks miqat zones (map + admin dashboard card)
+- **Green (olive, status only)**: `#4A7C3A`, badge `#DCEBD3` | **Gold**: `#D4A437`, badge `#FAEFC9` | **Danger**: `#C44536`
+- **Background**: `#F5F1E8` (screen), `#E4DAC7` (outer) | **Text**: `#1F1B16` / `#5C3A1E` / `#7A5C3E` (muted) — faint `#9A7B5C` for icons/placeholders only; gold text `#806316`
 - **Fonts**: Plus Jakarta Sans (UI), Amiri (Arabic)
 - Mobile tokens defined in `apps/mobile/src/theme.ts` — always import `colors` and `radius` from there.
 
@@ -217,3 +218,7 @@ Required in `.env` (see `.env.example`):
 | `PORT` | Default 3000 |
 | `NODE_ENV` | development / production |
 | `SAFAR_SYNC_TOKEN` | Optional, min 32 chars — enables `/integrations/safar/*` (machine-to-machine sync from the Safar back-office repo; `X-Service-Token` header, timing-safe compare). See `routes/integrations.ts` + `services/integration.service.ts`. |
+
+## UI Direction (antislop)
+
+For UI work, read `DESIGN.md` first for design direction, then apply antislop as the filter. The design prototype `project/Labbaik.dc.html` still uses the old maroon primary; `DESIGN.md` and the tokens above take precedence.

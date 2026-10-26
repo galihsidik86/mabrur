@@ -39,6 +39,29 @@ export async function initDB(): Promise<void> {
       updated_at TEXT NOT NULL DEFAULT (datetime('now'))
     );
 
+    -- Antrean unggah Dokumentasi: foto terkompres disimpan di HP sampai berhasil terkirim.
+    CREATE TABLE IF NOT EXISTS media_queue (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      group_id TEXT NOT NULL,
+      client_uuid TEXT NOT NULL,
+      kind TEXT NOT NULL DEFAULT 'photo',
+      mime TEXT NOT NULL DEFAULT 'image/jpeg',
+      file_uri TEXT NOT NULL,
+      thumb_uri TEXT,
+      width INTEGER,
+      height INTEGER,
+      duration_ms INTEGER,
+      caption TEXT,
+      schedule_id TEXT,
+      taken_at TEXT NOT NULL,
+      remote_id TEXT,
+      status TEXT NOT NULL DEFAULT 'pending',
+      attempts INTEGER NOT NULL DEFAULT 0,
+      next_try_at INTEGER NOT NULL DEFAULT 0,
+      last_error TEXT,
+      created_at TEXT NOT NULL DEFAULT (datetime('now'))
+    );
+
     CREATE TABLE IF NOT EXISTS miqat_zones (
       id TEXT PRIMARY KEY,
       name TEXT NOT NULL,
@@ -358,6 +381,20 @@ export async function getDuas(): Promise<Dua[]> {
   return d.getAllAsync('SELECT * FROM duas ORDER BY sort_order');
 }
 
+// ==================== Meta (key-value) ====================
+
+export async function getMeta(key: string): Promise<string | null> {
+  const row = await getDB().getFirstAsync<{ value: string }>('SELECT value FROM sync_meta WHERE key = ?', [key]);
+  return row?.value ?? null;
+}
+
+export async function setMeta(key: string, value: string): Promise<void> {
+  await getDB().runAsync(
+    "INSERT INTO sync_meta (key, value, updated_at) VALUES (?, ?, datetime('now')) ON CONFLICT(key) DO UPDATE SET value = excluded.value, updated_at = excluded.updated_at",
+    [key, value],
+  );
+}
+
 // ==================== Cleanup ====================
 
 export async function clearAll(): Promise<void> {
@@ -372,5 +409,6 @@ export async function clearAll(): Promise<void> {
     DELETE FROM ibadah_guides;
     DELETE FROM duas;
     DELETE FROM sync_meta;
+    DELETE FROM media_queue;
   `);
 }

@@ -1,13 +1,19 @@
 import * as TaskManager from 'expo-task-manager';
 import * as Location from 'expo-location';
 import * as SecureStore from 'expo-secure-store';
+import { Alert, Linking, Platform } from 'react-native';
 import { sendLocalNotification } from './notification';
+import { api } from './api';
+import { shouldSendLocation } from './location-sync-core';
+import { initLanguage, translate } from './i18n';
 
 const TASK_NAME = 'mabrur-background-location';
 const WARNING_DISTANCE = 3000;
 const NOTIFICATION_COOLDOWN = 5 * 60 * 1000; // 5 menit
 
 let lastWarnTime = 0;
+// Kiriman lokasi terakhir yang berhasil (hilang bila proses task dimulai ulang -> kirim segera).
+let lastSent: { lat: number; lng: number; at: number } | null = null;
 
 function haversine(
   lat1: number, lng1: number,
@@ -62,63 +68,114 @@ TaskManager.defineTask(TASK_NAME, async ({ data, error }: any) => {
     const now = Date.now();
     if (now - lastWarnTime > NOTIFICATION_COOLDOWN) {
       lastWarnTime = now;
-      const km = (minDist / 1000).toFixed(1).replace('.', ',');
+      // Task bisa berjalan headless (tanpa UI) -> muat pilihan bahasa dulu.
+      await initLanguage();
+      const km = (minDist / 1000).toFixed(1).replace('.', translate('number.decimal_sep'));
       await sendLocalNotification(
-        'Pakai ihram sekarang!',
-        `Kamu ${km} km dari batas miqat ${nearestName}. Berihram & niat sebelum melewati garis.`,
+        translate('miqat.notif_title'),
+        translate('miqat.notif_body', { km, miqat: nearestName }),
       );
     }
   }
 
-  // Send location to server (best effort)
+  // Kirim ke server: segera bila bergerak, heartbeat tiap beberapa menit bila diam.
+  // Lewat api.sendLocation agar access token (berlaku 15 menit) di-refresh otomatis —
+  // sebelumnya fetch mentah di sini ditolak 401 setelah app 15 menit di latar belakang,
+  // sehingga jamaah tampil "Belum ada lokasi"/tidak terpantau di aplikasi muthawwif.
+  const now = Date.now();
+  const since = lastSent
+    ? { movedMeters: haversine(lastSent.lat, lastSent.lng, lat, lng), msSinceLastSend: now - lastSent.at }
+    : null;
+  if (!shouldSendLocation(since)) return;
   try {
-    const token = await SecureStore.getItemAsync('access_token');
-    const apiUrl = await SecureStore.getItemAsync('api_url');
-    if (token && apiUrl) {
-      fetch(`${apiUrl}/locations`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify({
-          lat,
-          lng,
-          accuracy: loc.coords.accuracy,
-        }),
-      }).catch(() => {});
-    }
-  } catch {}
+    if (!(await SecureStore.getItemAsync('refresh_token'))) { lastSent = null; return; } // sudah logout
+    await api.sendLocation(lat, lng, loc.coords.accuracy ?? undefined);
+    lastSent = { lat, lng, at: now };
+  } catch {
+    // Offline/gagal: coba lagi di update berikutnya (lastSent tidak diubah).
+  }
 });
 
-export async function startBackgroundLocation(): Promise<boolean> {
-  try {
-    const { status: fg } = await Location.requestForegroundPermissionsAsync();
-    if (fg !== 'granted') return false;
+export type LocationSharingResult = 'ok' | 'declined' | 'denied' | 'gps_off' | 'error';
 
-    const { status: bg } = await Location.requestBackgroundPermissionsAsync();
-    if (bg !== 'granted') return false;
+function confirmLocationSharing(): Promise<boolean> {
+  return new Promise((resolve) => {
+    Alert.alert(
+      translate('loc.consent_title'),
+      `${translate('loc.consent_body')}\n\n${translate('loc.consent_hint')}`,
+      [
+        { text: translate('loc.later'), style: 'cancel', onPress: () => resolve(false) },
+        { text: translate('loc.continue'), onPress: () => resolve(true) },
+      ],
+      { cancelable: true, onDismiss: () => resolve(false) },
+    );
+  });
+}
+
+/**
+ * Mulai berbagi lokasi di latar belakang.
+ * interactive=true: boleh menampilkan penjelasan & meminta izin (saat login / ketuk pengingat).
+ * interactive=false: hanya (re)start bila izin sudah ada — aman dipanggil tiap app aktif.
+ */
+export async function startBackgroundLocation(interactive = true): Promise<LocationSharingResult> {
+  try {
+    let bg = await Location.getBackgroundPermissionsAsync();
+    if (!bg.granted) {
+      if (!interactive) return 'denied';
+      if (!(await confirmLocationSharing())) return 'declined';
+      const fg = await Location.requestForegroundPermissionsAsync();
+      if (!fg.granted) return 'denied';
+      bg = await Location.requestBackgroundPermissionsAsync();
+      if (!bg.granted) return 'denied';
+    }
+
+    if (!(await Location.hasServicesEnabledAsync())) return 'gps_off';
 
     const isRunning = await Location.hasStartedLocationUpdatesAsync(TASK_NAME);
-    if (isRunning) return true;
+    if (isRunning) return 'ok';
 
     await Location.startLocationUpdatesAsync(TASK_NAME, {
       accuracy: Location.Accuracy.Balanced,
-      timeInterval: 30000,
-      distanceInterval: 100,
+      // Android: update tiap ~1 menit walau diam (heartbeat diatur shouldSendLocation).
+      // iOS mengabaikan timeInterval; distanceInterval kecil agar tetap mengalir saat berjalan.
+      timeInterval: 60000,
+      distanceInterval: Platform.OS === 'android' ? 0 : 25,
+      pausesUpdatesAutomatically: false,
       showsBackgroundLocationIndicator: true,
       foregroundService: {
         notificationTitle: 'Mabrur',
-        notificationBody: 'Memantau lokasi untuk peringatan miqat',
-        notificationColor: '#8B2E2E',
+        notificationBody: translate('loc.service_body'),
+        notificationColor: '#0B5D47',
       },
     });
 
-    return true;
+    return 'ok';
   } catch (err) {
     console.warn('[BG] Gagal start background location:', err);
-    return false;
+    return 'error';
   }
+}
+
+/** Dipanggil saat jamaah mengetuk pengingat dari muthawwif: aktifkan + pandu bila gagal. */
+export async function promptLocationSharing(): Promise<LocationSharingResult> {
+  const result = await startBackgroundLocation(true);
+  if (result === 'denied') {
+    Alert.alert(
+      translate('loc.denied_title'),
+      translate('loc.denied_body'),
+      [{ text: translate('loc.later'), style: 'cancel' }, { text: translate('loc.open_settings'), onPress: () => { Linking.openSettings(); } }],
+    );
+  } else if (result === 'gps_off') {
+    try {
+      await Location.enableNetworkProviderAsync(); // Android: dialog sistem "nyalakan lokasi"
+      return startBackgroundLocation(false);
+    } catch {
+      Alert.alert(translate('loc.gps_off_title'), translate('loc.gps_off_body'));
+    }
+  } else if (result === 'ok') {
+    Alert.alert(translate('loc.active_title'), translate('loc.active_body'));
+  }
+  return result;
 }
 
 export async function stopBackgroundLocation(): Promise<void> {

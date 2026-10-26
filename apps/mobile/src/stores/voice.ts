@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import { api } from '../services/api';
+import { translate } from '../services/i18n';
 
 // State global Suara Rombongan. Koneksi LiveKit dipasang di root (VoiceHost)
 // sehingga tetap hidup saat pengguna berpindah ke layar Tawaf/Sa'i (auto-GPS
@@ -31,7 +32,7 @@ export const useVoice = create<VoiceState>((set, get) => ({
       const d = await api.getVoiceToken();
       set({ active: true, url: d.url, token: d.token, role: d.role, connecting: false });
     } catch (e: any) {
-      set({ error: e?.message || 'Gagal menyambung ke suara rombongan', connecting: false });
+      set({ error: e?.message || translate('account.voice_connect_failed'), connecting: false });
     }
   },
   stop: () => set({ active: false, url: null, token: null, role: null, error: null, connecting: false }),

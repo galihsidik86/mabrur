@@ -1,6 +1,7 @@
 import { Platform } from 'react-native';
 import * as SecureStore from 'expo-secure-store';
 import Constants from 'expo-constants';
+import { jwtExpiry } from './documentation-core';
 
 function getBaseUrl(): string {
   const configured = Constants.expoConfig?.extra?.apiUrl;
@@ -15,7 +16,18 @@ async function getToken(): Promise<string | null> {
   return SecureStore.getItemAsync('access_token');
 }
 
-async function tryRefresh(): Promise<string | null> {
+// Single-flight: refresh token dirotasi server (token lama langsung tidak berlaku), jadi
+// refresh paralel (mis. task lokasi latar belakang + layar aktif) harus berbagi satu request.
+let refreshInFlight: Promise<string | null> | null = null;
+
+function tryRefresh(): Promise<string | null> {
+  if (!refreshInFlight) {
+    refreshInFlight = doRefresh().finally(() => { refreshInFlight = null; });
+  }
+  return refreshInFlight;
+}
+
+async function doRefresh(): Promise<string | null> {
   const refreshToken = await SecureStore.getItemAsync('refresh_token');
   if (!refreshToken) return null;
   try {
@@ -26,6 +38,8 @@ async function tryRefresh(): Promise<string | null> {
     });
     if (!res.ok) return null;
     const json = await res.json();
+    // Logout (atau ganti akun) selama request berjalan: jangan hidupkan lagi sesi lama.
+    if ((await SecureStore.getItemAsync('refresh_token')) !== refreshToken) return null;
     await SecureStore.setItemAsync('access_token', json.data.access_token);
     await SecureStore.setItemAsync('refresh_token', json.data.refresh_token);
     return json.data.access_token;
@@ -34,7 +48,29 @@ async function tryRefresh(): Promise<string | null> {
   }
 }
 
-async function request<T = any>(
+export function apiUrl(path: string): string {
+  return `${BASE_URL}${path}`;
+}
+
+// Header Authorization untuk permintaan di luar request() (gambar ber-auth, unggah/unduh berkas).
+// Token yang tinggal < 60 detik disegarkan dulu agar unduhan/unggahan panjang tidak gagal 401.
+const TOKEN_MIN_REMAINING_SEC = 60;
+
+export async function getAuthHeaders(forceRefresh = false): Promise<Record<string, string>> {
+  let token = await getToken();
+  const exp = token ? jwtExpiry(token) : null;
+  if (token && (forceRefresh || (exp !== null && exp - Date.now() / 1000 < TOKEN_MIN_REMAINING_SEC))) {
+    token = (await tryRefresh()) ?? (await getToken());
+  }
+  return token ? { Authorization: `Bearer ${token}` } : {};
+}
+
+async function request<T = any>(path: string, options: RequestInit = {}): Promise<T> {
+  return (await requestEnvelope<{ data: T }>(path, options)).data;
+}
+
+// Respons utuh { data, meta } — untuk daftar berhalaman.
+async function requestEnvelope<T = any>(
   path: string,
   options: RequestInit = {},
 ): Promise<T> {
@@ -48,8 +84,10 @@ async function request<T = any>(
   let res = await fetch(`${BASE_URL}${path}`, { ...options, headers });
 
   if (res.status === 401 && token) {
-    const newToken = await tryRefresh();
-    if (newToken) {
+    // Refresh gagal bisa berarti proses lain (task latar belakang headless) sudah merotasi
+    // token lebih dulu — pakai access token terbaru di SecureStore bila sudah berganti.
+    const newToken = (await tryRefresh()) ?? (await getToken());
+    if (newToken && newToken !== token) {
       headers['Authorization'] = `Bearer ${newToken}`;
       res = await fetch(`${BASE_URL}${path}`, { ...options, headers });
     }
@@ -57,7 +95,70 @@ async function request<T = any>(
 
   const json = await res.json();
   if (!res.ok) throw new Error(json.error?.message || 'Permintaan gagal');
-  return json.data;
+  return json;
+}
+
+/** Frasa Arab (Alat Ibadah). english/transliteration_en kosong pada server versi lama. */
+export interface Phrase {
+  id: string;
+  category: string;
+  sort_order: number;
+  arabic: string;
+  indonesian: string;
+  transliteration: string | null;
+  english?: string | null;
+  transliteration_en?: string | null;
+}
+
+/** Kurs semua mata uang; rates[KODE] = nilai 1 unit `base` dalam KODE. */
+export interface CurrencyRates {
+  base: string;
+  rates: Record<string, number>;
+  updated: string;
+  updated_at?: string | null; // ISO; tidak ada pada respons server versi lama
+  is_fallback: boolean;
+}
+
+/** Foto Dokumentasi rombongan (GET /groups/:id/media). Berkas: /media/:id/file & /media/:id/thumb. */
+export interface GroupMedia {
+  id: string;
+  group_id: string;
+  uploader_id: string | null;
+  uploader_name: string | null;
+  schedule_id: string | null;
+  schedule_title: string | null;
+  kind: 'photo' | 'video';
+  mime: string;
+  size_bytes: number;
+  width: number | null;
+  height: number | null;
+  duration_ms: number | null;
+  caption: string | null;
+  is_official: boolean;
+  taken_at: string;
+  created_at: string;
+  expires_at: string;
+  has_thumb: boolean;
+}
+
+export interface GroupMediaMeta {
+  total: number;
+  page: number;
+  limit: number;
+  used_bytes: number;
+  quota_bytes: number;
+}
+
+export interface MemberStatus {
+  id: string; name: string; phone: string; role_in_group: 'jamaah' | 'muthawwif';
+  location: { lat: number; lng: number; updated_at: string } | null; // null juga bila lewat masa simpan
+  last_seen_at: string | null;
+  tracking: 'tracked' | 'stale' | 'none';
+  ihram: { is_ihram: boolean; niat_type: string | null };
+  nearest_miqat: { name: string; distance: number } | null;
+  distance_to_leader: number | null;
+  far_from_group: boolean;
+  status: 'safe' | 'attention';
 }
 
 export const api = {
@@ -187,11 +288,32 @@ export const api = {
   // Suara Rombongan (LiveKit): token + url + peran (speaker/listener) untuk grup user
   getVoiceToken: () =>
     request<{ url: string; token: string; room: string; role: 'speaker' | 'listener' }>('/voice/token'),
-  getPhrases: () => request<any[]>('/phrases'),
+  getPhrases: () => request<Phrase[]>('/phrases'),
+
+  // Bahasa pilihan -> server memakai untuk push notification (SOS, pengingat lokasi)
+  setLanguage: (language: 'id' | 'en') =>
+    request<{ language: string }>('/profile/language', { method: 'PUT', body: JSON.stringify({ language }) }),
+
+  // Kartu Taksi milik pengguna (hotel rombongan, kamar, kontak muthawwif)
+  getTaxiCard: (groupId: string) => request<unknown>(`/groups/${groupId}/taxi-card`),
+  // Dokumentasi rombongan (unggah/unduh berkas lewat services/documentation.ts).
+  listGroupMedia: (groupId: string, page: number, limit: number, officialOnly: boolean) =>
+    requestEnvelope<{ data: GroupMedia[]; meta: GroupMediaMeta }>(
+      `/groups/${groupId}/media?page=${page}&limit=${limit}${officialOnly ? '&official=1' : ''}`,
+    ),
+  updateMediaCaption: (id: string, caption: string | null) =>
+    request<{ caption: string | null }>(`/media/${id}`, { method: 'PATCH', body: JSON.stringify({ caption }) }),
+  deleteMedia: (id: string) => request<{ ok: boolean }>(`/media/${id}`, { method: 'DELETE' }),
   getHealthTips: () => request<any[]>('/health-tips'),
-  getPrayerTimes: (lat?: number, lng?: number) =>
-    request<any>(`/prayer-times${lat ? `?lat=${lat}&lng=${lng}` : ''}`),
-  getCurrency: () => request<any>('/currency'),
+  // tz = zona waktu jam HP (jam), agar waktu salat sebanding dengan jam yang dipakai layar.
+  getPrayerTimes: (lat?: number, lng?: number, tz?: number) => {
+    // Disusun manual: URLSearchParams di React Native tidak lengkap (set() bisa melempar error).
+    const params: string[] = [];
+    if (lat != null && lng != null) params.push(`lat=${lat}`, `lng=${lng}`);
+    if (tz != null && Number.isFinite(tz)) params.push(`tz=${tz}`);
+    return request<any>(`/prayer-times${params.length ? `?${params.join('&')}` : ''}`);
+  },
+  getCurrency: () => request<CurrencyRates>('/currency'),
   saveLocation: (name: string, lat: number, lng: number) =>
     request<any>('/saved-locations', { method: 'POST', body: JSON.stringify({ name, lat, lng }) }),
   saveLogbook: (date: string, content: string, mood?: string) =>
@@ -209,20 +331,22 @@ export const api = {
     request<any>(`/sos/${sosId}/photo`, { method: 'PATCH', body: JSON.stringify({ photo_url: photoUrl }) }),
   submitRating: (rating: number, feedback?: string) =>
     request<any>('/ratings', { method: 'POST', body: JSON.stringify({ rating, feedback }) }),
-  setTheme: (theme: string) =>
-    request<any>('/theme', { method: 'PATCH', body: JSON.stringify({ theme }) }),
 
   getMemberStatuses: (groupId: string) =>
     request<{
-      stats: { total: number; safe: number; attention: number };
-      members: Array<{
-        id: string; name: string; phone: string; role_in_group: string;
-        location: { lat: number; lng: number; updated_at: string } | null;
-        ihram: { is_ihram: boolean; niat_type: string | null };
-        nearest_miqat: { name: string; distance: number } | null;
-        status: 'safe' | 'attention';
-      }>;
+      stats: {
+        total: number; safe: number; attention: number;
+        jamaah_total: number; tracked: number; stale: number; no_location: number; far_from_group: number;
+      };
+      members: MemberStatus[];
     }>(`/groups/${groupId}/members/status`),
+
+  // Push "aktifkan lokasi"; tanpa userIds = semua jamaah yang tidak terpantau
+  sendLocationReminders: (groupId: string, userIds?: string[]) =>
+    request<{ sent: number; skipped_cooldown: number; no_push_token: number }>(
+      `/groups/${groupId}/location-reminders`,
+      { method: 'POST', body: JSON.stringify(userIds ? { user_ids: userIds } : {}) },
+    ),
 
   // Perekam GPS (riset): unggah sesi trace ke server untuk dianalisis dari admin
   uploadGpsTrace: (payload: {

@@ -4,6 +4,7 @@ import { LiveKitRoom, AudioSession, useLocalParticipant, useParticipants } from 
 import { activateKeepAwakeAsync, deactivateKeepAwake } from 'expo-keep-awake';
 import { Ionicons } from '@expo/vector-icons';
 import { useVoice } from '../stores/voice';
+import { useI18n } from '../services/i18n';
 import { colors } from '../theme';
 
 // Membungkus SELURUH app dengan LiveKitRoom saat suara aktif → koneksi bertahan
@@ -31,6 +32,7 @@ export function VoiceHost({ children }: { children: React.ReactNode }) {
 
 // Banner kontrol mengambang, tampil di semua layar selama suara aktif.
 function VoiceBanner() {
+  const t = useI18n((st) => st.t);
   const { role, stop } = useVoice();
   const participants = useParticipants();
   const { localParticipant } = useLocalParticipant();
@@ -55,18 +57,18 @@ function VoiceBanner() {
         size={18} color="#fff" />
       <Text style={{ flex: 1, color: '#fff', fontSize: 13, fontFamily: 'PlusJakartaSans_600SemiBold' }}>
         {isSpeaker
-          ? (talking ? 'Sedang siaran' : 'Suara Rombongan')
-          : (someoneSpeaking ? 'Muthawwif berbicara' : 'Mendengarkan')} · {participants.length}
+          ? (talking ? t('account.voice_bar_broadcasting') : t('account.voice_bar_title'))
+          : (someoneSpeaking ? t('account.voice_bar_muthawwif_speaking') : t('account.voice_bar_listening'))} · {participants.length}
       </Text>
       {isSpeaker && (
         <TouchableOpacity onPress={toggle}
           style={{ backgroundColor: talking ? colors.green : 'rgba(255,255,255,0.2)', borderRadius: 8, paddingHorizontal: 12, paddingVertical: 6 }}>
           <Text style={{ color: '#fff', fontSize: 12, fontFamily: 'PlusJakartaSans_700Bold' }}>
-            {talking ? 'Stop bicara' : 'Bicara'}
+            {talking ? t('account.voice_bar_stop_talk') : t('account.voice_bar_talk')}
           </Text>
         </TouchableOpacity>
       )}
-      <TouchableOpacity onPress={stop} style={{ padding: 4 }} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+      <TouchableOpacity onPress={stop} style={{ padding: 4 }} hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }} accessibilityRole="button" accessibilityLabel={t('a11y.voice_stop')}>
         <Ionicons name="close-circle" size={22} color="rgba(255,255,255,0.85)" />
       </TouchableOpacity>
     </View>

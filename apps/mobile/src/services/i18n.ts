@@ -1,80 +1,70 @@
 import { create } from 'zustand';
+import * as SecureStore from 'expo-secure-store';
+import { resolveInitialLang, interpolate, type Lang, type TranslateParams } from '../i18n/core';
+import { id, type TranslationKey } from '../i18n/locales/id';
+import { en } from '../i18n/locales/en';
+import { api } from './api';
 
-type Lang = 'id' | 'en' | 'ar';
+export type { Lang, TranslationKey };
 
-const translations: Record<string, Record<Lang, string>> = {
-  // Auth
-  'login.title': { id: 'Masuk', en: 'Login', ar: 'تسجيل الدخول' },
-  'login.phone': { id: 'Nomor HP', en: 'Phone Number', ar: 'رقم الهاتف' },
-  'login.password': { id: 'Password', en: 'Password', ar: 'كلمة المرور' },
-  'login.submit': { id: 'Masuk', en: 'Sign In', ar: 'دخول' },
+const LOCALES: Record<Lang, Record<TranslationKey, string>> = { id, en };
+// SecureStore (bukan SQLite): tidak terhapus saat logout & sudah tersedia di layar login.
+const LANG_KEY = 'app_lang';
 
-  // Nav
-  'nav.beranda': { id: 'Beranda', en: 'Home', ar: 'الرئيسية' },
-  'nav.peta': { id: 'Peta', en: 'Map', ar: 'خريطة' },
-  'nav.ibadah': { id: 'Ibadah', en: 'Worship', ar: 'عبادة' },
-  'nav.doa': { id: 'Doa', en: 'Prayers', ar: 'دعاء' },
-  'nav.jadwal': { id: 'Jadwal', en: 'Schedule', ar: 'جدول' },
+export type TFunction = (key: TranslationKey, params?: TranslateParams) => string;
 
-  // Beranda
-  'home.greeting': { id: "Assalamu'alaikum,", en: "Assalamu'alaikum,", ar: 'السلام عليكم،' },
-  'home.ihram_status': { id: 'STATUS IHRAM', en: 'IHRAM STATUS', ar: 'حالة الإحرام' },
-  'home.not_ihram': { id: 'Belum berihram', en: 'Not in ihram', ar: 'لم يحرم بعد' },
-  'home.in_ihram': { id: 'Sudah berihram', en: 'In ihram', ar: 'محرم' },
-  'home.nearest_miqat': { id: 'MIQAT TERDEKAT', en: 'NEAREST MIQAT', ar: 'أقرب ميقات' },
-  'home.distance': { id: 'JARAK KE BATAS', en: 'DISTANCE TO BOUNDARY', ar: 'المسافة للحد' },
-  'home.next_agenda': { id: 'Agenda berikutnya', en: 'Next agenda', ar: 'الأجندة التالية' },
-  'home.your_group': { id: 'Rombongan kamu', en: 'Your group', ar: 'مجموعتك' },
+// true setelah bahasa dimuat atau dipilih di proses JS ini.
+let initialized = false;
 
-  // Ibadah
-  'ibadah.title': { id: 'Tuntunan ibadah', en: 'Worship Guide', ar: 'دليل العبادة' },
-  'ibadah.umrah': { id: 'Umrah', en: 'Umrah', ar: 'عمرة' },
-  'ibadah.haji': { id: 'Haji', en: 'Hajj', ar: 'حج' },
-  'ibadah.ziarah': { id: 'Ziarah', en: 'Visit', ar: 'زيارة' },
+function makeT(lang: Lang): TFunction {
+  return (key, params) => interpolate(LOCALES[lang][key] ?? id[key] ?? key, params);
+}
 
-  // Doa
-  'doa.title': { id: 'Doa & bacaan', en: 'Prayers & Readings', ar: 'الأدعية والأذكار' },
-
-  // Jadwal
-  'jadwal.title': { id: 'Jadwal & agenda', en: 'Schedule & Agenda', ar: 'الجدول والأجندة' },
-
-  // SOS
-  'sos.title': { id: 'SOS', en: 'SOS', ar: 'طوارئ' },
-  'sos.send': { id: 'Kirim SOS sekarang', en: 'Send SOS now', ar: 'أرسل طوارئ الآن' },
-  'sos.sent': { id: 'Sinyal darurat terkirim', en: 'Emergency signal sent', ar: 'تم إرسال إشارة الطوارئ' },
-  'sos.cancel': { id: 'Batalkan SOS', en: 'Cancel SOS', ar: 'إلغاء الطوارئ' },
-  'sos.history': { id: 'Riwayat SOS', en: 'SOS History', ar: 'سجل الطوارئ' },
-
-  // Profile
-  'profile.title': { id: 'Profil', en: 'Profile', ar: 'الملف الشخصي' },
-  'profile.edit': { id: 'Edit Profil', en: 'Edit Profile', ar: 'تعديل الملف' },
-  'profile.stats': { id: 'Statistik Perjalanan', en: 'Journey Stats', ar: 'إحصائيات الرحلة' },
-  'profile.change_password': { id: 'Ganti Password', en: 'Change Password', ar: 'تغيير كلمة المرور' },
-  'profile.logout': { id: 'Keluar', en: 'Sign Out', ar: 'خروج' },
-
-  // Chat
-  'chat.title': { id: 'Chat Rombongan', en: 'Group Chat', ar: 'محادثة المجموعة' },
-  'chat.placeholder': { id: 'Ketik pesan...', en: 'Type a message...', ar: '...اكتب رسالة' },
-
-  // Common
-  'common.save': { id: 'Simpan', en: 'Save', ar: 'حفظ' },
-  'common.cancel': { id: 'Batal', en: 'Cancel', ar: 'إلغاء' },
-  'common.loading': { id: 'Memuat...', en: 'Loading...', ar: '...جاري التحميل' },
-  'common.coming_soon': { id: 'Segera hadir', en: 'Coming soon', ar: 'قريباً' },
-};
+function deviceLocale(): string | null {
+  try {
+    // Hermes menyediakan Intl -> locale bawaan HP, tanpa dependensi native tambahan.
+    return Intl.DateTimeFormat().resolvedOptions().locale ?? null;
+  } catch {
+    return null;
+  }
+}
 
 interface I18nState {
   lang: Lang;
-  setLang: (lang: Lang) => void;
-  t: (key: string) => string;
+  /** Identitas berganti saat bahasa berganti -> komponen yang memilih `t` ikut render ulang. */
+  t: TFunction;
+  setLang: (lang: Lang) => Promise<void>;
 }
 
-export const useI18n = create<I18nState>((set, get) => ({
+export const useI18n = create<I18nState>((set) => ({
   lang: 'id',
-  setLang: (lang: Lang) => set({ lang }),
-  t: (key: string) => {
-    const entry = translations[key];
-    if (!entry) return key;
-    return entry[get().lang] || entry.id || key;
+  t: makeT('id'),
+  setLang: async (lang) => {
+    initialized = true;
+    set({ lang, t: makeT(lang) });
+    await SecureStore.setItemAsync(LANG_KEY, lang).catch(() => {});
+    // Gagal saat belum login/offline tidak masalah: disinkronkan lagi setelah login (_layout).
+    api.setLanguage(lang).catch(() => {});
   },
 }));
+
+/**
+ * Muat pilihan bahasa (atau bahasa HP) — panggil saat app start dan di task latar belakang.
+ * Idempoten per proses JS: bila UI sudah memuat/memilih bahasa, task latar belakang yang
+ * berjalan di context yang sama tidak membaca ulang (bisa membaca nilai lama saat penulisan
+ * SecureStore belum selesai dan mengembalikan bahasa ke pilihan sebelumnya).
+ */
+export async function initLanguage(): Promise<Lang> {
+  if (initialized) return useI18n.getState().lang;
+  const stored = await SecureStore.getItemAsync(LANG_KEY).catch(() => null);
+  if (initialized) return useI18n.getState().lang; // setLang terjadi selama await di atas
+  const lang = resolveInitialLang(stored, deviceLocale());
+  initialized = true;
+  useI18n.setState({ lang, t: makeT(lang) });
+  return lang;
+}
+
+/** Terjemahan di luar komponen React (notifikasi lokal, Alert dari service). */
+export function translate(key: TranslationKey, params?: TranslateParams): string {
+  return useI18n.getState().t(key, params);
+}

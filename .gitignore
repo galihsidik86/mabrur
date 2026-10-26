@@ -9,3 +9,5 @@ coverage/
 *.apk
 .expo/
 .idea/
+# Berkas Dokumentasi rombongan (foto jamaah) — jangan pernah di-commit
+server/storage/

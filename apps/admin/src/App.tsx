@@ -7,15 +7,8 @@ import Users from './pages/Users';
 import Groups from './pages/Groups';
 import Content from './pages/Content';
 import GpsValidation from './pages/GpsValidation';
+import { C, R } from './theme';
 
-const C = {
-  primary: '#8B2E2E',
-  bg: '#F5F1E8',
-  sidebar: '#1F1B16',
-  text: '#F5F1E8',
-  muted: '#B89A7A',
-  border: '#ECE5D8',
-};
 
 function RequireAuth({ children }: { children: React.ReactNode }) {
   const user = getUser();
@@ -28,11 +21,11 @@ function RequireAuth({ children }: { children: React.ReactNode }) {
 }
 
 const nav = [
-  { to: '/', label: 'Dashboard', icon: '◈' },
-  { to: '/users', label: 'Pengguna', icon: '◉' },
-  { to: '/groups', label: 'Rombongan', icon: '◎' },
-  { to: '/content', label: 'Konten', icon: '◇' },
-  { to: '/gps-validation', label: 'Validasi GPS', icon: '◆' },
+  { to: '/', label: 'Dashboard' },
+  { to: '/users', label: 'Pengguna' },
+  { to: '/groups', label: 'Rombongan' },
+  { to: '/content', label: 'Konten' },
+  { to: '/gps-validation', label: 'Validasi GPS' },
 ];
 
 function Layout({ children }: { children: React.ReactNode }) {
@@ -45,12 +38,12 @@ function Layout({ children }: { children: React.ReactNode }) {
         display: 'flex', flexDirection: 'column',
       }}>
         <div style={{ padding: '0 20px', marginBottom: 32 }}>
-          <div style={{ fontSize: 20, fontWeight: 800, color: C.text, letterSpacing: -0.5 }}>
+          <div style={{ fontSize: 20, fontWeight: 800, color: C.sidebarText, letterSpacing: -0.5 }}>
             Mabrur
           </div>
-          <div style={{ fontSize: 11, color: C.muted, marginTop: 2 }}>Panel Admin</div>
+          <div style={{ fontSize: 11, color: C.sidebarMuted, marginTop: 2 }}>Panel Admin</div>
         </div>
-        <nav style={{ flex: 1 }}>
+        <nav style={{ flex: 1 }} aria-label="Menu utama">
           {nav.map((n) => (
             <NavLink
               key={n.to}
@@ -59,23 +52,24 @@ function Layout({ children }: { children: React.ReactNode }) {
               style={({ isActive }) => ({
                 display: 'flex', alignItems: 'center', gap: 10,
                 padding: '10px 20px', fontSize: 14, fontWeight: isActive ? 700 : 500,
-                color: isActive ? '#fff' : C.muted,
-                background: isActive ? 'rgba(139,46,46,0.3)' : 'transparent',
-                borderLeft: isActive ? `3px solid ${C.primary}` : '3px solid transparent',
+                color: isActive ? C.sidebarActiveText : C.sidebarMuted,
+                background: isActive ? C.sidebarActiveBg : 'transparent',
+                // Emas, bukan zamrud: zamrud di sidebar gelap hanya 2,18:1 sehingga penanda aktif tak terlihat.
+                borderLeft: isActive ? `3px solid ${C.gold}` : '3px solid transparent',
                 textDecoration: 'none',
               })}
             >
-              <span style={{ fontSize: 16 }}>{n.icon}</span> {n.label}
+              {n.label}
             </NavLink>
           ))}
         </nav>
         <div style={{ padding: '0 20px' }}>
-          <div style={{ fontSize: 12, color: C.muted }}>{user?.name}</div>
+          <div style={{ fontSize: 12, color: C.sidebarMuted }}>{user?.name}</div>
           <button
             onClick={logout}
             style={{
-              marginTop: 8, background: 'transparent', border: '1px solid rgba(255,255,255,0.15)',
-              color: C.muted, padding: '6px 14px', borderRadius: 8, fontSize: 12,
+              marginTop: 8, background: 'transparent', border: `1px solid ${C.sidebarBorder}`,
+              color: C.sidebarMuted, padding: '6px 14px', borderRadius: R.sm, fontSize: 12,
               cursor: 'pointer', fontWeight: 600,
             }}
           >
