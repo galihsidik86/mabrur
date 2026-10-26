@@ -2,7 +2,7 @@
   "expo": {
     "name": "Mabrur",
     "slug": "mabrur",
-    "version": "0.1.0",
+    "version": "0.2.0",
     "scheme": "mabrur",
     "platforms": [
       "ios",
@@ -28,6 +28,7 @@
     },
     "android": {
       "package": "app.mabrur",
+      "versionCode": 2,
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#0B5D47"
@@ -40,6 +41,16 @@
       "expo-font",
       "expo-splash-screen",
       "expo-status-bar",
+      [
+        "expo-location",
+        {
+          "locationWhenInUsePermission": "Mabrur memerlukan lokasi untuk fitur geofence miqat dan SOS.",
+          "locationAlwaysAndWhenInUsePermission": "Mabrur memerlukan lokasi di latar belakang agar muthawwif dapat memantau posisi rombongan dan memberi peringatan batas miqat.",
+          "isAndroidBackgroundLocationEnabled": true,
+          "isAndroidForegroundServiceEnabled": true,
+          "isIosBackgroundLocationEnabled": true
+        }
+      ],
       [
         "expo-image-picker",
         {
